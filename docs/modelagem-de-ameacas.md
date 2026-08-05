@@ -1,21 +1,41 @@
-# Modelagem de Ameaças e Tratamento de Riscos — [Nome do Sistema]
+# Modelagem de Ameaças e Tratamento de Riscos - SIGH (Sistema Integrado de Gestão Hospitalar)
 
----
-
-## Etapa 1 — Casos de Abuso e Modelagem de Ameaças com STRIDE
+## Etapa 1 - Casos de Abuso e Modelagem de Ameaças com STRIDE
 
 ### 1. Identificação do sistema
 
-- **Nome do sistema:**
-- **Integrantes do grupo:**
-- **Repositório:**
-- **Justificativa para a escolha do sistema:**
+- **Nome do sistema:** SIGH - Sistema Integrado de Gestão Hospitalar (recorte de 5 módulos: Cadastro/Prontuário de Pacientes, Atendimento Médico/Consultas, Internação e Leitos, Farmácia/Prescrição de Medicamentos e Financeiro/Cobrança)
+- **Integrantes do grupo:** Arthur Provenzi Parizotto, Emilly Nascimento Dias, Lorenzo Ponsi Ficher, Maria Eduarda Sanchez Chessio, Pietro Mendes Prauchner
+- **Repositório:** [Trab_ESseg](https://github.com/lilydias24/Trab_ESseg.git)
+- **Justificativa para a escolha do sistema:** o SIGH foi escolhido por reunir, em um único sistema, os elementos necessários para uma análise STRIDE completa: múltiplos perfis de usuário com diferentes níveis de permissão (Médico, Enfermeiro, Recepcionista, Administrador), integração com um sistema externo (validação de cobertura de convênio), dados de alta sensibilidade (prontuário médico, prescrições, dados financeiros) e operações irreversíveis de alto impacto, como o registro de óbito e a alta hospitalar. O grupo também já dispõe da modelagem completa do sistema (casos de uso, diagrama de classes/domínio e arquitetura de componentes), produzida em trabalho anterior da graduação, o que permite fundamentar cada ameaça em elementos concretos do modelo - campos de classes, regras de negócio e arquitetura - em vez de suposições genéricas.
 
 ### 2. Descrição do sistema
 
-*(Descrever o problema que o sistema resolve, quem o utiliza, principais funcionalidades, informações armazenadas/transmitidas e recursos que precisam ser protegidos.)*
+O SIGH é um software voltado à gestão dos principais processos operacionais de um hospital. Ele integra diferentes setores - atendimento, enfermagem, farmácia e administração financeira - permitindo que informações de pacientes circulem entre esses setores de forma coordenada, desde o primeiro cadastro até a cobrança de um atendimento.
+
+**Problema que o sistema resolve:** hoje, hospitais lidam com informações espalhadas entre setores que precisam se comunicar (recepção, enfermagem, corpo médico, farmácia e financeiro). O SIGH centraliza essas informações em um único sistema, reduzindo retrabalho e permitindo que cada profissional tenha acesso ao histórico relevante do paciente no momento do atendimento.
+
+**Quem utiliza o sistema:**
+- **Médico** - registra prontuário, prescreve medicamentos, autoriza altas, registra consultas e óbitos;
+- **Enfermeiro** - realiza triagem, controla leitos, gerencia estoque de medicamentos, atualiza prontuário e registra exames;
+- **Recepcionista** - agenda consultas, emite faturas e gerencia o cadastro de pacientes;
+- **Administrador** - cadastra profissionais, gerencia escalas e possui diferentes níveis de acesso (Diretor, Gerente Geral, Gerente de Setor, Supervisor);
+- **«system» Convênio** - sistema externo que valida a cobertura de procedimentos para os pacientes.
+
+**Principais funcionalidades:**
+- Cadastro e prontuário de pacientes (dados pessoais, histórico médico, alergias, medicações em uso);
+- Agendamento e registro de consultas, incluindo integração com convênios médicos;
+- Controle de internações, ocupação de leitos e altas hospitalares;
+- Prescrição e rastreamento de medicamentos, com controle de estoque na farmácia;
+- Emissão de faturas e controle de pagamentos de consultas, exames e internações.
+
+**Informações armazenadas/transmitidas:** dados pessoais e clínicos de pacientes (CPF, data de nascimento, tipo sanguíneo, histórico médico, alergias, prescrições), credenciais de acesso dos profissionais (login e senha), registros de internação e óbito, e dados financeiros de cobrança.
+
+**Recursos que precisam ser protegidos:** as credenciais de login dos profissionais (`nomeLogin`/`senhaLogin`, sem indicação de hashing no modelo de domínio original, o que as torna um ponto crítico para ataques de Spoofing), o prontuário e os dados clínicos dos pacientes, as prescrições de medicamentos, os registros de óbito (operação irreversível) e os dados financeiros/de faturamento.
 
 ### 3. Usuários, ativos e pontos de interação
+
+*(Seção de responsabilidade de Integrante 2 - pendente: tabela de perfis de acesso e lista de ativos importantes)*
 
 #### 3.1 Usuários e perfis de acesso
 
@@ -25,7 +45,7 @@
 
 #### 3.2 Ativos importantes
 
-*(Listar dados pessoais, credenciais, pagamentos, avaliações, mensagens, localização, documentos, etc., destacando os que causam prejuízo se comprometidos.)*
+*(Pendente)*
 
 #### 3.3 Pontos de interação e componentes
 
@@ -35,7 +55,7 @@
 
 ### 4. Visão geral da arquitetura ou fluxo
 
-*(Descrição textual e/ou diagrama — ver `diagramas/`. Pode ser diagrama de contexto, fluxo de dados, componentes ou casos de uso.)*
+*(Seção de responsabilidade de Integrante 3 - pendente: diagrama de contexto/componentes exportado do Lucid, versionado em `diagramas/`)*
 
 `![Diagrama de contexto](../diagramas/diagrama-contexto.png)`
 
@@ -49,6 +69,7 @@
 | T04 | Information Disclosure | | | |
 | T05 | Denial of Service | | | |
 | T06 | Elevation of Privilege | | | |
+
 
 *(Adicionar quantas linhas forem necessárias por categoria; justificar caso alguma categoria não seja aplicável.)*
 
@@ -65,7 +86,7 @@
 - **Impacto esperado:**
 - **Categorias STRIDE relacionadas:**
 
-*(Repetir a estrutura acima para CA02, CA03... — recomenda-se ao menos 1 caso por integrante.)*
+*(Repetir a estrutura acima para CA02, CA03... - recomenda-se ao menos 1 caso por integrante.)*
 
 ### 7. Considerações finais (Etapa 1)
 
@@ -76,7 +97,9 @@
 
 ---
 
-## Etapa 2 — Análise, Priorização e Tratamento de Riscos com o NIST CSF 2.0
+## Etapa 2 - Análise, Priorização e Tratamento de Riscos com o NIST CSF 2.0
+
+*(seções da Etapa 2 - critérios de impacto, registro de riscos, priorização e mapeamento/tratamento com o NIST CSF 2.0 - a serem adicionadas conforme a divisão de trabalho de cada integrante, seguindo a mesma trilha STRIDE definida na Etapa 1.)*
 
 ### 8. Critérios de probabilidade
 
@@ -86,6 +109,7 @@
 | 2 | Média-baixa | O evento é possível, mas depende de uma vulnerabilidade ou condição específica |
 | 3 | Média-alta | O evento é plausível e pode ocorrer em situações comuns de uso ou ataque |
 | 4 | Alta | O evento pode ocorrer com facilidade, frequência ou durante condições previsíveis do sistema |
+
 
 ### 9. Critérios de impacto
 
@@ -206,4 +230,3 @@ Pontuação = Probabilidade × Impacto
 
 ---
 
-## Etapa 3 — *(aguardando enunciado do professor)*
