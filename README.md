@@ -4,7 +4,7 @@
 
 ## Integrantes
 
-- Arthur Provenzi Parizotto (@usuario-github-1)
+- Arthur Provenzi Parizotto (@ARTHUR9011)
 - Emilly Nascimento Dias (@lilydias24)
 - Lorenzo Ponsi Ficher (@usuario-github-3)
 - Maria Eduarda Sanchez Chessio (@usuario-github-4)
