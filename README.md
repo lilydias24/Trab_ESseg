@@ -6,7 +6,7 @@
 
 - Arthur Provenzi Parizotto (@ARTHUR9011)
 - Emilly Nascimento Dias (@lilydias24)
-- Lorenzo Ponsi Ficher (@usuario-github-3)
+- Lorenzo Ponsi Ficher (@lorenzoficher)
 - Maria Eduarda Sanchez Chessio (@usuario-github-4)
 - Pietro Mendes Prauchner (@usuario-github-5)
 
