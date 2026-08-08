@@ -10,7 +10,7 @@
 | 13.2 Critérios de impacto | @ARTHUR9011 + @lorenzoficher | Escala base definida |
 | 13.3 Cálculo e classificação | @ARTHUR9011 | Concluída |
 | 13.4 Registro de riscos | Todos (1 risco por pessoa) | R01, R02, R05 e R06 concluídos; R03 e R04 pendentes |
-| 13.5 Justificativas | Todos | R01 e R02 concluídas; demais pendentes |
+| 13.5 Justificativas | Todos | R01, R02, R05 e R06 concluídas; R03 e R04 pendentes |
 | 13.6 Priorização geral | @mariasanchez0’s (compila) | Pendente |
 | 13.7 Conclusão da análise | @ARTHUR9011 | Rascunho concluído (revisão após R03-R06) |
 | 14.1 Estratégia de tratamento | Todos | R01 e R02 concluídas; demais pendentes |
@@ -84,7 +84,91 @@ Pontuação = Probabilidade × Impacto
 
 **Por que Crítico é adequado.** 3 × 4 = 12 já coloca R02 na faixa Crítica, mas há duas agravantes que a fórmula não captura: o dano sai do sistema (é mediado por corpo, não por dado) e o próprio ato apaga a evidência - sem valor anterior nem autor guardados, a prescrição adulterada é indistinguível de uma legítima.
 
-> **Pendente:** justificativas de R03 a R06, cada uma pelo respectivo responsável.
+### R05
+
+**Probabilidade (3 - Média-alta).** A escala de 13.1 define 3 como o evento plausível
+"em situações comuns de uso ou ataque", e é exatamente aí que R05 se encaixa: ele é o
+único risco do recorte que **não exige ator malicioso**. A emissão de faturas (RF25),
+que roda dentro do Serviço de Atendimento Médico por não existir microsserviço
+Financeiro, disputa as mesmas conexões do SGBD de que o Serviço de Internação precisa
+para alocar um leito - basta que o fechamento de faturamento coincida com o horário de
+maior movimento assistencial. A isso somam-se dois vetores que também não dependem de
+ataque: o `buscarPacientePorIdentificador(idPaciente)` com identificador sequencial, que
+gera volume de consultas válidas, e a chamada síncrona ao «system» Convênio (RF06), em
+que uma lentidão **do terceiro** trava o atendimento do hospital. Não é 4 porque o evento
+ainda depende da coincidência entre a janela de carga administrativa e o pico
+assistencial - não está disponível a qualquer momento como o vetor de T01; e não é 2
+porque não depende de nenhuma vulnerabilidade específica nem de o ator conhecer alguma
+lacuna: o uso legítimo já produz a condição.
+
+**Impacto (4 - Muito alto).** A escala de 13.2 reserva o 4 para o que "pode afetar muitos
+usuários e comprometer operações críticas", e a indisponibilidade aqui não é parcial nem
+localizada: como todos os DAOs terminam no mesmo SGBD e o API Gateway é passagem
+obrigatória, os 7 serviços caem juntos, para todos os perfis, no mesmo instante. O que
+fica inacessível é prontuário, alergias, prescrição em curso e mapa de leitos - com
+pacientes internados no prédio, e não usuários que possam voltar depois. É o oposto
+exato do RNF03, que exige operação 24h/7d com recuperação automática de falhas.
+
+**Quem é afetado.** Os pacientes internados, em primeiro lugar, porque a decisão clínica
+passa a ser tomada sem o histórico; médicos, enfermeiros e recepcionistas, que voltam ao
+papel enquanto durar a janela; e o hospital, que perde simultaneamente os módulos
+assistenciais e os administrativos. Entre os ativos, os atingidos são o prontuário do
+`Paciente`, a `PrescricaoMedicamento` em curso, o `LeitoHospitalar` e o faturamento do
+RF25.
+
+**Por que Crítico é adequado.** 3 × 4 = 12 já coloca R05 na faixa Crítica, e há duas
+agravantes que a fórmula não captura. A primeira é que o dano **sobrevive à restauração
+do serviço**: tudo o que foi feito no papel entra no sistema depois, digitado por quem
+teve tempo, com data e hora informadas por quem digita - a janela de indisponibilidade
+fabrica, de forma legítima e em escala, a mesma condição que sustenta T03 (Repudiation).
+Uma queda de algumas horas deixa no prontuário um rastro não auditável por semanas. A
+segunda é que um dos gatilhos está **fora do controle do hospital**: a disponibilidade do
+«system» Convênio é decidida por um terceiro, e o modelo não prevê *timeout* nem modo
+degradado que isole essa dependência.
+
+### R06
+
+**Probabilidade (2 - Média-baixa).** O valor acompanha o exemplo já registrado em 13.1,
+que usa esta mesma ameaça para ilustrar a faixa: a elevação *"depende de a validação
+existir apenas na interface e de o atacante conhecer essa lacuna (T06)"*. São duas
+condições específicas, e há uma terceira: o ator precisa **já ser** `Administrador`, o
+único perfil do modelo que possui `nivelAcesso` - o que exclui médicos, enfermeiros e
+recepcionistas do vetor. Não é 3 porque o evento não decorre de uso comum do sistema:
+exige reenviar a requisição de salvamento com um valor que a interface não oferece, isto
+é, operar fora do fluxo que a tela monta. E não é 1 porque não há nada de incomum no
+acesso exigido nem de raro na capacidade técnica: o campo já trafega no salvamento
+normal do cadastro (CA05, passo 2), de modo que quem tem o perfil já tem o caminho -
+falta apenas perceber que ele está aberto.
+
+**Impacto (4 - Muito alto).** O `nivelAcesso` é o **único mecanismo de autorização que
+existe no modelo inteiro do SIGH** (observação 1 da seção 8.3): elevá-lo não contorna uma
+barreira entre várias, contorna *a* barreira. Com alçada de Diretor sobre o Serviço de
+Funcionários, o ator alcança o cadastro completo de profissionais, incluindo `nomeLogin`
+e `senhaLogin` de todos os perfis - que a seção 8.3.2 registra em texto simples. Isso
+**habilita T01 em massa** sem que nenhuma senha precise ser roubada e, a partir das
+contas assumidas, viabiliza prescrever (T02) e registrar óbito (T03) em nome de médicos
+reais. Some-se a criação de novas contas com perfil de Médico, que o sistema tratará
+como legítimas desde o primeiro login, porque no SIGH o perfil *é* a permissão.
+
+**Quem é afetado.** Todos os funcionários cadastrados, cujas credenciais ficam expostas
+de uma só vez; os pacientes, por consequência, quando essas credenciais forem usadas
+sobre prontuário e prescrição; e o hospital, que perde a integridade do próprio modelo de
+autorização e fica sem meio de demonstrar a extensão do acesso perante a LGPD (art. 11).
+
+**Por que Alto é adequado.** 2 × 4 = 8 coloca R06 na faixa Alta, e o número está correto:
+a probabilidade é de fato condicionada, e inflá-la para chegar a Crítico contradiria a
+escala publicada em 13.1. O que a fórmula não captura são duas agravantes que devem pesar
+na priorização de 13.6, e não na pontuação. A primeira é que R06 é um risco
+**habilitador**: a pontuação mede o dano que ele causa por si, não o fato de que ele
+desbloqueia T01, T02 e T03 de uma vez - a única ameaça do recorte que multiplica as
+outras. A segunda é que **não há anomalia a observar**: a identidade não foi falsificada,
+foi promovida, e um log - se existisse - registraria um Diretor legítimo fazendo o que
+Diretores fazem; com o Tópico 9 excluindo o registro de eventos críticos e sem perfil de
+auditoria, a elevação é silenciosa e permanente. O próprio enunciado (13.3) prevê esse
+caso ao advertir que "dois riscos com a mesma pontuação podem receber prioridades
+diferentes": R06 pede urgência acima do que um 8 sugere.
+
+> **Pendente:** justificativas de R03 e R04, cada uma pelo respectivo responsável.
 
 ## 13.6 Priorização geral
 
