@@ -15,7 +15,7 @@
 | 13.7 Conclusão da análise | @ARTHUR9011 | Rascunho concluído (revisão após R03-R06) |
 | 14.1 Estratégia de tratamento | Todos | R01, R02, R05 e R06 concluídas; R03 e R04 pendentes |
 | 14.2 Funções do NIST CSF | @lorenzoficher | Tabela base definida |
-| 14.3 Mapeamento risco → NIST | Todos | R01 e R02 concluídos; demais pendentes |
+| 14.3 Mapeamento risco → NIST | Todos | R01, R02, R05 e R06 concluídos; R03 e R04 pendentes |
 | 14.4 Plano de tratamento | Todos | R01 e R02 concluídos; demais pendentes |
 | 14.5 Ordem de implementação | @mariasanchez0’s | Pendente |
 | 14.6 Risco residual | Todos | R01 e R02 concluídos; demais pendentes |
@@ -225,8 +225,8 @@ A atenção inicial deve ir para essa faixa Crítica: R02, em que a alteração 
 | R02 | X | | X | X | X | |
 | R03 | | | | | | |
 | R04 | | | | | | |
-| R05 | | | | | | |
-| R06 | | | | | | |
+| R05 | | X | X | X | X | X |
+| R06 | X | | X | X | X | |
 
 ### Justificativa do mapeamento
 
@@ -245,7 +245,65 @@ A atenção inicial deve ir para essa faixa Crítica: R02, em que a alteração 
 - **Respond:** detectada uma alteração suspeita, a prescrição deve ser bloqueada para administração e farmácia/chefia notificadas antes do próximo horário de medicação - a janela de resposta útil é o intervalo entre a alteração e a administração.
 - **Por que não Identify e Recover:** a identificação do ativo e da vulnerabilidade já está feita na Etapa 1 (T02/CA02); e não existe recuperação de sistema para dano clínico já administrado - o versionamento restaura o dado, não o paciente. É por isso que o tratamento de R02 concentra tudo **antes** da administração.
 
-> **Pendente:** mapeamento e justificativa de R03 a R06, cada um pelo respectivo responsável (evitar marcar todas as funções sem justificar).
+#### R05 (@PPrauchner)
+
+- **Identify:** é a função de entrada deste risco, e o único da trilha em que ela é
+  marcada. Antes de proteger, é preciso saber **quanto** o SGBD central suporta e **quem**
+  consome o quê: não existe hoje um levantamento de capacidade, de conexões por
+  microsserviço nem do inventário de dependências externas - e uma delas, o «system»
+  Convênio (RF06), é caminho crítico do atendimento sem estar reconhecida como tal.
+  Cota e *rate limiting* só podem ser calibrados depois desse levantamento.
+- **Protect:** onde atuam os controles que reduzem a probabilidade da saturação - cota de
+  conexões por microsserviço, *rate limiting* no API Gateway, réplica de leitura para
+  relatórios e *timeout* com modo degradado na chamada ao Convênio. É também o que separa
+  a carga administrativa (RF25) da carga assistencial, hoje indistinguíveis para o banco.
+- **Detect:** a saturação tem indicador antecedente, ao contrário das demais ameaças da
+  trilha: o uso do pool de conexões cresce antes de o serviço cair. Alertar acima de um
+  limiar transforma um incidente em uma janela de intervenção.
+- **Respond:** detectada a saturação, a resposta é a degradação controlada - suspender
+  relatórios e exportações e preservar prontuário, prescrição e mapa de leitos. A decisão
+  de **o que derrubar primeiro** precisa estar tomada antes, não durante a queda.
+- **Recover:** é o núcleo do tratamento aqui, e **R05 é o único risco desta trilha em que
+  Recover é legítimo** - nos demais, o dano já consumado não se restaura. Aqui restaurar
+  o serviço *é* tratar o risco, e o RNF03 exige exatamente isso ao pedir recuperação
+  automática de falhas. A recuperação inclui a reintegração dos registros feitos no papel
+  durante a janela, que é o que impede o encadeamento com T03 (Repudiation).
+- **Por que não Govern:** a política já existe e é explícita - RNF01, RNF02 e RNF03
+  determinam volume simultâneo, escalabilidade e operação 24h/7d. O que falta não é
+  decisão nem dono: é contrapartida de projeto. Marcar Govern aqui sugeriria uma lacuna de
+  governança que a documentação do SIGH não tem; a lacuna é arquitetural, e é como decisão
+  de arquitetura que ela será tratada na Etapa 3.
+
+#### R06 (@PPrauchner)
+
+- **Govern:** é a função de entrada deste risco. Hoje não existe política dizendo quem
+  pode alterar `nivelAcesso`, sob qual aprovação e com qual registro - o campo é apenas
+  mais um atributo do cadastro. As regras de autorização do SIGH vivem como texto de caso
+  de uso (UC03, UC10) e não têm dono; enquanto isso não mudar, qualquer controle técnico
+  fica sem critério para decidir o que recusar.
+- **Protect:** onde atua o controle central do plano (14.4) - revalidação de autorização
+  no servidor, com o perfil vindo da sessão autenticada e nunca do corpo da requisição.
+  É o que fecha exatamente a lacuna que o passo 3 do CA05 explora, e é o que retira do
+  Desktop Cliente, controlado pelo usuário, a decisão de autorização.
+- **Detect:** hoje a elevação é invisível porque **não há anomalia a observar** - a
+  identidade é legítima. A detecção precisa, portanto, ser do **evento**, não do
+  comportamento: toda alteração de `nivelAcesso` registrada em trilha imutável e alertada
+  no momento em que ocorre. É a regra 3 prevista para o roteiro da Etapa 6.
+- **Respond:** detectada uma elevação não aprovada, a resposta é reverter o campo,
+  encerrar as sessões do titular e - por causa do encadeamento com T01 - tratar como
+  comprometidas as credenciais alcançadas durante o período, forçando troca. A janela útil
+  vai da elevação ao primeiro uso das credenciais obtidas.
+- **Por que não Identify:** o ativo, a vulnerabilidade e o caminho de exploração já estão
+  identificados na Etapa 1 (T06 e CA05), com o componente e o campo nomeados. Repetir a
+  função aqui seria marcá-la sem resultado esperado novo.
+- **Por que não Recover:** não há o que restaurar. Reverter o `nivelAcesso` é escrever um
+  valor de volta em um campo - operação trivial que não repara nada do que foi feito com
+  o privilégio. O que de fato precisaria de recuperação são as credenciais expostas, e
+  essa recuperação pertence a R01 (substituição de senhas e armazenamento com hash), não a
+  R06. Assumir Recover aqui daria a impressão falsa de que a elevação é reversível em seus
+  efeitos, quando o contrário é o ponto: **em R06 tudo tem de ser feito antes**.
+
+> **Pendente:** mapeamento e justificativa de R03 e R04, cada um pelo respectivo responsável (evitar marcar todas as funções sem justificar).
 
 ## 14.4 Plano de tratamento
 
