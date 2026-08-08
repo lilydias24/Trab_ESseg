@@ -16,7 +16,7 @@
 | 14.1 Estratégia de tratamento | Todos | R01, R02, R05 e R06 concluídas; R03 e R04 pendentes |
 | 14.2 Funções do NIST CSF | @lorenzoficher | Tabela base definida |
 | 14.3 Mapeamento risco → NIST | Todos | R01, R02, R05 e R06 concluídos; R03 e R04 pendentes |
-| 14.4 Plano de tratamento | Todos | R01 e R02 concluídos; demais pendentes |
+| 14.4 Plano de tratamento | Todos | R01, R02, R05 e R06 concluídos; R03 e R04 pendentes |
 | 14.5 Ordem de implementação | @mariasanchez0’s | Pendente |
 | 14.6 Risco residual | Todos | R01 e R02 concluídos; demais pendentes |
 | 15. Considerações finais | @PPrauchner (rascunho) + revisão de todos | Pendente |
@@ -313,8 +313,16 @@ A atenção inicial deve ir para essa faixa Crítica: R02, em que a alteração 
 | R02 | Reduzir | **R02-C1** - a operação de alteração passa a registrar o responsável obtido da sessão autenticada no servidor (nunca informado pelo cliente), cumprindo a regra do UC03; **R02-C2** - validação de papel no servidor: apenas médico, e médico vinculado ao paciente; **R02-C3** - validação de faixa terapêutica por medicamento, com bloqueio de valores fora da faixa; **R02-C4** - versionamento da prescrição em trilha imutável (valor anterior, novo valor, autor, data/hora); **R02-C5** - segunda assinatura de outro profissional + reautenticação para alterar prescrição ativa | Govern, Protect, Detect, Respond | @ARTHUR9011 | Testes com caso válido e caso malicioso (Etapa 4); log de auditoria consultável com autor e valor anterior; alerta da regra 2 do roteiro de detecção (Etapa 6) disparando em alteração fora de faixa ou sem segunda assinatura |
 | R03 | | | | | |
 | R04 | | | | | |
-| R05 | | | | | |
-| R06 | | | | | |
+| R05 | Reduzir | **R05-C1** - pool de conexões do SGBD com **cota por microsserviço**, de modo que o Serviço de Atendimento Médico (onde reside o RF25) não consuma as conexões de que o Serviço de Internação precisa; **R05-C2** - *rate limiting* no API Gateway por sessão e por endpoint, aplicado aos endpoints de relatório e de consulta de prontuário, incluindo o `buscarPacientePorIdentificador(idPaciente)`; **R05-C3** - réplica de leitura dedicada a relatórios, listagens administrativas e exportações, retirando essa carga da instância que atende a operação assistencial; **R05-C4** - *timeout* e modo degradado na chamada ao «system» Convênio (RF06): o atendimento é registrado e a validação de cobertura fica pendente para conferência posterior, em vez de bloquear o fluxo; **R05-C5** - alerta de saturação quando o uso do pool passar de 80%, com regra de degradação previamente definida que suspende relatórios e exportações e preserva prontuário, prescrição e mapa de leitos | Identify, Protect, Detect, Respond, Recover | @PPrauchner | Teste de carga simulando o fechamento de faturamento concorrente com o pico assistencial, verificando que os módulos assistenciais continuam respondendo; painel de conexões por microsserviço mostrando a cota em vigor; teste de indisponibilidade do Convênio confirmando que o atendimento prossegue em modo degradado; registro do alerta de 80% disparando antes da queda no teste de carga |
+| R06 | Reduzir | **R06-C1** - revalidação de autorização **no servidor**, no Serviço de Funcionários: o perfil que decide vem da sessão autenticada e o `nivelAcesso` recebido no corpo da requisição é descartado antes de qualquer validação; alteração de perfil solicitada por quem não é Diretor retorna HTTP 403; **R06-C2** - `nivelAcesso` imutável pelo próprio titular: a mudança só ocorre por fluxo de aprovação de nível superior, nunca no salvamento do próprio cadastro; **R06-C3** - trilha de auditoria imutável de toda alteração de perfil, com autor, valor anterior, valor novo e data/hora carimbados pelo servidor - suprindo a lacuna que o Tópico 9 deixou aberta; **R06-C4** - alerta automático ao Diretor e à Segurança da Informação a cada elevação de perfil, no momento em que ela ocorre | Govern, Protect, Detect, Respond | @PPrauchner | Os dois testes da Etapa 4 (caso válido de promoção por sessão Diretor e caso não autorizado por sessão Supervisor, este esperando 403 e o campo inalterado); trilha de auditoria consultável exibindo autor e valor anterior de cada alteração; regra 3 do roteiro de detecção (Etapa 6) disparando em uma elevação simulada |
+
+> **Observação para a ordem de implementação (14.5), @mariasanchez0’s:** o **R06-C1** é o
+> controle da trilha que **reduz mais de um risco ao mesmo tempo**. A checagem que ele
+> institui - papel obtido da sessão no servidor, e não do que o cliente enviou - é a mesma
+> de que o **R02-C2** depende para garantir que só médicos alterem tratamentos. Como 14.5
+> lista "controles que reduzem vários riscos" entre os critérios de ordenação, ele é
+> candidato às primeiras posições, ao lado do controle de hash e salt apontado pela
+> @lilydias24.
 
 ## 14.5 Ordem inicial de implementação
 
