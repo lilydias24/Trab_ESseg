@@ -18,7 +18,7 @@
 | 14.3 Mapeamento risco → NIST | Todos | R01, R02, R05 e R06 concluídos; R03 e R04 pendentes |
 | 14.4 Plano de tratamento | Todos | R01, R02, R05 e R06 concluídos; R03 e R04 pendentes |
 | 14.5 Ordem de implementação | @mariasanchez0’s | Pendente |
-| 14.6 Risco residual | Todos | R01 e R02 concluídos; demais pendentes |
+| 14.6 Risco residual | Todos | R01, R02, R05 e R06 concluídos; R03 e R04 pendentes |
 | 15. Considerações finais | @PPrauchner (rascunho) + revisão de todos | Pendente |
 
 ---
@@ -338,8 +338,8 @@ A atenção inicial deve ir para essa faixa Crítica: R02, em que a alteração 
 | R02 | Crítico (12) | Médio (4) | Controles R02-C1 a R02-C5 comprovadamente operantes (evidências de 14.4); alerta da Etapa 6 ativo; revisão da classificação se a segunda assinatura for flexibilizada na rotina |
 | R03 | | | |
 | R04 | | | |
-| R05 | | | |
-| R06 | | | |
+| R05 | Crítico (12) | Médio (6) | Controles R05-C1 a R05-C5 comprovadamente operantes (evidências de 14.4), com o teste de carga executado sobre a cota e a réplica já em produção; alerta de 80% ativo e com destinatário definido; revisão da estimativa se o recorte incorporar novos módulos, uma nova unidade hospitalar (RNF02) ou uma nova integração externa síncrona |
+| R06 | Alto (8) | Médio (4) | Controles R06-C1 a R06-C4 comprovadamente operantes, com os dois testes da Etapa 4 passando e a trilha de auditoria consultável; regra 3 da Etapa 6 ativa e com destinatário definido; revisão da estimativa se o fluxo de aprovação de R06-C2 ganhar exceção de rotina ou se o tratamento de R01 (armazenamento de `senhaLogin`) não avançar |
 
 ### Justificativa do residual de R01 (@lilydias24)
 
@@ -354,6 +354,67 @@ A atenção inicial deve ir para essa faixa Crítica: R02, em que a alteração 
 **Impacto (4, inalterado).** Se ainda assim o evento ocorrer, o dano continua físico e potencialmente fatal - nenhum controle reduz a gravidade clínica de uma dose errada administrada. O que muda é a visibilidade: com autor e valor anterior versionados, a adulteração deixa de ser indistinguível de uma prescrição legítima, mas não deixa de ser dano.
 
 **Condição para aceitar o residual Médio:** os controles precisam estar comprovadamente operantes (coluna de evidências de 14.4), e a classificação deve ser refeita se a segunda assinatura ganhar exceções de rotina (ex.: emergências) ou se o alerta de detecção da Etapa 6 ficar inativo.
+
+### Justificativa do residual de R05 (@PPrauchner)
+
+**Probabilidade (3 → 2).** Com a cota por microsserviço (R05-C1), o *rate limiting* no
+Gateway (R05-C2) e a réplica de leitura (R05-C3), o cenário mais provável do risco - a
+carga administrativa do fechamento de faturamento derrubando o módulo assistencial -
+deixa de existir por construção: a origem da carga volta a importar para o efeito. O que
+resta é o evento que depende de condição específica, isto é, volume acima do que a cota
+foi dimensionada para absorver ou falha na própria instância do banco. Não cai a 1 porque
+o SGBD continua sendo **um só**: a réplica de leitura não elimina o ponto único de
+escrita, e essa é uma mudança de arquitetura que a Etapa 3 discute, não um controle desta
+etapa.
+
+**Impacto (4 → 3).** Este é o único risco da trilha em que o impacto **também** cai, e a
+diferença merece ser dita, porque contraria o padrão dos demais residuais deste documento
+(em R02 e em R06 o impacto permanece 4). A razão é que o dano de R05 é de **alcance e
+duração**, não físico e irreversível: com o modo degradado do R05-C4 e a regra de
+priorização do R05-C5, a queda deixa de ser simultânea em todos os módulos e passa a
+atingir primeiro relatórios, exportações e validação de convênio - o prontuário, a
+prescrição em curso e o mapa de leitos continuam disponíveis. Sai da faixa "afeta muitos
+usuários e compromete operações críticas" para "interrupção limitada, com possibilidade
+de recuperação". Não cai a 2 porque a indisponibilidade total continua possível na falha
+do banco, e a janela ainda produz registros digitados a posteriori.
+
+**Condição para aceitar o residual Médio:** os cinco controles precisam estar
+comprovadamente operantes segundo a coluna de evidências de 14.4 - com destaque para o
+teste de carga, que é o único que demonstra a cota funcionando sob a condição real. A
+estimativa deve ser refeita se o recorte crescer, se o RNF02 for exercido com uma nova
+unidade hospitalar ou se qualquer nova integração externa entrar de forma síncrona no
+fluxo de atendimento, repetindo o problema que o R05-C4 corrige no Convênio.
+
+### Justificativa do residual de R06 (@PPrauchner)
+
+**Probabilidade (2 → 1).** Com a revalidação no servidor (R06-C1) e a imutabilidade do
+campo pelo próprio titular (R06-C2), a lacuna que a probabilidade 2 pressupunha - a
+validação existir apenas na interface - deixa de existir, e o vetor do CA05 passa a
+retornar 403. A elevação passa a exigir condições incomuns: o comprometimento de uma
+conta de Diretor, o conluio de quem aprova, ou uma falha no próprio servidor de
+autorização. É exatamente a definição do valor 1 em 13.1. Não chega a zero porque nenhum
+controle proposto elimina o caminho legítimo da promoção - ele apenas passa a ter dono e
+registro.
+
+**Impacto (4, inalterado).** Se a elevação ainda assim ocorrer, o alcance é o mesmo: o
+`nivelAcesso` continua sendo o único mecanismo de autorização do modelo, e as credenciais
+de todos os perfis continuam armazenadas em texto simples enquanto o tratamento de R01
+não estiver implementado. Nenhum dos quatro controles reduz a gravidade do que um Diretor
+indevido consegue fazer - eles reduzem a chance de alguém chegar lá e o tempo até que se
+perceba. O que muda é a visibilidade: com R06-C3 e R06-C4, a elevação deixa de ser
+silenciosa e permanente, e passa a ser um evento datado, com autor e valor anterior. Isso
+encurta a janela de exploração, mas não o dano por unidade de tempo. **A redução do
+impacto de R06 depende de R01, não de R06** - é uma dependência a levar para a
+priorização de 13.6.
+
+**Condição para aceitar o residual Médio:** os dois testes da Etapa 4 precisam estar
+passando, a trilha de auditoria precisa ser consultável e a regra 3 da Etapa 6 precisa
+estar ativa e endereçada a alguém - um alerta sem destinatário não é controle. A
+estimativa deve ser refeita se o fluxo de aprovação do R06-C2 ganhar exceções de rotina
+(por exemplo, promoções emergenciais fora do fluxo), ou se o armazenamento de
+`senhaLogin` continuar em texto simples após a implementação dos controles de R01 - nesse
+caso o impacto 4 se mantém indefinidamente, e é honesto registrar que o residual Médio
+pressupõe aquele tratamento em curso.
 
 ## 15. Considerações finais (Etapa 2)
 
