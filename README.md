@@ -8,7 +8,7 @@
 - Emilly Nascimento Dias (@lilydias24)
 - Lorenzo Ponsi Ficher (@lorenzoficher)
 - Maria Eduarda Sanchez Chessio (@usuario-github-4)
-- Pietro Mendes Prauchner (@usuario-github-5)
+- Pietro Mendes Prauchner (@PPrauchner)
 
 ## Sobre o projeto
 
