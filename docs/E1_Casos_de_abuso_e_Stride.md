@@ -101,13 +101,30 @@ Cada integrante é responsável por uma categoria, amarrada a um módulo/ativo c
 
 | ID | Categoria STRIDE | Componente ou ativo | Ameaça identificada | Possível impacto |
 | --- | --- | --- | --- | --- |
-| T01 | Spoofing | | | |
+| T01 | Spoofing | Credenciais de acesso da classe `Funcionario` (`nomeLogin`, `senhaLogin`) - módulo de autenticação, transversal aos 5 módulos | Um atacante de posse do par login/senha de um médico autentica-se no SIGH como o profissional legítimo. O modelo de domínio guarda `senhaLogin` como atributo simples da classe `Funcionario`, sem indicação de hash ou salt, e a autenticação se resume à comparação direta dos dois campos: não há segundo fator, bloqueio por tentativas malsucedidas nem vínculo da sessão a um terminal | Acesso integral ao prontuário de qualquer paciente e execução de operações privativas do perfil médico (prescrever, dar alta, registrar óbito) atribuídas ao profissional legítimo. Um dump da tabela `Funcionario` compromete todas as contas de uma vez |
 | T02 | Tampering | | | |
 | T03 | Repudiation | | | |
 | T04 | Information Disclosure | | | |
 | T05 | Denial of Service | | | |
 | T06 | Elevation of Privilege | | | |
 
+### T01 - Spoofing na conta de `Funcionario` (@lilydias24)
+
+**Onde está no modelo.** No diagrama de classes do SIGH, a classe `Funcionario` (superclasse de Médico, Enfermeiro, Recepcionista e Administrador) possui os atributos `nomeLogin` e `senhaLogin` como campos de texto comuns, sem qualquer indicação de transformação criptográfica. Não existe no modelo nenhuma entidade, operação ou componente dedicado a políticas de credencial (expiração, complexidade, histórico, bloqueio).
+
+**O que a documentação do próprio SIGH confirma.** Dois pontos evitam que esta ameaça dependa de suposição:
+
+- O **RNF05 - Segurança** exige que "as informações médicas devem ser protegidas por criptografia", mas o modelo de domínio guarda `senhaLogin` em texto simples. O requisito de proteção existe no papel e não chegou ao projeto - a ameaça está na distância entre os dois.
+- O **Tópico 9** do documento original declara fora de escopo a biometria/reconhecimento facial e o **registro de eventos críticos de acesso indevido**. O sistema, portanto, assume não ter autenticação forte nem trilha de detecção de acesso indevido: um login com credencial roubada não encontra barreira nem deixa alarme.
+
+**Por que isso é uma ameaça de Spoofing.** A identidade de um profissional no SIGH é comprovada por um único fator - saber a senha. Como consequência:
+
+1. **A senha é reutilizável e permanente.** Sem política de expiração ou verificação de complexidade, uma senha fraca ou reaproveitada de outro serviço continua válida indefinidamente.
+2. **Um vazamento do banco entrega credenciais em claro.** Como o modelo não prevê hash nem salt, o comprometimento do SGBD central (que a arquitetura de componentes mostra ser único para todos os módulos) expõe diretamente as senhas de todos os profissionais - inclusive as de Administrador.
+3. **Não há barreira após a obtenção da senha.** Ausência de MFA, de reautenticação para operações sensíveis, de bloqueio após tentativas malsucedidas e de vínculo com dispositivo/terminal significa que qualquer pessoa com o par correto entra sem atrito - inclusive por força bruta a partir da própria rede do hospital.
+4. **O ambiente favorece o vetor.** Postos de enfermagem usam terminais compartilhados e plantões trocam de turno; senhas observadas por cima do ombro, anotadas ou deixadas em sessão aberta são vetores realistas, não hipotéticos.
+
+**Impacto.** Confidencialidade: leitura irrestrita de prontuários, alergias, prescrições e dados financeiros. Integridade e segurança do paciente: possibilidade de prescrever medicamento, autorizar alta ou registrar óbito em nome de um médico. Responsabilização: como o SIGH registra o autor pela sessão autenticada, as ações do atacante ficam atribuídas ao profissional legítimo, encadeando com **T03 (Repudiation)** e, se a conta assumida for de Administrador, com **T06 (Elevation of Privilege)**.
 
 ### 8.5.1 Interpretação da análise
 
@@ -117,20 +134,38 @@ Cada integrante é responsável por uma categoria, amarrada a um módulo/ativo c
 
 | ID | Título | STRIDE de origem | Responsável |
 | --- | --- | --- | --- |
-| CA01 | *(a definir)* | T01 - Spoofing | @lilydias24 |
+| CA01 | Uso de credenciais roubadas para assumir a conta de um médico | T01 - Spoofing | @lilydias24 |
 | CA02 | *(a definir)* | T02 - Tampering | @ARTHUR9011 |
 | CA03 | *(a definir)* | T03 - Repudiation | @lorenzoficher |
 | CA04 | *(a definir)* | T04 - Information Disclosure | @mariasanchez0’s |
 | CA05 | *(a definir)* | T05/T06 - DoS e Elevation of Privilege | @PPrauchner |
 
-### CA01
+### CA01 - Uso de credenciais roubadas para assumir a conta de um médico
 
-- **Ator:**
-- **Objetivo:**
+- **Ator:** atacante com acesso à rede interna do hospital - tipicamente alguém de dentro (estagiário, terceirizado, colega de plantão) ou um invasor que já obteve as credenciais de um médico por outro meio.
+- **Objetivo:** autenticar-se no SIGH com a identidade de um médico para consultar prontuários e executar operações restritas a esse perfil, fazendo com que os registros apontem o profissional legítimo como autor.
 - **Condições necessárias:**
+  - `senhaLogin` armazenada sem hash e sem salt no SGBD central, o que torna um dump do banco imediatamente utilizável;
+  - autenticação de fator único, sem MFA e sem reautenticação antes de operações sensíveis (prescrição, alta, registro de óbito);
+  - ausência de bloqueio de conta e de alerta após sequências de tentativas malsucedidas;
+  - ausência de política de complexidade, expiração e não reuso de senha;
+  - terminais compartilhados nos postos de atendimento, sem expiração de sessão por inatividade.
 - **Fluxo de abuso:**
+  1. O atacante obtém o par `nomeLogin`/`senhaLogin` de um médico - observando a digitação em um terminal compartilhado, por phishing, por reuso de uma senha já vazada em outro serviço, ou lendo diretamente a tabela `Funcionario` após acesso ao banco.
+  2. Acessa a tela de login do SIGH a partir de um terminal da rede hospitalar, em horário de baixa circulação.
+  3. Informa as credenciais; o sistema apenas compara os valores armazenados e abre a sessão com perfil de Médico - sem segundo fator, sem verificação de dispositivo e sem notificar o titular.
+  4. Com a sessão ativa, consulta o prontuário de pacientes que não estão sob seus cuidados. O caminho técnico é o mesmo dos diagramas de sequência do SIGH - Desktop Cliente → API Gateway → Serviço de Paciente -, chamando `buscarPacientePorIdentificador(idPaciente)`. Como o identificador é sequencial, basta variá-lo para percorrer prontuários, incluindo histórico, alergias e prescrições em andamento.
+  5. Executa ao menos uma operação privativa do perfil médico - `atualizarTratamentosDoPaciente(tratamento)` para registrar ou alterar uma `PrescricaoMedicamento`, a autorização de alta (UC06) ou `Obito.registrarObito(data, hora)` (UC10). Nenhuma dessas operações recebe um parâmetro de responsável: a regra "somente médicos podem registrar óbito" existe apenas como texto na descrição do caso de uso, não nos parâmetros da operação.
+  6. Encerra a sessão. Todos os registros gerados constam no sistema como tendo sido feitos pelo médico titular da conta.
+
+  *Referência técnica do fluxo: os diagramas de sequência versionados em `diagrams/sequencia/` (DS03 - Gerenciar Tratamento, DS06 - Autorizar Alta, DS10 - Registrar Óbito) mostram exatamente essas chamadas no caminho legítimo. O abuso não inventa um caminho novo: percorre o mesmo, com a identidade errada.*
+  
 - **Impacto esperado:**
-- **Categorias STRIDE relacionadas:** 
+  - **Confidencialidade:** exposição de dados clínicos e pessoais sensíveis, com violação do sigilo médico e da LGPD (dados de saúde são dados pessoais sensíveis, art. 5º, II).
+  - **Segurança do paciente:** uma prescrição ou alta indevida gerada nessa sessão tem consequência assistencial direta e imediata.
+  - **Irreversibilidade:** o registro de óbito não tem desfazimento trivial e produz efeitos legais e administrativos fora do sistema.
+  - **Responsabilização:** o médico titular responde, perante o hospital e o conselho profissional, por atos que não praticou, e o hospital não consegue provar o contrário com os registros existentes.
+- **Categorias STRIDE relacionadas:** **Spoofing** (principal - assunção da identidade do médico); **Information Disclosure** (leitura do prontuário); **Tampering** (alteração de prescrição a partir da conta assumida); **Repudiation** (as ações são indistinguíveis das do titular); **Elevation of Privilege** (caso a conta obtida seja de Administrador).
 
 ## 8.7 Considerações finais (Etapa 1)
 
