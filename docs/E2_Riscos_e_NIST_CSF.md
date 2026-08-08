@@ -9,7 +9,7 @@
 | 13.1 Critérios de probabilidade | @ARTHUR9011 + @lorenzoficher | Concluída (exemplos do SIGH adicionados) |
 | 13.2 Critérios de impacto | @ARTHUR9011 + @lorenzoficher | Escala base definida |
 | 13.3 Cálculo e classificação | @ARTHUR9011 | Concluída |
-| 13.4 Registro de riscos | Todos (1 risco por pessoa) | R01 e R02 concluídos; R03-R06 pendentes |
+| 13.4 Registro de riscos | Todos (1 risco por pessoa) | R01, R02, R05 e R06 concluídos; R03 e R04 pendentes |
 | 13.5 Justificativas | Todos | R01 e R02 concluídas; demais pendentes |
 | 13.6 Priorização geral | @mariasanchez0’s (compila) | Pendente |
 | 13.7 Conclusão da análise | @ARTHUR9011 | Rascunho concluído (revisão após R03-R06) |
@@ -62,8 +62,8 @@ Pontuação = Probabilidade × Impacto
 | R02 | T02 - Tampering | @ARTHUR9011 | Alteração indevida da `dosagemMedicamento` ou do `intervaloConsumo` de uma prescrição ativa, executada pela enfermagem como se fosse a prescrição original | `atualizarTratamentosDoPaciente(tratamento)` não recebe o responsável; a regra "apenas médicos autorizados" (UC03) não é validada no servidor; não há faixa terapêutica para os campos; a alteração sobrescreve o registro sem versionamento nem autor | 3 | 4 | 12 | Crítico |
 | R03 | T03 - Repudiation | @lorenzoficher | | | | | | |
 | R04 | T04 - Information Disclosure | @mariasanchez0’s | | | | | | |
-| R05 | T05 - Denial of Service | @PPrauchner | | | | | | |
-| R06 | T06 - Elevation of Privilege | @PPrauchner | | | | | | |
+| R05 | T05 - Denial of Service | @PPrauchner | Indisponibilidade simultânea dos módulos assistenciais - prontuário, prescrição em curso e mapa de leitos ficam inacessíveis a todos os perfis ao mesmo tempo, com pacientes internados, por saturação do SGBD central ou do API Gateway | Todos os DAOs terminam em um **SGBD único**, sem réplica, cota de conexões por microsserviço nem prioridade entre carga administrativa e assistencial; o API Gateway é passagem obrigatória e não aplica *rate limiting*; a emissão de faturas (RF25) roda no Serviço de Atendimento Médico por não existir microsserviço Financeiro; a chamada ao «system» Convênio (RF06) é síncrona, sem *timeout* nem modo degradado; RNF01, RNF02 e RNF03 exigem volume simultâneo, escalabilidade e recuperação automática que o diagrama de implantação não sustenta | 3 | 4 | 12 | Crítico |
+| R06 | T06 - Elevation of Privilege | @PPrauchner | Um Administrador de nível Supervisor persiste `nivelAcesso: Diretor` no próprio cadastro e passa a operar com alçada de Diretor sobre o Serviço de Funcionários, alcançando o cadastro completo de profissionais e os campos `nomeLogin` e `senhaLogin` de todos os perfis | `Administrador.nivelAcesso` é o **único** atributo de autorização do modelo e é salvo junto com os demais dados do cadastro, sem operação própria e sem regra que impeça o titular de alterar o próprio valor; a verificação de perfil ocorre na montagem da interface e não é revalidada no servidor a partir da sessão autenticada; o firewall de cada serviço separa serviço de serviço, não perfis dentro de uma sessão já autenticada; o Tópico 9 exclui do escopo o registro de eventos críticos de acesso indevido e não existe perfil de auditoria | 2 | 4 | 8 | Alto |
 
 ## 13.5 Justificativas das avaliações
 
