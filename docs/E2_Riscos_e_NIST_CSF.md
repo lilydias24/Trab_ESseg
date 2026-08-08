@@ -10,7 +10,7 @@
 | 13.2 Critérios de impacto | @ARTHUR9011 + @lorenzoficher | Escala base definida |
 | 13.3 Cálculo e classificação | @ARTHUR9011 | Concluída |
 | 13.4 Registro de riscos | Todos (1 risco por pessoa) | R01 e R02 concluídos; R03-R06 pendentes |
-| 13.5 Justificativas | Todos | R01 concluída; demais pendentes |
+| 13.5 Justificativas | Todos | R01 e R02 concluídas; demais pendentes |
 | 13.6 Priorização geral | @mariasanchez0’s (compila) | Pendente |
 | 13.7 Conclusão da análise | @ARTHUR9011 | Pendente |
 | 14.1 Estratégia de tratamento | Todos | R01 concluída; demais pendentes |
@@ -74,7 +74,17 @@ Pontuação = Probabilidade × Impacto
 **Quem é afetado.** 
 **Por que Crítico é adequado.** 
 
-> **Pendente:** justificativas de R02 a R06, cada uma pelo respectivo responsável.
+### R02
+
+**Probabilidade (3 - Média-alta).** O evento não exige invasão nem capacidade técnica: exige uma sessão autenticada que alcance o Serviço de Paciente - condição comum de uso do SIGH, com terminais compartilhados nos postos de atendimento e sessões sem expiração por inatividade (condições do CA02). Como a regra "apenas médicos autorizados podem alterar tratamentos" (UC03) é textual e não há validação de papel na operação, o alcance não se restringe ao perfil médico. Não é 4 porque ainda depende de intenção deliberada e de acesso à rede interna do hospital.
+
+**Impacto (4 - Muito alto).** É o impacto mais grave do recorte: superdosagem ou subdosagem com dano físico direto ao paciente, potencialmente fatal, e irreversível no momento em que o medicamento é administrado. Somam-se a responsabilização indevida de quem administrou, a responsabilidade civil do hospital, a apuração pelos conselhos profissionais (CFM/COREN) e o tratamento indevido de dado de saúde perante a LGPD.
+
+**Quem é afetado.** O paciente, em primeiro lugar e fisicamente; o profissional de enfermagem que administrou (sem autor registrado, a apuração recai sobre ele); o médico titular da prescrição; e o hospital como instituição.
+
+**Por que Crítico é adequado.** 3 × 4 = 12 já coloca R02 na faixa Crítica, mas há duas agravantes que a fórmula não captura: o dano sai do sistema (é mediado por corpo, não por dado) e o próprio ato apaga a evidência - sem valor anterior nem autor guardados, a prescrição adulterada é indistinguível de uma legítima.
+
+> **Pendente:** justificativas de R03 a R06, cada uma pelo respectivo responsável.
 
 ## 13.6 Priorização geral
 
