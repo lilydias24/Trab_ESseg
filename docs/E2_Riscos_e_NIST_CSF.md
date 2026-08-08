@@ -6,33 +6,31 @@
 
 | Seção | Responsável | Situação |
 | --- | --- | --- |
-| 13.1 Critérios de probabilidade | @ARTHUR9011 + @lorenzoficher | Escala base definida |
+| 13.1 Critérios de probabilidade | @ARTHUR9011 + @lorenzoficher | Concluída (exemplos do SIGH adicionados) |
 | 13.2 Critérios de impacto | @ARTHUR9011 + @lorenzoficher | Escala base definida |
 | 13.3 Cálculo e classificação | @ARTHUR9011 | Concluída |
-| 13.4 Registro de riscos | Todos (1 risco por pessoa) | R01 concluído; R02-R06 pendentes |
-| 13.5 Justificativas | Todos | R01 concluída; demais pendentes |
+| 13.4 Registro de riscos | Todos (1 risco por pessoa) | R01 e R02 concluídos; R03-R06 pendentes |
+| 13.5 Justificativas | Todos | R01 e R02 concluídas; demais pendentes |
 | 13.6 Priorização geral | @mariasanchez0’s (compila) | Pendente |
-| 13.7 Conclusão da análise | @ARTHUR9011 | Pendente |
-| 14.1 Estratégia de tratamento | Todos | R01 concluída; demais pendentes |
+| 13.7 Conclusão da análise | @ARTHUR9011 | Rascunho concluído (revisão após R03-R06) |
+| 14.1 Estratégia de tratamento | Todos | R01 e R02 concluídas; demais pendentes |
 | 14.2 Funções do NIST CSF | @lorenzoficher | Tabela base definida |
-| 14.3 Mapeamento risco → NIST | Todos | R01 concluído; demais pendentes |
-| 14.4 Plano de tratamento | Todos | R01 concluído; demais pendentes |
+| 14.3 Mapeamento risco → NIST | Todos | R01 e R02 concluídos; demais pendentes |
+| 14.4 Plano de tratamento | Todos | R01 e R02 concluídos; demais pendentes |
 | 14.5 Ordem de implementação | @mariasanchez0’s | Pendente |
-| 14.6 Risco residual | Todos | R01 concluído; demais pendentes |
+| 14.6 Risco residual | Todos | R01 e R02 concluídos; demais pendentes |
 | 15. Considerações finais | @PPrauchner (rascunho) + revisão de todos | Pendente |
 
 ---
 
 ## 13.1 Critérios de probabilidade
 
-| Valor | Classificação | Critério |
-| --- | --- | --- |
-| 1 | Baixa | O evento depende de condições incomuns, acesso muito específico ou grande capacidade técnica |
-| 2 | Média-baixa | O evento é possível, mas depende de uma vulnerabilidade ou condição específica |
-| 3 | Média-alta | O evento é plausível e pode ocorrer em situações comuns de uso ou ataque |
-| 4 | Alta | O evento pode ocorrer com facilidade, frequência ou durante condições previsíveis do sistema |
-
-> **Pendente (Integrantes 2 e 3):** acrescentar a cada faixa um exemplo concreto do contexto do SIGH.
+| Valor | Classificação | Critério | Exemplo no contexto do SIGH |
+| --- | --- | --- | --- |
+| 1 | Baixa | O evento depende de condições incomuns, acesso muito específico ou grande capacidade técnica | Adulteração direta dos dados no SGBD central: exige acesso de infraestrutura ao banco, fora dos perfis da aplicação |
+| 2 | Média-baixa | O evento é possível, mas depende de uma vulnerabilidade ou condição específica | Elevação de privilégio pelo `nivelAcesso` do Administrador: depende de a validação existir apenas na interface e de o atacante conhecer essa lacuna (T06) |
+| 3 | Média-alta | O evento é plausível e pode ocorrer em situações comuns de uso ou ataque | Alteração de prescrição a partir de uma sessão autenticada que alcança o Serviço de Paciente - situação comum nos postos com terminais compartilhados (T02) |
+| 4 | Alta | O evento pode ocorrer com facilidade, frequência ou durante condições previsíveis do sistema | Tentativas de login com senhas fracas ou reaproveitadas: sem bloqueio por tentativas e com `senhaLogin` em texto simples, o vetor está disponível a qualquer momento (T01) |
 
 ## 13.2 Critérios de impacto
 
@@ -43,7 +41,7 @@
 | 3 | Alto | Causa prejuízo relevante aos usuários, ao negócio, à administração ou à privacidade |
 | 4 | Muito alto | Pode afetar muitos usuários, comprometer operações críticas ou causar prejuízo grave |
 
-> **Pendente (Integrantes 2 e 3):** acrescentar a cada faixa um exemplo concreto do contexto do SIGH.
+> **Pendente (@lorenzoficher):** acrescentar a cada faixa um exemplo concreto do contexto do SIGH, no mesmo formato adotado em 13.1.
 
 ## 13.3 Cálculo e classificação dos riscos
 
@@ -61,7 +59,7 @@ Pontuação = Probabilidade × Impacto
 | ID | Origem STRIDE | Responsável | Evento de risco | Vulnerabilidade ou condição | Probabilidade | Impacto | Pontuação | Nível |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | R01 | T01 - Spoofing | @lilydias24 | | | | | | |
-| R02 | T02 - Tampering | @ARTHUR9011 | | | | | | |
+| R02 | T02 - Tampering | @ARTHUR9011 | Alteração indevida da `dosagemMedicamento` ou do `intervaloConsumo` de uma prescrição ativa, executada pela enfermagem como se fosse a prescrição original | `atualizarTratamentosDoPaciente(tratamento)` não recebe o responsável; a regra "apenas médicos autorizados" (UC03) não é validada no servidor; não há faixa terapêutica para os campos; a alteração sobrescreve o registro sem versionamento nem autor | 3 | 4 | 12 | Crítico |
 | R03 | T03 - Repudiation | @lorenzoficher | | | | | | |
 | R04 | T04 - Information Disclosure | @mariasanchez0’s | | | | | | |
 | R05 | T05 - Denial of Service | @PPrauchner | | | | | | |
@@ -76,7 +74,17 @@ Pontuação = Probabilidade × Impacto
 **Quem é afetado.** 
 **Por que Crítico é adequado.** 
 
-> **Pendente:** justificativas de R02 a R06, cada uma pelo respectivo responsável.
+### R02
+
+**Probabilidade (3 - Média-alta).** O evento não exige invasão nem capacidade técnica: exige uma sessão autenticada que alcance o Serviço de Paciente - condição comum de uso do SIGH, com terminais compartilhados nos postos de atendimento e sessões sem expiração por inatividade (condições do CA02). Como a regra "apenas médicos autorizados podem alterar tratamentos" (UC03) é textual e não há validação de papel na operação, o alcance não se restringe ao perfil médico. Não é 4 porque ainda depende de intenção deliberada e de acesso à rede interna do hospital.
+
+**Impacto (4 - Muito alto).** É o impacto mais grave do recorte: superdosagem ou subdosagem com dano físico direto ao paciente, potencialmente fatal, e irreversível no momento em que o medicamento é administrado. Somam-se a responsabilização indevida de quem administrou, a responsabilidade civil do hospital, a apuração pelos conselhos profissionais (CFM/COREN) e o tratamento indevido de dado de saúde perante a LGPD.
+
+**Quem é afetado.** O paciente, em primeiro lugar e fisicamente; o profissional de enfermagem que administrou (sem autor registrado, a apuração recai sobre ele); o médico titular da prescrição; e o hospital como instituição.
+
+**Por que Crítico é adequado.** 3 × 4 = 12 já coloca R02 na faixa Crítica, mas há duas agravantes que a fórmula não captura: o dano sai do sistema (é mediado por corpo, não por dado) e o próprio ato apaga a evidência - sem valor anterior nem autor guardados, a prescrição adulterada é indistinguível de uma legítima.
+
+> **Pendente:** justificativas de R03 a R06, cada uma pelo respectivo responsável.
 
 ## 13.6 Priorização geral
 
@@ -88,7 +96,11 @@ Pontuação = Probabilidade × Impacto
 
 > Seção do **@ARTHUR9011** (líder da etapa), com validação coletiva. Não consta com número próprio no enunciado, mas o exemplo entregue pelo professor traz uma conclusão fechando a análise antes de entrar no tratamento - encerramento do raciocínio de probabilidade × impacto, dizendo quais riscos exigem atenção inicial e em que condições a classificação deve ser revisada.
 
-*(Pendente.)*
+A análise partiu das ameaças da Etapa 1 e as converteu em riscos comparáveis por uma mesma régua: probabilidade × impacto, nas escalas de 1 a 4 definidas em 13.1 e 13.2. Dois padrões já aparecem nos riscos registrados. Primeiro, os riscos do topo da tabela não são os de ataque mais sofisticado, e sim os que dependem apenas de condições comuns de uso do SIGH - uma senha em texto simples, uma sessão aberta em terminal compartilhado, uma operação que não verifica quem a chama. Segundo, probabilidade e impacto têm origens distintas: a probabilidade vem quase sempre de controles ausentes (autenticação de fator único, validação apenas na interface, ausência de trilha), enquanto o impacto vem da natureza do ativo (dado clínico, prescrição, registro de óbito). Isso orienta o tratamento: reduzir probabilidade é tarefa de engenharia, mas o impacto, na maior parte dos casos, não se reduz - o que dá prioridade aos riscos Críticos, em que as duas dimensões se encontram.
+
+A atenção inicial deve ir para essa faixa Crítica: R02, em que a alteração de uma prescrição alcança o paciente fisicamente antes de qualquer detecção, e R01, que além do dano próprio funciona como porta de entrada dos demais riscos - toda ameaça do recorte fica mais provável a partir de uma conta assumida. A classificação deve ser revisada em três momentos: quando R03-R06 forem registrados e a priorização geral (13.6) puder ser compilada; quando os controles de 14.4 forem implementados e verificados, passando a valer os residuais de 14.6; e se o contexto operacional mudar - novos módulos no recorte, nova integração externa ou um incidente real que contradiga alguma estimativa.
+
+> *Rascunho do líder da etapa; revisão prevista quando R03-R06 estiverem registrados.*
 
 ## 14.1 Estratégias de tratamento
 
@@ -102,7 +114,7 @@ Pontuação = Probabilidade × Impacto
 | Risco | Estratégia escolhida | Justificativa |
 | --- | --- | --- |
 | R01 | | |
-| R02 | | |
+| R02 | Reduzir | Alterar prescrição é função essencial do sistema, então o risco não pode ser Evitado; a responsabilidade clínica não pode ser transferida a terceiro, então não há o que Compartilhar; e um risco Crítico com dano potencialmente fatal não pode ser Aceito. Resta Reduzir: controles que diminuam a probabilidade da alteração indevida e aumentem a chance de detecção antes da administração do medicamento |
 | R03 | | |
 | R04 | | |
 | R05 | | |
@@ -126,7 +138,7 @@ Pontuação = Probabilidade × Impacto
 | Risco | Govern | Identify | Protect | Detect | Respond | Recover |
 | --- | :---: | :---: | :---: | :---: | :---: | :---: |
 | R01 | | | | | | |
-| R02 | | | | | | |
+| R02 | X | | X | X | X | |
 | R03 | | | | | | |
 | R04 | | | | | | |
 | R05 | | | | | | |
@@ -141,14 +153,22 @@ Pontuação = Probabilidade × Impacto
 - **Respond** 
 - **Recover**
 
-> **Pendente:** mapeamento e justificativa de R02 a R06, cada um pelo respectivo responsável (evitar marcar todas as funções sem justificar).
+#### R02 (@ARTHUR9011)
+
+- **Govern:** as regras do UC03 - apenas médicos autorizados alteram tratamentos e todo tratamento guarda o responsável - precisam deixar de ser texto de caso de uso e virar política com dono: quem pode alterar prescrição ativa, quando a segunda assinatura é exigida e quem responde pela trilha de auditoria.
+- **Protect:** é onde os controles do plano (14.4) atuam - responsável obrigatório na operação, validação de papel no servidor, faixa terapêutica, versionamento e reautenticação reduzem diretamente a probabilidade.
+- **Detect:** alteração de dosagem fora de faixa ou sem segunda assinatura deve gerar alerta - é exatamente a regra 2 do roteiro de detecção previsto para a Etapa 6, que observa este risco.
+- **Respond:** detectada uma alteração suspeita, a prescrição deve ser bloqueada para administração e farmácia/chefia notificadas antes do próximo horário de medicação - a janela de resposta útil é o intervalo entre a alteração e a administração.
+- **Por que não Identify e Recover:** a identificação do ativo e da vulnerabilidade já está feita na Etapa 1 (T02/CA02); e não existe recuperação de sistema para dano clínico já administrado - o versionamento restaura o dado, não o paciente. É por isso que o tratamento de R02 concentra tudo **antes** da administração.
+
+> **Pendente:** mapeamento e justificativa de R03 a R06, cada um pelo respectivo responsável (evitar marcar todas as funções sem justificar).
 
 ## 14.4 Plano de tratamento
 
 | Risco | Estratégia | Controles propostos | Funções relacionadas | Responsáveis | Evidências e verificação |
 | --- | --- | --- | --- | --- | --- |
 | R01 | | | | | |
-| R02 | | | | | |
+| R02 | Reduzir | **R02-C1** - a operação de alteração passa a registrar o responsável obtido da sessão autenticada no servidor (nunca informado pelo cliente), cumprindo a regra do UC03; **R02-C2** - validação de papel no servidor: apenas médico, e médico vinculado ao paciente; **R02-C3** - validação de faixa terapêutica por medicamento, com bloqueio de valores fora da faixa; **R02-C4** - versionamento da prescrição em trilha imutável (valor anterior, novo valor, autor, data/hora); **R02-C5** - segunda assinatura de outro profissional + reautenticação para alterar prescrição ativa | Govern, Protect, Detect, Respond | @ARTHUR9011 | Testes com caso válido e caso malicioso (Etapa 4); log de auditoria consultável com autor e valor anterior; alerta da regra 2 do roteiro de detecção (Etapa 6) disparando em alteração fora de faixa ou sem segunda assinatura |
 | R03 | | | | | |
 | R04 | | | | | |
 | R05 | | | | | |
@@ -165,7 +185,7 @@ Pontuação = Probabilidade × Impacto
 | Risco | Nível inicial | Nível residual esperado | Condição para aceitar o residual |
 | --- | --- | --- | --- |
 | R01 | | | |
-| R02 | | | |
+| R02 | Crítico (12) | Médio (4) | Controles R02-C1 a R02-C5 comprovadamente operantes (evidências de 14.4); alerta da Etapa 6 ativo; revisão da classificação se a segunda assinatura for flexibilizada na rotina |
 | R03 | | | |
 | R04 | | | |
 | R05 | | | |
@@ -176,6 +196,14 @@ Pontuação = Probabilidade × Impacto
 **Probabilidade**
 **Impacto**
 **Condição para aceitar o residual Alto:** 
+
+### Justificativa do residual de R02 (@ARTHUR9011)
+
+**Probabilidade (3 → 1).** Com os controles R02-C1 a R02-C5, uma alteração indevida que chegue à administração passa a exigir condições incomuns: uma conta de médico vinculada ao paciente, reautenticada, um valor dentro da faixa terapêutica e a confirmação de um segundo profissional - na prática, o conluio de dois profissionais ou o comprometimento simultâneo de duas contas (cenário que remete ao residual de R01).
+
+**Impacto (4, inalterado).** Se ainda assim o evento ocorrer, o dano continua físico e potencialmente fatal - nenhum controle reduz a gravidade clínica de uma dose errada administrada. O que muda é a visibilidade: com autor e valor anterior versionados, a adulteração deixa de ser indistinguível de uma prescrição legítima, mas não deixa de ser dano.
+
+**Condição para aceitar o residual Médio:** os controles precisam estar comprovadamente operantes (coluna de evidências de 14.4), e a classificação deve ser refeita se a segunda assinatura ganhar exceções de rotina (ex.: emergências) ou se o alerta de detecção da Etapa 6 ficar inativo.
 
 ## 15. Considerações finais (Etapa 2)
 
