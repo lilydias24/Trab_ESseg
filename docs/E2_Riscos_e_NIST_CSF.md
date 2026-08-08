@@ -13,7 +13,7 @@
 | 13.5 Justificativas | Todos | R01, R02, R05 e R06 concluídas; R03 e R04 pendentes |
 | 13.6 Priorização geral | @mariasanchez0’s (compila) | Pendente |
 | 13.7 Conclusão da análise | @ARTHUR9011 | Rascunho concluído (revisão após R03-R06) |
-| 14.1 Estratégia de tratamento | Todos | R01 e R02 concluídas; demais pendentes |
+| 14.1 Estratégia de tratamento | Todos | R01, R02, R05 e R06 concluídas; R03 e R04 pendentes |
 | 14.2 Funções do NIST CSF | @lorenzoficher | Tabela base definida |
 | 14.3 Mapeamento risco → NIST | Todos | R01 e R02 concluídos; demais pendentes |
 | 14.4 Plano de tratamento | Todos | R01 e R02 concluídos; demais pendentes |
@@ -201,8 +201,8 @@ A atenção inicial deve ir para essa faixa Crítica: R02, em que a alteração 
 | R02 | Reduzir | Alterar prescrição é função essencial do sistema, então o risco não pode ser Evitado; a responsabilidade clínica não pode ser transferida a terceiro, então não há o que Compartilhar; e um risco Crítico com dano potencialmente fatal não pode ser Aceito. Resta Reduzir: controles que diminuam a probabilidade da alteração indevida e aumentem a chance de detecção antes da administração do medicamento |
 | R03 | | |
 | R04 | | |
-| R05 | | |
-| R06 | | |
+| R05 | Reduzir | Não há o que Evitar: o acesso concorrente de todos os módulos ao banco é a operação normal do SIGH, e eliminá-lo seria eliminar o sistema. Compartilhar cobre no máximo uma parte (hospedagem com acordo de nível de serviço) e não transfere a consequência assistencial - e a parcela que já está compartilhada, a validação de cobertura pelo «system» Convênio (RF06), hoje **amplia** o risco em vez de reduzi-lo, por ser síncrona e sem modo degradado. Aceitar contrariaria frontalmente o RNF03. Resta Reduzir, e nas duas pontas: controles que diminuam a probabilidade da saturação (cota de conexões, *rate limiting*, réplica de leitura) e controles que reduzam alcance e duração da janela (modo degradado e prioridade dos serviços assistenciais) |
+| R06 | Reduzir | Evitar exigiria eliminar a graduação de acesso do `Administrador` - mas o `nivelAcesso` é o único mecanismo de autorização do modelo, e retirá-lo pioraria a situação em vez de resolvê-la. Compartilhar não se aplica: decidir quem tem alçada sobre o cadastro de profissionais é decisão interna e indelegável, não existe terceiro a quem atribuí-la. Aceitar é insustentável para um risco que expõe as credenciais de todos os perfis e habilita T01, T02 e T03 em cascata. Resta Reduzir, com um deslocamento preciso: mover a decisão de autorização da montagem da interface para o servidor, e tornar observável a alteração do campo que hoje muda em silêncio |
 
 ## 14.2 Funções do NIST CSF 2.0
 
