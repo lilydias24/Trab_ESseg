@@ -6,7 +6,7 @@
 
 | Seção | Responsável | Situação |
 | --- | --- | --- |
-| 13.1 Critérios de probabilidade | @ARTHUR9011 + @lorenzoficher | Escala base definida |
+| 13.1 Critérios de probabilidade | @ARTHUR9011 + @lorenzoficher | Concluída (exemplos do SIGH adicionados) |
 | 13.2 Critérios de impacto | @ARTHUR9011 + @lorenzoficher | Escala base definida |
 | 13.3 Cálculo e classificação | @ARTHUR9011 | Concluída |
 | 13.4 Registro de riscos | Todos (1 risco por pessoa) | R01 concluído; R02-R06 pendentes |
@@ -25,14 +25,12 @@
 
 ## 13.1 Critérios de probabilidade
 
-| Valor | Classificação | Critério |
-| --- | --- | --- |
-| 1 | Baixa | O evento depende de condições incomuns, acesso muito específico ou grande capacidade técnica |
-| 2 | Média-baixa | O evento é possível, mas depende de uma vulnerabilidade ou condição específica |
-| 3 | Média-alta | O evento é plausível e pode ocorrer em situações comuns de uso ou ataque |
-| 4 | Alta | O evento pode ocorrer com facilidade, frequência ou durante condições previsíveis do sistema |
-
-> **Pendente (Integrantes 2 e 3):** acrescentar a cada faixa um exemplo concreto do contexto do SIGH.
+| Valor | Classificação | Critério | Exemplo no contexto do SIGH |
+| --- | --- | --- | --- |
+| 1 | Baixa | O evento depende de condições incomuns, acesso muito específico ou grande capacidade técnica | Adulteração direta dos dados no SGBD central: exige acesso de infraestrutura ao banco, fora dos perfis da aplicação |
+| 2 | Média-baixa | O evento é possível, mas depende de uma vulnerabilidade ou condição específica | Elevação de privilégio pelo `nivelAcesso` do Administrador: depende de a validação existir apenas na interface e de o atacante conhecer essa lacuna (T06) |
+| 3 | Média-alta | O evento é plausível e pode ocorrer em situações comuns de uso ou ataque | Alteração de prescrição a partir de uma sessão autenticada que alcança o Serviço de Paciente - situação comum nos postos com terminais compartilhados (T02) |
+| 4 | Alta | O evento pode ocorrer com facilidade, frequência ou durante condições previsíveis do sistema | Tentativas de login com senhas fracas ou reaproveitadas: sem bloqueio por tentativas e com `senhaLogin` em texto simples, o vetor está disponível a qualquer momento (T01) |
 
 ## 13.2 Critérios de impacto
 
@@ -43,7 +41,7 @@
 | 3 | Alto | Causa prejuízo relevante aos usuários, ao negócio, à administração ou à privacidade |
 | 4 | Muito alto | Pode afetar muitos usuários, comprometer operações críticas ou causar prejuízo grave |
 
-> **Pendente (Integrantes 2 e 3):** acrescentar a cada faixa um exemplo concreto do contexto do SIGH.
+> **Pendente (@lorenzoficher):** acrescentar a cada faixa um exemplo concreto do contexto do SIGH, no mesmo formato adotado em 13.1.
 
 ## 13.3 Cálculo e classificação dos riscos
 
