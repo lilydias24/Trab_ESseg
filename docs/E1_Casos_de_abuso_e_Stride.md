@@ -13,7 +13,7 @@
 | 8.4 Visão geral da arquitetura/fluxo | @lorenzoficher | Concluída |
 | 8.5 Modelagem STRIDE | Todos (1 categoria por pessoa) | T01, T02, T03, T05 e T06 concluídas; T04 pendente |
 | 8.5.1 Interpretação da análise | @lilydias24 | Pendente (após as demais ameaças) |
-| 8.6 Casos de abuso | Todos (1 caso por pessoa) | CA01, CA02 e CA03 concluídos; CA04, CA05 pendentes |
+| 8.6 Casos de abuso | Todos (1 caso por pessoa) | CA01, CA02, CA03 e CA05 concluídos; CA04 pendente |
 | 8.7 Considerações finais | @lilydias24 (rascunho) + revisão de todos | Pendente (após 8.3-8.6) |
 
 ---
@@ -283,7 +283,7 @@ Dois pontos adicionais do documento original completam a condição:
 | CA02 | Alteração indevida da dosagem de um medicamento prescrito | T02 - Tampering | @ARTHUR9011 |
 | CA03 | Registro de óbito sem possibilidade de comprovar quem o realizou | T03 - Repudiation | @lorenzoficher |
 | CA04 | *(a definir)* | T04 - Information Disclosure | @mariasanchez0’s |
-| CA05 | *(a definir)* | T05/T06 - DoS e Elevation of Privilege | @PPrauchner |
+| CA05 | Administrador de setor eleva o próprio nível e degrada a operação do hospital | T05/T06 - DoS e Elevation of Privilege | @PPrauchner |
 
 ### CA01 - Uso de credenciais roubadas para assumir a conta de um médico
 
@@ -366,6 +366,41 @@ Dois pontos adicionais do documento original completam a condição:
   - **Efeito externo já consumado:** o dado foi transmitido ao Sistema Governamental antes de qualquer conferência, e a integração não está documentada a ponto de se saber o que foi enviado.
   - **Encobrimento:** um óbito registrado por engano ou por conveniência administrativa fica indistinguível de um óbito legítimo, o que impede não só a punição como a própria detecção do erro.
 - **Categorias STRIDE relacionadas:** **Repudiation** (principal - ausência de autoria e de carimbo confiável de tempo); **Spoofing** (quando o registro parte de uma conta assumida, como em CA01); **Tampering** (a data e a hora escolhidas por quem registra adulteram o próprio conteúdo do registro); **Elevation of Privilege** (se quem registra não é médico e a restrição existe apenas na interface).
+
+### CA05 - Administrador de setor eleva o próprio nível e degrada a operação do hospital
+
+Este caso cobre **duas** categorias de origem, e por isso vale explicitar a costura antes dos campos: a elevação de privilégio (**T06**) é o **meio**, e a indisponibilidade (**T05**) é a **consequência**. O ator não ataca o banco - ele usa uma função que o sistema oferece, com um privilégio que não deveria ter. É o que torna o caso difícil de detectar: a degradação é indistinguível de um pico legítimo, e a elevação que a causou não deixou rastro.
+
+- **Ator:** Administrador com `nivelAcesso = Supervisor` - usuário **legítimo e autenticado com a própria conta**, não um invasor externo. Tipicamente alguém do quadro administrativo de um setor, com acesso regular ao SIGH e conhecimento de que a restrição de perfil é aplicada na montagem da tela.
+- **Objetivo:** obter alcance administrativo de nível Diretor sobre o Serviço de Funcionários - e, com ele, acesso ao cadastro completo de profissionais, incluindo `nomeLogin` e `senhaLogin`. A degradação do sistema é, aqui, **efeito colateral do próprio uso do privilégio obtido**: o volume de leitura necessário para varrer o cadastro e as escalas de todas as unidades satura o SGBD compartilhado. Ela pode ainda ser buscada deliberadamente, como cortina de fumaça, já que uma janela de indisponibilidade produz registros feitos no papel e digitados depois - terreno em que a alteração de perfil fica ainda mais difícil de reconstruir.
+- **Condições necessárias:**
+  - `Administrador.nivelAcesso` é o **único** atributo de permissão do modelo (observação 1 da seção 8.3): não há verificação de autorização por operação em nenhum outro perfil;
+  - o `nivelAcesso` é salvo junto com os demais dados do cadastro, sem operação própria e sem regra que impeça o titular de alterar o próprio valor;
+  - a validação do perfil ocorre na montagem da interface, e não é revalidada no servidor a partir da sessão autenticada - o Desktop Cliente é a única coisa entre o usuário e a operação administrativa;
+  - o Tópico 9 coloca o registro de eventos críticos de acesso indevido fora do escopo, e não existe perfil de auditoria (seção 8.3): a mudança de perfil não é registrada nem observada;
+  - o SGBD é **único e centralizado** e o API Gateway é passagem obrigatória (seção 8.4): não há cota de conexões por microsserviço, *rate limiting* nem separação entre carga administrativa e carga assistencial;
+  - o RNF01, o RNF02 e o RNF03 exigem alto volume simultâneo, escalabilidade para outras unidades e operação 24h/7d com recuperação automática - nenhum deles tem contrapartida de redundância no diagrama de implantação.
+- **Fluxo de abuso:**
+  1. O Supervisor autentica-se normalmente no SIGH pelo Desktop Cliente, com as próprias credenciais. Nada de anômalo acontece: é o login de todo dia.
+  2. Abre a tela de edição do próprio cadastro de funcionário, disponível ao seu perfil, e observa que o campo `nivelAcesso` é enviado junto com os demais dados no salvamento.
+  3. Reenvia a requisição de salvamento pelo caminho Desktop Cliente → API Gateway → Serviço de Funcionários, alterando o valor do campo para `Diretor`. O firewall do serviço deixa passar - ele separa serviço de serviço, não distingue qual perfil emitiu a chamada dentro de uma sessão já autenticada. O servidor persiste o valor sem verificar se quem pediu tem alçada sobre aquele campo.
+  4. Reautentica-se ou recarrega a sessão. A interface agora monta as opções de Diretor: cadastro de profissionais, gestão de escalas e gestão de medicamentos.
+  5. Com esse alcance, percorre o cadastro completo de `Funcionario` de todas as unidades - listagens que os módulos administrativos necessariamente oferecem -, obtendo `nomeLogin` e `senhaLogin` de médicos, enfermeiros e recepcionistas em texto simples. Onde o identificador é sequencial, como em `buscarPacientePorIdentificador(idPaciente)`, basta variá-lo para ampliar a varredura.
+  6. Essa varredura, somada à consulta às escalas de todas as unidades, é executada em horário de movimento assistencial. Como todos os DAOs terminam no mesmo SGBD, as conexões consumidas pelo Serviço de Funcionários são as mesmas de que o Serviço de Internação e o Serviço de Paciente precisam.
+  7. O banco satura. Os módulos assistenciais degradam ao mesmo tempo: o médico não abre o prontuário, o enfermeiro não consulta `LeitoHospitalar.disponivel`, a prescrição em curso não é exibida. O hospital volta ao papel enquanto durar a janela.
+  8. Restabelecido o serviço, a apuração encontra um pico de carga sem causa aparente e um cadastro de Diretor a mais. Não há registro de quando o `nivelAcesso` mudou, de qual terminal partiu a alteração, nem quem a fez - e os registros assistenciais da janela foram digitados depois, com data e hora informadas por quem digitou.
+
+  *Referência técnica do fluxo: o caminho da elevação é o mesmo dos diagramas de sequência versionados em `diagrams/sequencia/` - Desktop Cliente → API Gateway → Firewall do serviço → Serviço (Visão → Controle → Negócio → Persistência) → DAO → SGBD -, com um campo a mais no corpo da requisição. Já a parte de indisponibilidade se lê no diagrama de implantação (`diagrams/estrutura/Diagramas_SIGH - Implantacao.png`): os servidores de aplicação são distintos, mas convergem para um **único** servidor de banco de dados. É esse ponto de convergência que transforma a carga de um módulo administrativo em falha de um módulo assistencial.*
+
+  > **Observação sobre a escolha do caso.** A escrita deste caso teve de contornar uma tensão real: T05 é a única ameaça do recorte que **não exige ator malicioso** - um pico de uso legítimo produz a mesma condição. Registrá-la como caso de abuso apenas na forma "alguém sobrecarrega o banco de propósito" seria a leitura mais pobre, porque ignora o cenário mais provável. A opção adotada foi encadear: o abuso está na elevação (T06), e a indisponibilidade aparece como consequência de um uso do privilégio que o próprio sistema considera legítimo. A variante puramente acidental de T05 - o fechamento de faturamento concorrente com o pico assistencial - permanece descrita na seção T05 e será tratada como risco na Etapa 2, onde a ausência de ator malicioso é justamente o que eleva a probabilidade.
+
+- **Impacto esperado:**
+  - **Assistencial:** indisponibilidade simultânea de prontuário, prescrição e mapa de leitos, com pacientes internados no prédio. Contraria o RNF03, que exige operação 24h/7d com recuperação automática.
+  - **Confidencialidade e comprometimento em cascata:** as credenciais de todos os perfis ficam expostas em texto simples, o que **habilita T01 em escala** sem que nenhuma senha precise ser roubada - e, a partir daí, prescrever (T02) ou registrar óbito (T03) em nome de médicos reais.
+  - **Integridade da autorização:** com poder de cadastro de profissionais, o ator cria contas com perfil de Médico que o sistema tratará como legítimas desde o primeiro login, porque no modelo do SIGH o perfil *é* a permissão.
+  - **Rastreabilidade:** a elevação não é registrada e a janela de indisponibilidade produz registros digitados a posteriori, com data e hora informadas por quem digita - dois vetores que convergem em **T03 (Repudiation)**. Não é possível estabelecer nem quando o privilégio mudou, nem o que foi feito com ele.
+  - **Institucional e legal:** violação do sigilo médico e tratamento indevido de dado pessoal sensível de saúde (LGPD, art. 11), agravados pela impossibilidade de demonstrar a extensão do acesso.
+- **Categorias STRIDE relacionadas:** **Elevation of Privilege** (principal - alteração do próprio `nivelAcesso` sem alçada); **Denial of Service** (a carga administrativa sobre o SGBD único degrada os módulos assistenciais); **Information Disclosure** (leitura do cadastro completo de funcionários e de dados clínicos alcançados pela varredura); **Spoofing** (as credenciais obtidas permitem assumir contas de médicos, como em CA01); **Repudiation** (nem a elevação nem a operação subsequente deixam autoria verificável).
 
 ## 8.7 Considerações finais (Etapa 1)
 
