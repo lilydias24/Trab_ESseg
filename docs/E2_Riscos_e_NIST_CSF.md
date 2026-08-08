@@ -13,7 +13,7 @@
 | 13.5 Justificativas | Todos | R01 e R02 concluídas; demais pendentes |
 | 13.6 Priorização geral | @mariasanchez0’s (compila) | Pendente |
 | 13.7 Conclusão da análise | @ARTHUR9011 | Pendente |
-| 14.1 Estratégia de tratamento | Todos | R01 concluída; demais pendentes |
+| 14.1 Estratégia de tratamento | Todos | R01 e R02 concluídas; demais pendentes |
 | 14.2 Funções do NIST CSF | @lorenzoficher | Tabela base definida |
 | 14.3 Mapeamento risco → NIST | Todos | R01 concluído; demais pendentes |
 | 14.4 Plano de tratamento | Todos | R01 concluído; demais pendentes |
@@ -110,7 +110,7 @@ Pontuação = Probabilidade × Impacto
 | Risco | Estratégia escolhida | Justificativa |
 | --- | --- | --- |
 | R01 | | |
-| R02 | | |
+| R02 | Reduzir | Alterar prescrição é função essencial do sistema, então o risco não pode ser Evitado; a responsabilidade clínica não pode ser transferida a terceiro, então não há o que Compartilhar; e um risco Crítico com dano potencialmente fatal não pode ser Aceito. Resta Reduzir: controles que diminuam a probabilidade da alteração indevida e aumentem a chance de detecção antes da administração do medicamento |
 | R03 | | |
 | R04 | | |
 | R05 | | |
