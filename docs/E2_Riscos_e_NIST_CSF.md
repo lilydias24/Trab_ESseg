@@ -9,7 +9,7 @@
 | 13.1 Critérios de probabilidade | @ARTHUR9011 + @lorenzoficher | Concluída (exemplos do SIGH adicionados) |
 | 13.2 Critérios de impacto | @ARTHUR9011 + @lorenzoficher | Escala base definida |
 | 13.3 Cálculo e classificação | @ARTHUR9011 | Concluída |
-| 13.4 Registro de riscos | Todos (1 risco por pessoa) | R01 concluído; R02-R06 pendentes |
+| 13.4 Registro de riscos | Todos (1 risco por pessoa) | R01 e R02 concluídos; R03-R06 pendentes |
 | 13.5 Justificativas | Todos | R01 concluída; demais pendentes |
 | 13.6 Priorização geral | @mariasanchez0’s (compila) | Pendente |
 | 13.7 Conclusão da análise | @ARTHUR9011 | Pendente |
@@ -59,7 +59,7 @@ Pontuação = Probabilidade × Impacto
 | ID | Origem STRIDE | Responsável | Evento de risco | Vulnerabilidade ou condição | Probabilidade | Impacto | Pontuação | Nível |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | R01 | T01 - Spoofing | @lilydias24 | | | | | | |
-| R02 | T02 - Tampering | @ARTHUR9011 | | | | | | |
+| R02 | T02 - Tampering | @ARTHUR9011 | Alteração indevida da `dosagemMedicamento` ou do `intervaloConsumo` de uma prescrição ativa, executada pela enfermagem como se fosse a prescrição original | `atualizarTratamentosDoPaciente(tratamento)` não recebe o responsável; a regra "apenas médicos autorizados" (UC03) não é validada no servidor; não há faixa terapêutica para os campos; a alteração sobrescreve o registro sem versionamento nem autor | 3 | 4 | 12 | Crítico |
 | R03 | T03 - Repudiation | @lorenzoficher | | | | | | |
 | R04 | T04 - Information Disclosure | @mariasanchez0’s | | | | | | |
 | R05 | T05 - Denial of Service | @PPrauchner | | | | | | |
