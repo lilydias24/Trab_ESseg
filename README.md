@@ -90,12 +90,14 @@ Pastas a serem criadas conforme as etapas avançarem: `codigo/etapa-4/` (Etapa 4
 
 - [x] 8.1 Identificação do sistema - @lilydias24
 - [x] 8.2 Descrição do sistema - @lilydias24
-- [ ] 8.3 Usuários, ativos e pontos de interação - @ARTHUR9011
-- [ ] 8.4 Visão geral da arquitetura/fluxo - @lorenzoficher (diagramas já versionados; falta o recorte e a análise)
-- [ ] 8.5 Modelagem STRIDE - T01 (Spoofing, @lilydias24) concluída; T02 a T06 pendentes
-- [ ] 8.5.1 Interpretação da análise - @lilydias24 (após T02 a T06)
-- [ ] 8.6 Casos de abuso - CA01 (@lilydias24) concluído; CA02 a CA05 pendentes
-- [ ] 8.7 Considerações finais - @lilydias24 (após 8.3 a 8.6)
+- [x] 8.3 Usuários, ativos e pontos de interação - @ARTHUR9011
+- [x] 8.4 Visão geral da arquitetura/fluxo - @lorenzoficher
+- [x] 8.5 Modelagem STRIDE - T01 (@lilydias24), T02 (@ARTHUR9011), T03 (@lorenzoficher), T04 (@mariasanchez0), T05 e T06 (@PPrauchner)
+- [x] 8.5.1 Interpretação da análise - @lilydias24
+- [x] 8.6 Casos de abuso - CA01 a CA05, um por integrante
+- [] 8.7 Considerações finais - @lilydias24 (rascunho revisado pelo grupo)
+
+> **Etapa 1 concluída** - todas as seções entregues, com contribuição de cada um dos 5 integrantes.
 
 ### Etapa 2 - Riscos e NIST CSF 2.0
 

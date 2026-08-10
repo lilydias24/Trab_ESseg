@@ -12,7 +12,7 @@
 | 8.3 Usuários, ativos e pontos de interação | @ARTHUR9011 | Concluída |
 | 8.4 Visão geral da arquitetura/fluxo | @lorenzoficher | Concluída |
 | 8.5 Modelagem STRIDE | Todos (1 categoria por pessoa) | Concluída |
-| 8.5.1 Interpretação da análise | @lilydias24 | Pendente (após as demais ameaças) |
+| 8.5.1 Interpretação da análise | @lilydias24 | Concluída |
 | 8.6 Casos de abuso | Todos (1 caso por pessoa) | CA01 a CA05 concluídos |
 | 8.7 Considerações finais | @lilydias24 (rascunho) + revisão de todos | Pendente (após 8.3-8.6) |
 
@@ -289,7 +289,17 @@ Dois pontos adicionais do documento original completam a condição:
 
 ### 8.5.1 Interpretação da análise
 
-> Rascunho de **@lilydias24**, a ser escrito quando T02 a T06 estiverem preenchidas - parágrafo de leitura conjunta da tabela, mostrando que as ameaças atingem partes diferentes do sistema (identidade, integridade dos dados clínicos, rastreabilidade, confidencialidade, disponibilidade e autorização) e por que nenhuma delas se resolve com um único controle.
+As seis ameaças atingem propriedades diferentes do SIGH: a identidade do profissional (T01), a integridade do dado clínico (T02), a rastreabilidade das operações (T03), a confidencialidade do prontuário e do faturamento (T04), a disponibilidade do sistema (T05) e a autorização das funções administrativas (T06). Nenhuma categoria do STRIDE precisou ser descartada por inaplicabilidade - o que não surpreende em um sistema que reúne múltiplos perfis, integrações externas, dados sensíveis e operações irreversíveis. Lidas em conjunto, porém, elas não são seis problemas independentes: revelam três padrões que se repetem.
+
+**Primeiro: regras que existem como texto, mas não como código.** T02, T03 e T06 têm a mesma raiz. O UC03 determina que apenas médicos autorizados alterem tratamentos e que todo tratamento guarde o responsável, mas `atualizarTratamentosDoPaciente(tratamento)` recebe apenas o tratamento. O UC10 determina que somente médicos registrem óbito, mas `registrarObito(data, hora)` não recebe quem registrou - e ainda aceita a data e a hora informadas por quem chama. O `nivelAcesso` decide o que a interface monta, e não o que o servidor aceita. Em metade das ameaças, a regra de negócio foi documentada e não chegou ao ponto onde precisaria ser verificada e registrada. **Uma regra que só existe na descrição do caso de uso não protege nada e não prova nada.**
+
+**Segundo: limites de confiança no lugar errado.** A arquitetura declara limites - cada microsserviço tem seu firewall antes do DAO -, mas eles separam serviço de serviço, e não as coisas que precisariam estar separadas. T04 nasce de Farmácia e Financeiro não terem serviço próprio, deixando prontuário, prescrição e faturamento dentro do mesmo perímetro. T05 nasce de os sete serviços convergirem para um SGBD único, atrás de um Gateway obrigatório, sem separação entre carga administrativa e carga assistencial. Nos dois casos a ameaça não vem de uma barreira que falhou, e sim de uma barreira que nunca foi desenhada - o que faz qualquer falha alcançar mais do que deveria.
+
+**Terceiro: ninguém está observando.** O Tópico 9 do documento original coloca o registro de eventos críticos de acesso indevido fora do escopo, e a seção 8.3 mostra que não existe perfil de auditoria. Essa ausência não cria nenhuma das ameaças, mas torna todas elas silenciosas: as tentativas de login não geram alarme (T01), a prescrição adulterada é indistinguível da legítima (T02), o óbito não tem autor (T03), a varredura de prontuários não deixa rastro (T04) e a mudança de perfil não é registrada (T06). É o único item ausente que aparece em cinco das seis ameaças.
+
+**As ameaças também se encadeiam, e sempre na mesma direção.** T01 e T06 são portas de entrada; T02, T03 e T04 são o que se faz depois de entrar. Os casos de abuso confirmam isso de forma independente: CA02, CA03 e CA04 citam a conta assumida como caminho alternativo de entrada, e CA05 mostra a versão em escala - a elevação de privilégio expõe as credenciais de todos os perfis em texto simples e habilita T01 sem que nenhuma senha precise ser roubada. T03 atua sobre todas as outras: sem autoria registrada, nenhuma delas pode ser comprovada depois. E T05 fecha o círculo por um caminho inesperado - a indisponibilidade produz registros feitos no papel e digitados depois, com data e hora informadas por quem digita, reproduzindo em escala e de forma legítima a mesma falta de rastreabilidade de T03.
+
+Vale registrar, por fim, que **o próprio SIGH já pedia parte do que não entregou**. O RNF05 exige criptografia para as informações médicas, e `senhaLogin` é um atributo de texto simples. O RNF01, o RNF02 e o RNF03 exigem alto volume simultâneo, escalabilidade para outras unidades e recuperação automática de falhas, e o diagrama de implantação mostra um banco único sem redundância. As ameaças mais graves deste recorte não foram levantadas contra a documentação do sistema: foram encontradas **dentro dela**, na distância entre o que os requisitos pediram e o que o projeto modelou.
 
 ## 8.6 Casos de abuso
 
