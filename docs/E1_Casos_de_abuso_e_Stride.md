@@ -13,7 +13,7 @@
 | 8.4 Visão geral da arquitetura/fluxo | @lorenzoficher | Concluída |
 | 8.5 Modelagem STRIDE | Todos (1 categoria por pessoa) | Concluída |
 | 8.5.1 Interpretação da análise | @lilydias24 | Pendente (após as demais ameaças) |
-| 8.6 Casos de abuso | Todos (1 caso por pessoa) | CA01, CA02, CA03 e CA05 concluídos; CA04 pendente |
+| 8.6 Casos de abuso | Todos (1 caso por pessoa) | CA01 a CA05 concluídos |
 | 8.7 Considerações finais | @lilydias24 (rascunho) + revisão de todos | Pendente (após 8.3-8.6) |
 
 ---
@@ -234,6 +234,22 @@ Cada integrante é responsável por uma categoria, amarrada a um módulo/ativo c
 
 **Impacto.** Impossibilidade de responsabilização em uma operação de efeito legal e civil. Exposição do médico titular, que responde por um ato que não tem como provar não ter praticado (encadeando com **T01**, quando o acesso vem de conta assumida). E, de forma mais silenciosa: um óbito registrado por engano, ou registrado para encerrar um caso ou liberar um leito, torna-se **indistinguível** de um óbito legítimo - o sistema não oferece nada que permita separar um do outro.
 
+### T04 - Information Disclosure por falta de isolamento entre serviços (@mariasanchez0)
+
+**Onde está na arquitetura.** O diagrama de componentes mostra que cada um dos 7 microsserviços é precedido por um componente Firewall próprio antes de expor seu DAO «persistent». Esse firewall é o limite de confiança que o projeto declara: é ali que a arquitetura decide o que pode atravessar de um serviço para outro. Acontece que **Farmácia/Medicamentos (RF21-RF24) e Financeiro/Cobrança (RF25) não têm microsserviço próprio**, apesar de terem requisitos funcionais dedicados. Eles residem implicitamente dentro do Serviço de Paciente e do Serviço de Atendimento Médico.
+
+**Por que a ausência de um limite é, ela própria, a ameaça.** A consequência não é que exista uma falha - é que, quando qualquer falha existir, ela alcança muito mais do que deveria:
+
+1. **O raio de impacto é multiplicado.** Um acesso indevido ao Serviço de Paciente não entrega apenas dados cadastrais: entrega, no mesmo movimento, prontuário, histórico, alergias e as prescrições ativas. Um acesso ao Serviço de Atendimento entrega consulta, exame, `valorConsulta`, `valorExame` e o convênio do paciente. Não existe uma segunda barreira entre "ver quem é o paciente" e "ver o que ele toma e quanto custa".
+2. **O identificador é enumerável.** `Paciente.buscarPacientePorIdentificador(idPaciente)` recebe um ID sequencial, e o modelo não especifica nenhuma verificação de que o solicitante tem direito àquele registro. Variar o número é suficiente para percorrer a base - o problema clássico de referência direta insegura a objeto.
+3. **Não há mínimo privilégio dentro dos perfis.** Como observado na seção 8.3, apenas o Administrador possui nível de acesso graduado. Não existe no modelo o vínculo "este profissional atende este paciente", de modo que qualquer médico ou enfermeiro autenticado tem, perante o sistema, o mesmo alcance que qualquer outro.
+4. **O SGBD é único.** Mesmo que os serviços fossem isolados na camada de aplicação, todos os DAOs terminam no mesmo banco. Um vazamento na persistência não respeita fronteira alguma - e o RNF05, que exige criptografia para informações médicas, não tem correspondência visível no modelo de dados.
+5. **Ninguém observa.** O Tópico 9 coloca o registro de eventos críticos de acesso indevido fora do escopo do sistema. Uma sequência de consultas atípicas não gera alerta nem deixa rastro para auditoria posterior.
+
+**Por que isso é Information Disclosure, e não outra categoria.** O dado não é alterado nem tornado indisponível: ele é **lido por quem não deveria lê-lo**, e o sistema entrega voluntariamente, porque não possui os elementos para distinguir um pedido legítimo de um ilegítimo. A ameaça não depende de invasão nem de exploração técnica sofisticada - basta estar autenticado.
+
+**Impacto.** Dados de saúde são dados pessoais sensíveis pela LGPD (art. 5º, II), com tratamento condicionado a hipóteses específicas (art. 11), e estão protegidos pelo sigilo médico. Alergias, comorbidades e medicações em uso revelam condições estigmatizantes, cuja exposição causa dano que não se repara com correção de registro. Somam-se os dados de convênio e de valores, que permitem inferir quais procedimentos a pessoa realizou. Por ser enumerável, um incidente aqui é da base inteira, e não de um paciente - o que aciona o dever de comunicação à ANPD e aos titulares (art. 48). E como não há detecção, a instituição tende a descobrir o vazamento quando o dado aparecer fora dela.
+
 ### T05 - Denial of Service por concentração no banco central (@PPrauchner)
 
 **Onde está no modelo.** O diagrama de componentes mostra que os DAOs de todos os serviços - `PacienteDAO`, `AtendimentoPacienteDAO`, `InternacaoPacienteDAO`, `AgendaFuncionarioDAO`, `FuncionarioDAO` - terminam no **mesmo SGBD**, e o diagrama de implantação confirma fisicamente: servidores de aplicação distintos para os módulos de Pacientes, Funcionários e Infraestrutura, ligados por TCP/IP a **um único servidor de banco de dados**. Os dois diagramas estão versionados em `diagrams/estrutura/` e já foram descritos na seção 8.4 pelo @lorenzoficher; o que interessa aqui é a consequência de segurança, não a repetição da leitura. Além do banco, há um segundo ponto de concentração no mesmo caminho: o **API Gateway**, que a seção 8.4.4 registra como passagem obrigatória de toda comunicação entre o Desktop Cliente e qualquer serviço.
@@ -282,7 +298,7 @@ Dois pontos adicionais do documento original completam a condição:
 | CA01 | Uso de credenciais roubadas para assumir a conta de um médico | T01 - Spoofing | @lilydias24 |
 | CA02 | Alteração indevida da dosagem de um medicamento prescrito | T02 - Tampering | @ARTHUR9011 |
 | CA03 | Registro de óbito sem possibilidade de comprovar quem o realizou | T03 - Repudiation | @lorenzoficher |
-| CA04 | *(a definir)* | T04 - Information Disclosure | @mariasanchez0 |
+| CA04 | Enumeração de prontuários para coleta de dados clínicos e financeiros | T04 - Information Disclosure | @mariasanchez0 |
 | CA05 | Administrador de setor eleva o próprio nível e degrada a operação do hospital | T05/T06 - DoS e Elevation of Privilege | @PPrauchner |
 
 ### CA01 - Uso de credenciais roubadas para assumir a conta de um médico
@@ -366,6 +382,33 @@ Dois pontos adicionais do documento original completam a condição:
   - **Efeito externo já consumado:** o dado foi transmitido ao Sistema Governamental antes de qualquer conferência, e a integração não está documentada a ponto de se saber o que foi enviado.
   - **Encobrimento:** um óbito registrado por engano ou por conveniência administrativa fica indistinguível de um óbito legítimo, o que impede não só a punição como a própria detecção do erro.
 - **Categorias STRIDE relacionadas:** **Repudiation** (principal - ausência de autoria e de carimbo confiável de tempo); **Spoofing** (quando o registro parte de uma conta assumida, como em CA01); **Tampering** (a data e a hora escolhidas por quem registra adulteram o próprio conteúdo do registro); **Elevation of Privilege** (se quem registra não é médico e a restrição existe apenas na interface).
+
+### CA04 - Enumeração de prontuários para coleta de dados clínicos e financeiros
+
+- **Ator:** usuário **legítimo e autenticado** do SIGH, com um perfil que alcança o Serviço de Paciente - por exemplo um recepcionista, um estagiário ou um profissional de plantão. Não é preciso ser invasor externo nem obter credenciais alheias: a conta própria basta.
+- **Objetivo:** reunir dados de pacientes que não estão sob seus cuidados - histórico, alergias, medicações em uso, convênio e valores de atendimento -, seja por curiosidade sobre uma pessoa conhecida ou de notoriedade pública, seja para repassar as informações a terceiros.
+- **Condições necessárias:**
+  - `buscarPacientePorIdentificador(idPaciente)` recebe identificador sequencial e o modelo não especifica verificação de que o solicitante tem direito àquele registro;
+  - não existe vínculo modelado entre profissional e paciente sob seus cuidados, nem nível de acesso graduado fora do perfil Administrador;
+  - Farmácia e Financeiro não têm microsserviço próprio: prescrição e faturamento ficam do lado de dentro do mesmo firewall do prontuário;
+  - o SGBD é único e o modelo não indica cifragem em repouso, apesar do RNF05;
+  - o Tópico 9 coloca o registro de eventos críticos fora do escopo: consultas em volume atípico não geram alerta nem ficam registradas.
+- **Fluxo de abuso:**
+  1. O ator autentica-se normalmente, com a própria conta e o próprio perfil.
+  2. Consulta um paciente que legitimamente lhe cabe atender, pelo caminho Desktop Cliente → API Gateway → Serviço de Paciente, e observa o `idPaciente` usado na requisição.
+  3. Altera o identificador - incrementando ou decrementando - e repete a chamada. O sistema retorna o prontuário de outro paciente, porque valida que o solicitante está autenticado, mas não que ele tem relação com aquele registro.
+  4. Como tratamento e prescrição residem no mesmo serviço, cada prontuário obtido já vem acompanhado das prescrições ativas. Pelo Serviço de Atendimento, o ator complementa com `valorConsulta`, `valorExame` e o convênio.
+  5. Repete a operação ao longo de dias, em volume discreto. Ainda que não fosse discreto, não haveria diferença: não existe monitoramento de consulta anômala.
+  6. Copia os dados para fora do sistema - planilha, captura de tela, anotação - e os utiliza ou repassa. Nada no SIGH registra que essas consultas ocorreram.
+
+  *Referência técnica do fluxo: os diagramas de sequência versionados em `diagrams/sequencia/` mostram `buscarPacientePorIdentificador` como primeira chamada de praticamente todos os casos de uso. O abuso usa a operação mais corriqueira do sistema, com um parâmetro que não lhe pertence.*
+
+- **Impacto esperado:**
+  - **Privacidade e sigilo:** exposição de dado pessoal sensível de saúde (LGPD art. 5º, II; tratamento condicionado pelo art. 11) e quebra de sigilo médico. Alergias, comorbidades e medicações revelam condições estigmatizantes, cuja divulgação causa dano que nenhuma correção de registro desfaz.
+  - **Dimensão financeira:** convênio e valores permitem inferir quais procedimentos a pessoa realizou - informação sensível por si só.
+  - **Escala:** por ser enumerável, o incidente é da base de pacientes, e não de um indivíduo. Isso muda a natureza da resposta: aciona o dever de comunicação à ANPD e aos titulares (art. 48) e o dano reputacional correspondente.
+  - **Descoberta tardia:** sem registro das consultas, a instituição não tem como delimitar o que foi acessado nem por quem, e tende a tomar conhecimento do vazamento apenas quando os dados aparecerem fora dela.
+- **Categorias STRIDE relacionadas:** **Information Disclosure** (principal - leitura não autorizada de dado sensível); **Elevation of Privilege** (o ator alcança registros fora do escopo do seu perfil sem que haja falha de autenticação); **Repudiation** (sem trilha de auditoria, não se identifica quem consultou o quê); **Spoofing** (o alcance é ainda maior quando a conta usada foi assumida, como em CA01).
 
 ### CA05 - Administrador de setor eleva o próprio nível e degrada a operação do hospital
 
