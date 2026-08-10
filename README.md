@@ -95,7 +95,7 @@ Pastas a serem criadas conforme as etapas avançarem: `codigo/etapa-4/` (Etapa 4
 - [x] 8.5 Modelagem STRIDE - T01 (@lilydias24), T02 (@ARTHUR9011), T03 (@lorenzoficher), T04 (@mariasanchez0), T05 e T06 (@PPrauchner)
 - [x] 8.5.1 Interpretação da análise - @lilydias24
 - [x] 8.6 Casos de abuso - CA01 a CA05, um por integrante
-- [] 8.7 Considerações finais - @lilydias24 (rascunho revisado pelo grupo)
+- [x] 8.7 Considerações finais - @lilydias24 (rascunho revisado pelo grupo)
 
 > **Etapa 1 concluída** - todas as seções entregues, com contribuição de cada um dos 5 integrantes.
 

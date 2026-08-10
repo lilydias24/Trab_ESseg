@@ -14,7 +14,7 @@
 | 8.5 Modelagem STRIDE | Todos (1 categoria por pessoa) | Concluída |
 | 8.5.1 Interpretação da análise | @lilydias24 | Concluída |
 | 8.6 Casos de abuso | Todos (1 caso por pessoa) | CA01 a CA05 concluídos |
-| 8.7 Considerações finais | @lilydias24 (rascunho) + revisão de todos | Pendente (após 8.3-8.6) |
+| 8.7 Considerações finais | @lilydias24 (rascunho) + revisão de todos | Concluído |
 
 ---
 
@@ -457,9 +457,19 @@ Este caso cobre **duas** categorias de origem, e por isso vale explicitar a cost
 
 ## 8.7 Considerações finais (Etapa 1)
 
-> Rascunho de responsabilidade de **@lilydias24**, com revisão de todos - a ser escrito após a conclusão de 8.3 a 8.6.
+**Ameaças mais preocupantes.** O grupo destaca três, por razões diferentes. **T01 (Spoofing)** preocupa por ser a porta: uma senha em texto simples, sem segundo fator e sem bloqueio por tentativas, é a condição de entrada citada por CA02, CA03 e CA04 como caminho alternativo - tratar T01 reduz a chance efetiva de quase todas as outras. **T02 (Tampering)** preocupa por ser a única cujo dano não é informacional: entre o campo `dosagemMedicamento` alterado e o prejuízo existe apenas a enfermagem cumprindo o que a tela mostra, e o efeito se torna irreversível no instante da administração. **T06 (Elevation of Privilege)** preocupa por ser a versão em escala de T01 - CA05 mostra que a elevação de perfil expõe as credenciais de todos os profissionais de uma vez, sem que nenhuma senha precise ser roubada. As três compartilham um traço: não exigem invasão, apenas o uso do sistema como ele foi projetado.
 
-- **Ameaças mais preocupantes:**
-- **Ativos mais importantes:**
-- **Tipos de abuso de maior impacto:**
-- **Principais dificuldades encontradas pelo grupo:**
+**Ativos mais importantes.** As **credenciais dos profissionais** (`Funcionario.nomeLogin` e `senhaLogin`) vêm em primeiro lugar não por serem o dado mais sensível, mas por serem a chave de todos os outros - e por estarem, no modelo, sem qualquer proteção. Em seguida vêm os ativos cuja corrupção ou exposição não se desfaz: a **prescrição e o tratamento** (`dosagemMedicamento`, `intervaloConsumo`), o **prontuário e os dados clínicos** do paciente, e o **registro de óbito**, que encerra o prontuário e produz efeito legal fora do hospital. O grupo registra ainda um ativo que não existe no modelo e deveria: a **trilha de auditoria**. Sua ausência não aparece em nenhuma classe, mas atravessa cinco das seis ameaças - é o ativo faltante mais caro do recorte.
+
+**Tipos de abuso de maior impacto.** **CA02** e **CA05**, por motivos opostos e complementares. CA02 tem o pior desfecho individual: o dano sai do sistema e atinge o corpo de uma pessoa, sem detecção prévia e sem reversão possível. CA05 tem o maior alcance: uma única elevação de privilégio compromete as credenciais de toda a instituição e, no mesmo movimento, derruba prontuário, prescrição e mapa de leitos com pacientes internados no prédio. Vale notar que **CA01 não aparece aqui por impacto próprio, e sim por frequência**: é o abuso mais barato de executar e o pré-requisito mais citado pelos demais.
+
+**Principais dificuldades encontradas pelo grupo.**
+
+1. **Separar ameaça genérica de ameaça deste sistema.** Foi a dificuldade central e a que mais mudou o método de trabalho. A saída adotada foi exigir que toda ameaça citasse um elemento concreto do modelo - um campo, uma assinatura de operação, uma regra de caso de uso ou um componente do diagrama. O que não conseguia ser ancorado assim era descartado.
+2. **O SIGH não está implementado.** Toda a análise foi lida do modelo, não do código, o que impõe um limite honesto: só é possível afirmar que **o modelo não especifica** determinada verificação, nunca que o sistema não a faz. Ameaças como T02 e T06 dependem de a validação existir apenas na interface - hipótese plausível diante do modelo, mas não verificável nesta etapa.
+3. **Decidir o que fazer com as lacunas do documento original.** A ausência de microsserviço próprio para Farmácia e Financeiro podia ser tratada como pressuposto ("assume-se que residem em outro serviço") ou como achado da análise. O grupo optou pela segunda leitura, e ela acabou sustentando T04 e agravando T05. A mesma decisão valeu para o «system» Sistema Governamental e o «system» Sistema de Laboratório, que não têm requisito ou modelagem correspondente.
+4. **Uma ameaça que não precisa de atacante.** T05 foi a mais difícil de encaixar no formato de caso de abuso: um pico de uso legítimo produz a mesma indisponibilidade que um ataque produziria. Descrevê-la apenas como "alguém sobrecarrega o banco de propósito" empobreceria a análise. A solução foi encadear T06 e T05 em CA05 - a elevação como meio, a indisponibilidade como consequência do uso do privilégio -, mantendo a variante acidental descrita em T05 para ser tratada como risco na Etapa 2.
+5. **Coordenar cinco trilhas sem sobreposição nem lacuna.** A divisão por categoria STRIDE, com uma pessoa dona de cada uma do início ao fim, resolveu a atribuição, mas exigiu atenção às fronteiras: quase toda ameaça encosta na de outra pessoa. A convenção adotada foi citar a ameaça vizinha pelo identificador e pelo responsável, em vez de reescrever a análise dela.
+
+**Encaminhamento para a Etapa 2.** As seis ameaças passam a riscos R01 a R06, mantendo o mesmo responsável, para serem quantificados por probabilidade × impacto e tratados com o NIST CSF 2.0. Dois pontos desta etapa devem ser levados adiante explicitamente: o encadeamento entre as ameaças, que faz de R01 e R06 habilitadores dos demais e deve pesar na priorização; e a ausência de trilha de auditoria, que é um único controle faltante com efeito sobre quase todos os riscos - candidato natural às primeiras posições da ordem de implementação.
+
