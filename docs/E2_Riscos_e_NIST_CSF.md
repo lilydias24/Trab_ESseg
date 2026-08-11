@@ -18,7 +18,7 @@
 | 14.3 Mapeamento risco → NIST | Todos | R01, R02, R03, R05 e R06 concluídos; R04 pendente |
 | 14.4 Plano de tratamento | Todos | R01, R02, R03, R05 e R06 concluídos; R04 pendente |
 | 14.5 Ordem de implementação | @mariasanchez0’s | Pendente |
-| 14.6 Risco residual | Todos | R01, R02, R05 e R06 concluídos; R03 e R04 pendentes |
+| 14.6 Risco residual | Todos | R01, R02, R03, R05 e R06 concluídos; R04 pendente |
 | 15. Considerações finais | @PPrauchner (rascunho) + revisão de todos | Rascunho concluído sobre R01, R02, R05 e R06 (revisão após R03, R04, 13.6 e 14.5) |
 
 ---
@@ -457,7 +457,7 @@ registrar, por exemplo, por que R02 não tem Recover e por que R05 não tem Gove
 | --- | --- | --- | --- |
 | R01 | Crítico (16) | Alto (8) | Controles R01-C1 a R01-C5 comprovadamente operantes (evidências de 14.4); regra 1 de detecção da Etapa 6 ativa e monitorada; revisão trimestral dos logs de autenticação e de bloqueio |
 | R02 | Crítico (12) | Médio (4) | Controles R02-C1 a R02-C5 comprovadamente operantes (evidências de 14.4); alerta da Etapa 6 ativo; revisão da classificação se a segunda assinatura for flexibilizada na rotina |
-| R03 | | | |
+| R03 | Crítico (12) | Médio (6) | Controles R03-C1 a R03-C5 comprovadamente operantes (evidências de 14.4), com a trilha consultável e a segregação de escrita demonstrada; procedimento de retificação junto ao Sistema Governamental documentado e testado; tratamento de R01 em curso, porque a força da autoria não supera a da autenticação que a sustenta; revisão da estimativa se o registro em contingência durante indisponibilidade (encadeamento com R05) deixar de ser exceção |
 | R04 | | | |
 | R05 | Crítico (12) | Médio (6) | Controles R05-C1 a R05-C5 comprovadamente operantes (evidências de 14.4), com o teste de carga executado sobre a cota e a réplica já em produção; alerta de 80% ativo e com destinatário definido; revisão da estimativa se o recorte incorporar novos módulos, uma nova unidade hospitalar (RNF02) ou uma nova integração externa síncrona |
 | R06 | Alto (8) | Médio (4) | Controles R06-C1 a R06-C4 comprovadamente operantes, com os dois testes da Etapa 4 passando e a trilha de auditoria consultável; regra 3 da Etapa 6 ativa e com destinatário definido; revisão da estimativa se o fluxo de aprovação de R06-C2 ganhar exceção de rotina ou se o tratamento de R01 (armazenamento de `senhaLogin`) não avançar |
@@ -479,6 +479,46 @@ Não desce a 1, diferente do residual de R02, e a comparação explica por quê:
 **Impacto (4, inalterado).** Se ainda assim o evento ocorrer, o dano continua físico e potencialmente fatal - nenhum controle reduz a gravidade clínica de uma dose errada administrada. O que muda é a visibilidade: com autor e valor anterior versionados, a adulteração deixa de ser indistinguível de uma prescrição legítima, mas não deixa de ser dano.
 
 **Condição para aceitar o residual Médio:** os controles precisam estar comprovadamente operantes (coluna de evidências de 14.4), e a classificação deve ser refeita se a segunda assinatura ganhar exceções de rotina (ex.: emergências) ou se o alerta de detecção da Etapa 6 ficar inativo.
+
+### Justificativa do residual de R03 (@lorenzoficher)
+
+**Probabilidade (4 → 2).** É a maior queda de probabilidade do registro, e a razão é
+estrutural: em R03 o valor 4 não vinha da capacidade de um atacante, e sim de um controle
+que simplesmente **não existe**. Com a autoria obtida da sessão (R03-C1), o carimbo de
+tempo do servidor (R03-C2) e a trilha somente de acréscimo com escrita segregada
+(R03-C3), o registro não atribuível deixa de ser o resultado padrão da operação e passa a
+exigir condição específica - o comprometimento de uma conta de médico ou uma falha do
+próprio mecanismo de auditoria, que por R03-C5 reverte a operação em vez de deixá-la sem
+rastro. É a definição do valor 2 em 13.1.
+
+Não cai a 1, e são duas as razões, ambas permanentes. A primeira é que **o momento clínico
+do óbito continua sendo informado por uma pessoa**: o servidor carimba quando o registro
+foi feito, não quando a morte ocorreu, e essa é uma limitação da realidade, não do
+projeto - a divergência justificada de R03-C2 reduz o espaço para um carimbo clínico
+conveniente, mas não o fecha. A segunda é que a trilha prova **qual sessão** registrou, e
+não qual pessoa estava no teclado: enquanto `senhaLogin` permanecer em texto simples e sem
+MFA, a autoria vale exatamente o que valer a autenticação que a sustenta. É a mesma
+dependência que o @PPrauchner registrou no residual de R06, e vale aqui com igual força:
+**o residual de R03 pressupõe o tratamento de R01 em curso.**
+
+**Impacto (3, inalterado).** Os cinco controles atuam sobre a existência da prova, não
+sobre a gravidade do que acontece quando ela falta. Se o evento ainda assim ocorrer, o
+registro continua encerrando o prontuário, continua produzindo efeito legal e continua
+seguindo ao Sistema Governamental - e o médico titular continua sem meio de se defender.
+O que R03-C4 acrescenta é a possibilidade de **retificar** o efeito externo, o que reduz a
+duração do prejuízo, mas não a sua natureza. Reduzir o impacto de R03 exigiria mudar quem
+suporta a consequência de um óbito mal registrado, e isso não é matéria de controle
+técnico.
+
+**Condição para aceitar o residual Médio:** além das evidências de 14.4, três condições
+específicas. A trilha precisa ter destinatário e leitor definidos - uma trilha que ninguém
+consulta é custo de armazenamento, não controle. O procedimento de retificação do R03-C4
+precisa ter sido executado ao menos uma vez em teste, porque é o único controle do plano
+cuja falha só apareceria durante um incidente real. E a estimativa deve ser refeita se o
+registro em contingência durante indisponibilidade deixar de ser exceção: como observou o
+@PPrauchner em R05, a janela de queda fabrica registros digitados depois com data e hora
+informadas por quem digita, e um fluxo de contingência frequente reintroduz a probabilidade
+4 por uma porta que os controles de R03 não fecham.
 
 ### Justificativa do residual de R05 (@PPrauchner)
 
