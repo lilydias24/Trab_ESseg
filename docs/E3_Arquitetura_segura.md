@@ -35,8 +35,8 @@ do medicamento, porque o dano clínico não pode ser desfeito pelo sistema depoi
 momento.
 
 **Enunciado completo.** Toda solicitação de alteração de uma prescrição ativa deve ser
-processada no servidor e somente pode produzir uma nova versão vigente quando, na mesma
-transação, o SIGH:
+processada no servidor e somente pode produzir uma nova versão vigente quando, no mesmo
+fluxo controlado e antes da publicação, o SIGH:
 
 1. obtiver o autor da sessão autenticada, sem aceitar identidade informada pelo cliente;
 2. confirmar que o autor é médico e está vinculado ao atendimento do paciente;
@@ -44,18 +44,23 @@ transação, o SIGH:
    para o medicamento;
 4. exigir reautenticação do autor e confirmação de um segundo profissional autorizado,
    diferente do autor da mudança;
-5. preservar a versão anterior e acrescentar uma nova versão à trilha de auditoria; e
+5. confirmar que a versão-base ainda é a vigente, preservar a versão anterior e
+   acrescentar atomicamente a nova versão e seu registro à trilha de auditoria; e
 6. tornar a nova versão disponível para administração somente depois que todas as
    verificações e o registro de auditoria forem concluídos com sucesso.
 
 **Comportamento esperado.** A trilha deve ser somente de acréscimo e registrar, no
-mínimo, o identificador da prescrição e do paciente, medicamento, dose e intervalo
-anteriores e novos, justificativa, autor, segundo confirmador, data/hora fornecida pelo
-servidor e identificador de correlação da operação. Nenhum desses dados de autoria pode
-vir do corpo enviado pelo Desktop Cliente. Se autorização, vínculo, faixa terapêutica,
-reautenticação, confirmação independente ou gravação da auditoria falhar, a operação deve
-falhar de forma fechada: a versão vigente permanece inalterada, nenhuma atualização
-parcial é persistida e a tentativa recusada é registrada para detecção.
+mínimo, o identificador da prescrição, do paciente, da versão-base e da nova versão,
+medicamento, dose e intervalo anteriores e novos, justificativa, autor, segundo
+confirmador, data/hora fornecida pelo servidor e identificador de correlação da operação.
+Nenhum desses dados de autoria pode vir do corpo enviado pelo Desktop Cliente. Se
+autorização, vínculo, faixa terapêutica, reautenticação, confirmação independente,
+controle de concorrência ou gravação da auditoria falhar, a operação deve falhar de forma
+fechada: a versão vigente permanece inalterada, nenhuma atualização parcial é persistida
+e a tentativa recusada é registrada para detecção. A confirmação humana pode ocorrer
+antes da transação de publicação; nesse caso, ela fica vinculada à versão proposta, e as
+regras e a versão-base são verificadas novamente imediatamente antes da publicação
+atômica, sem manter uma transação de banco aberta durante a espera.
 
 Neste requisito, **confirmação** ou **coassinatura** significa uma aprovação eletrônica
 atribuída a outra sessão autenticada e vinculada à versão exata da prescrição. Ela não é
@@ -76,6 +81,7 @@ cenários forem demonstrados por testes automatizados e pela consulta à auditor
 | RS02-CA05 | Reautenticação está ausente/inválida, não há segundo confirmador ou autor e confirmador são a mesma pessoa | A solicitação é recusada e nenhuma nova versão é criada |
 | RS02-CA06 | O registro da auditoria falha durante a alteração | Toda a transação é revertida; a prescrição anterior continua vigente e não há versão parcial |
 | RS02-CA07 | Um usuário da aplicação tenta alterar ou excluir uma versão já registrada | A operação é recusada e a trilha preserva integralmente o histórico |
+| RS02-CA08 | Duas alterações concorrentes tentam partir da mesma versão-base | No máximo uma delas torna-se vigente; a outra recebe conflito, não sobrescreve dados e precisa passar novamente pelas validações e pela confirmação sobre a nova base |
 
 ## 2. Vulnerabilidades catalogadas (CWE/OWASP)
 
@@ -125,7 +131,7 @@ implementado apenas porque aparece no texto do requisito.
 | R02-C1 - autor obtido da sessão | Cláusulas 1 e 5; autoria nunca é aceita do cliente | RS02-CA01, RS02-CA02 e RS02-CA06 | Teste que adultera o autor no corpo e comprova que a auditoria registra o usuário da sessão |
 | R02-C2 - papel e vínculo validados no servidor | Cláusula 2 e falha fechada | RS02-CA02 e RS02-CA03 | Testes de autorização com perfil não médico e médico não vinculado, ambos sem mudança persistida |
 | R02-C3 - faixa terapêutica | Cláusula 3 | RS02-CA04 | Testes de limite inferior, limite superior e valores imediatamente fora dos limites para dose e intervalo |
-| R02-C4 - versionamento imutável | Cláusulas 5 e 6; comportamento esperado da auditoria | RS02-CA01, RS02-CA06 e RS02-CA07 | Consulta exibindo valor anterior e novo; tentativa de alteração/exclusão recusada; falha de auditoria causando rollback |
+| R02-C4 - versionamento imutável | Cláusulas 5 e 6; comportamento esperado da auditoria | RS02-CA01, RS02-CA06, RS02-CA07 e RS02-CA08 | Consulta exibindo valor anterior e novo; tentativa de alteração/exclusão recusada; falha de auditoria causando rollback; teste concorrente sem atualização perdida |
 | R02-C5 - reautenticação e segunda confirmação | Cláusula 4 | RS02-CA01 e RS02-CA05 | Testes sem reautenticação, sem confirmador e com autor igual ao confirmador, além do fluxo válido com duas identidades |
 
 **Contratos necessários para a arquitetura segura.** O diagrama da seção 3 deve permitir
@@ -135,7 +141,8 @@ identificar, ainda que em nível lógico:
 - a política de autorização que verifica papel médico e vínculo com o paciente;
 - o catálogo clínico versionado que fornece as faixas terapêuticas;
 - o fluxo de confirmação independente vinculado à versão proposta;
-- o armazenamento transacional das versões da prescrição; e
+- o armazenamento transacional das versões da prescrição, com controle de concorrência
+  pela versão-base; e
 - a trilha de auditoria somente de acréscimo, separada da permissão de alterar a
   prescrição.
 
