@@ -58,7 +58,7 @@ Pontuação = Probabilidade × Impacto
 
 | ID | Origem STRIDE | Responsável | Evento de risco | Vulnerabilidade ou condição | Probabilidade | Impacto | Pontuação | Nível |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| R01 | T01 - Spoofing | @lilydias24 | | | | | | |
+| R01 | T01 - Spoofing | @lilydias24 | Uso das credenciais legítimas de um profissional para assumir sua identidade no SIGH e executar consultas ao prontuário e operações clínicas em nome dele | `senhaLogin` armazenada como texto simples na classe `Funcionario`, contrariando o RNF05; autenticação de fator único, sem MFA nem reautenticação em operações sensíveis; sem bloqueio após tentativas malsucedidas; sessões sem expiração por inatividade em terminais compartilhados; o Tópico 9 exclui do escopo o registro de eventos críticos de acesso indevido | 4 | 4 | 16 | Crítico |
 | R02 | T02 - Tampering | @ARTHUR9011 | Alteração indevida da `dosagemMedicamento` ou do `intervaloConsumo` de uma prescrição ativa, executada pela enfermagem como se fosse a prescrição original | `atualizarTratamentosDoPaciente(tratamento)` não recebe o responsável; a regra "apenas médicos autorizados" (UC03) não é validada no servidor; não há faixa terapêutica para os campos; a alteração sobrescreve o registro sem versionamento nem autor | 3 | 4 | 12 | Crítico |
 | R03 | T03 - Repudiation | @lorenzoficher | | | | | | |
 | R04 | T04 - Information Disclosure | @mariasanchez0’s | | | | | | |
@@ -69,10 +69,15 @@ Pontuação = Probabilidade × Impacto
 
 ### R01
 
-**Probabilidade.** 
-**Impacto** 
-**Quem é afetado.** 
-**Por que Crítico é adequado.** 
+**Probabilidade (4 - Alta).** O único obstáculo entre o atacante e a conta é saber a senha, e os caminhos para obtê-la são todos de baixo custo: observação da digitação em terminal compartilhado, reuso de senha já vazada em outro serviço, phishing dirigido ao corpo clínico, ou leitura direta da tabela `Funcionario` - que, sem hash, entrega as credenciais prontas para uso. Sem bloqueio por tentativas malsucedidas, a força bruta a partir da rede interna também está disponível.
+
+Duas condições sustentam o valor 4 sem depender de suposição, porque vêm da documentação do próprio SIGH: o **RNF05** exige criptografia para as informações médicas, mas o modelo guarda `senhaLogin` em texto simples - a proteção está no requisito e não chegou ao projeto; e o **Tópico 9** coloca o registro de eventos críticos de acesso indevido fora do escopo, de modo que uma sequência de tentativas não encontra barreira nem gera alarme. É o critério de "condições previsíveis do sistema" da escala 13.1.
+
+**Impacto (4 - Muito alto).** Uma sessão assumida alcança o prontuário de qualquer paciente - dado pessoal sensível pela LGPD (art. 5º, II) e protegido por sigilo médico - e habilita operações de consequência assistencial imediata: prescrever medicamento, autorizar alta e registrar óbito. As duas últimas são irreversíveis fora do sistema: uma alta indevida coloca um paciente para fora do hospital, e um registro de óbito produz efeitos legais e administrativos que nenhum `rollback` desfaz. Como o SIGH atribui a autoria pela sessão autenticada, as ações constam como sendo do profissional legítimo.
+
+**Quem é afetado.** O paciente, na segurança clínica e na privacidade; o profissional cuja conta foi assumida, responsabilizado por atos que não praticou e sem meios de demonstrar o contrário; e a instituição, exposta perante a LGPD, os conselhos profissionais e eventuais ações judiciais.
+
+**Por que Crítico é adequado.** 4 × 4 = 16 é a pontuação máxima da escala, e o que a justifica não é apenas a soma das duas dimensões: **R01 é o habilitador dos demais riscos do registro**. Uma conta assumida é o ponto de partida natural para a alteração de prescrição (R02), o registro de óbito irrastreável (R03) e a leitura indevida de prontuários (R04) - os casos de abuso CA02, CA03 e CA04 citam explicitamente a conta assumida como caminho de entrada alternativo. Tratar R01 reduz a probabilidade efetiva de todos eles, o que reforça sua posição no topo da priorização.
 
 ### R02
 
@@ -197,7 +202,7 @@ A atenção inicial deve ir para essa faixa Crítica: R02, em que a alteração 
 
 | Risco | Estratégia escolhida | Justificativa |
 | --- | --- | --- |
-| R01 | | |
+| R01 | Reduzir | Autenticar profissionais é função indispensável do SIGH, então não há como Evitar. Compartilhar atenderia só em parte: delegar a autenticação a um provedor de identidade institucional transfere a implementação, mas não a responsabilidade do hospital sobre os dados nem a consequência clínica de um acesso indevido. Aceitar é insustentável em um risco de pontuação máxima que habilita todos os demais. Resta Reduzir, e o espaço é amplo porque nenhuma barreira usual existe hoje: a redução ataca as condições que tornam a probabilidade alta - armazenamento inadequado da senha, fator único e ausência de bloqueio e de detecção |
 | R02 | Reduzir | Alterar prescrição é função essencial do sistema, então o risco não pode ser Evitado; a responsabilidade clínica não pode ser transferida a terceiro, então não há o que Compartilhar; e um risco Crítico com dano potencialmente fatal não pode ser Aceito. Resta Reduzir: controles que diminuam a probabilidade da alteração indevida e aumentem a chance de detecção antes da administração do medicamento |
 | R03 | | |
 | R04 | | |
@@ -221,7 +226,7 @@ A atenção inicial deve ir para essa faixa Crítica: R02, em que a alteração 
 
 | Risco | Govern | Identify | Protect | Detect | Respond | Recover |
 | --- | :---: | :---: | :---: | :---: | :---: | :---: |
-| R01 | | | | | | |
+| R01 | X | | X | X | X | X |
 | R02 | X | | X | X | X | |
 | R03 | | | | | | |
 | R04 | | | | | | |
@@ -230,12 +235,14 @@ A atenção inicial deve ir para essa faixa Crítica: R02, em que a alteração 
 
 ### Justificativa do mapeamento
 
-- **Govern**
-- **Identify**
-- **Protect**
-- **Detect**
-- **Respond** 
-- **Recover**
+#### R01 (@lilydias24)
+
+- **Govern:** o risco nasce da ausência de uma política institucional de credenciais - não há regra definida de complexidade, expiração, não reuso, nem responsável designado pela gestão das contas de profissionais. Sem essa decisão no nível de governança, os controles técnicos não têm parâmetro para serem configurados: "bloquear após N tentativas" só existe depois que alguém define o N e quem responde pelo desbloqueio.
+- **Protect:** é o núcleo do tratamento. Hash com salt, autenticação multifator, bloqueio por tentativas e expiração de sessão atuam diretamente sobre as condições que tornam a probabilidade alta.
+- **Detect:** hoje uma sequência de tentativas malsucedidas ou um login fora do padrão do profissional passa despercebido - o Tópico 9 coloca esse registro fora do escopo. A detecção é o que permite perceber o abuso **antes** de a sessão ser usada, e é exatamente a regra 1 do roteiro previsto para a Etapa 6.
+- **Respond:** havendo suspeita de conta comprometida, é preciso procedimento definido - bloquear a conta, encerrar as sessões ativas e comunicar o profissional titular e a chefia -, e não apenas abrir um chamado.
+- **Recover:** marcado aqui, diferente de R02, e a diferença é o que justifica a marcação. Em R02 não existe recuperação para uma dose já administrada; em R01 existe recuperação real e necessária: rotacionar as credenciais, revogar sessões e, sobretudo, **auditar e reverter o que a sessão comprometida produziu** - prescrições, altas e registros gerados em nome do titular. Sem esse passo, o incidente termina com a senha trocada e os atos indevidos ainda válidos no prontuário.
+- **Por que não Identify:** o ativo (`Funcionario.senhaLogin`), os perfis e a vulnerabilidade já foram levantados na Etapa 1 (T01/CA01). O tratamento de R01 não depende de nenhum trabalho adicional de identificação, e marcar a função aqui seria apenas preencher a tabela.
 
 #### R02 (@ARTHUR9011)
 
@@ -309,7 +316,7 @@ A atenção inicial deve ir para essa faixa Crítica: R02, em que a alteração 
 
 | Risco | Estratégia | Controles propostos | Funções relacionadas | Responsáveis | Evidências e verificação |
 | --- | --- | --- | --- | --- | --- |
-| R01 | | | | | |
+| R01 | Reduzir | **R01-C1** - armazenar `senhaLogin` com hash e salt por algoritmo próprio para senhas (Argon2id, ou bcrypt com custo ≥ 12), migrando as senhas existentes na próxima autenticação de cada profissional; **R01-C2** - autenticação multifator no login e reautenticação antes de operações sensíveis (prescrever, autorizar alta, registrar óbito); **R01-C3** - bloqueio temporário da conta após 5 tentativas malsucedidas em 15 minutos, com alerta gerado; **R01-C4** - encerramento automático da sessão após 10 minutos de inatividade, tratando o terminal compartilhado como o padrão e não como exceção; **R01-C5** - política de senha com comprimento mínimo, proibição de reuso e verificação contra listas públicas de senhas vazadas | Govern, Protect, Detect, Respond, Recover | @lilydias24 | Amostra da tabela `Funcionario` exibindo apenas hash, sem senha em claro; testes com caso válido e caso malicioso da prática de armazenamento seguro de senhas (Etapa 4); registro de configuração do MFA e da política de bloqueio; log de tentativas malsucedidas e de bloqueios efetivados; alerta da regra 1 do roteiro de detecção (Etapa 6) disparando em cenário simulado |
 | R02 | Reduzir | **R02-C1** - a operação de alteração passa a registrar o responsável obtido da sessão autenticada no servidor (nunca informado pelo cliente), cumprindo a regra do UC03; **R02-C2** - validação de papel no servidor: apenas médico, e médico vinculado ao paciente; **R02-C3** - validação de faixa terapêutica por medicamento, com bloqueio de valores fora da faixa; **R02-C4** - versionamento da prescrição em trilha imutável (valor anterior, novo valor, autor, data/hora); **R02-C5** - segunda assinatura de outro profissional + reautenticação para alterar prescrição ativa | Govern, Protect, Detect, Respond | @ARTHUR9011 | Testes com caso válido e caso malicioso (Etapa 4); log de auditoria consultável com autor e valor anterior; alerta da regra 2 do roteiro de detecção (Etapa 6) disparando em alteração fora de faixa ou sem segunda assinatura |
 | R03 | | | | | |
 | R04 | | | | | |
@@ -328,13 +335,13 @@ A atenção inicial deve ir para essa faixa Crítica: R02, em que a alteração 
 
 > Seção compilada pelo **@mariasanchez0’s**, com justificativa - depende dos controles de todos os riscos.
 
-*(Pendente. Observação de @lilydias24 para a compilação: o controle C1 - hash e salt - é pré-requisito dos demais controles de R01 e não depende de nenhum outro item do plano, o que o torna candidato natural às primeiras posições.)*
+*(Pendente. Observação de @lilydias24 para a compilação: **R01-C1** - hash e salt - não depende de nenhum outro item do plano e é pré-requisito dos demais controles de R01, o que o torna candidato natural às primeiras posições. Vale considerar também que R01 é habilitador de R02, R03 e R04, de modo que seus controles reduzem a probabilidade efetiva desses riscos mesmo antes de os controles próprios deles serem implantados.)*
 
 ## 14.6 Estimativa do risco residual
 
 | Risco | Nível inicial | Nível residual esperado | Condição para aceitar o residual |
 | --- | --- | --- | --- |
-| R01 | | | |
+| R01 | Crítico (16) | Alto (8) | Controles R01-C1 a R01-C5 comprovadamente operantes (evidências de 14.4); regra 1 de detecção da Etapa 6 ativa e monitorada; revisão trimestral dos logs de autenticação e de bloqueio |
 | R02 | Crítico (12) | Médio (4) | Controles R02-C1 a R02-C5 comprovadamente operantes (evidências de 14.4); alerta da Etapa 6 ativo; revisão da classificação se a segunda assinatura for flexibilizada na rotina |
 | R03 | | | |
 | R04 | | | |
@@ -343,9 +350,13 @@ A atenção inicial deve ir para essa faixa Crítica: R02, em que a alteração 
 
 ### Justificativa do residual de R01 (@lilydias24)
 
-**Probabilidade**
-**Impacto**
-**Condição para aceitar o residual Alto:** 
+**Probabilidade (4 → 2).** Cada controle fecha um dos caminhos que hoje estão abertos: com hash e salt (R01-C1), um vazamento do banco deixa de entregar credenciais utilizáveis; com MFA (R01-C2), a senha isolada passa a ser insuficiente; com bloqueio por tentativas (R01-C3), a força bruta interna deixa de ser viável; com expiração de sessão (R01-C4), o terminal aberto entre plantões deixa de ser porta de entrada; e com a política de senha (R01-C5), o reuso de credencial vazada deixa de valer. Resta o caminho que nenhum desses controles fecha - **phishing capaz de capturar também o segundo fator, ou um dispositivo de MFA comprometido** -, o que corresponde a "possível, mas dependente de uma vulnerabilidade ou condição específica" na escala 13.1.
+
+Não desce a 1, diferente do residual de R02, e a comparação explica por quê: em R02 a barreira final é **outra pessoa** - a segunda assinatura exige o conluio de dois profissionais. Em R01, o segundo fator continua sendo algo que o mesmo titular carrega, e por isso pode ser obtido pela mesma manobra que obtém a senha. Um segundo fator não é uma segunda pessoa.
+
+**Impacto (4, inalterado).** Os cinco controles são preventivos e de detecção: reduzem a chance de o acesso acontecer, não o dano de um acesso que se concretize. Quem entra na conta continua alcançando o prontuário completo e as operações irreversíveis. Reduzir o impacto exigiria mudanças de outra natureza - segregação mais fina de permissões dentro do próprio perfil médico e segunda assinatura obrigatória em operações irreversíveis -, que pertencem ao requisito RS01 e às decisões de arquitetura da Etapa 3.
+
+**Condição para aceitar o residual Alto:** manter a regra 1 de detecção da Etapa 6 ativa e efetivamente monitorada, revisar trimestralmente os logs de autenticação e de bloqueio, e reavaliar a classificação caso a segunda assinatura em operações irreversíveis venha a ser implementada - é a única mudança capaz de tirar este risco do impacto 4.
 
 ### Justificativa do residual de R02 (@ARTHUR9011)
 

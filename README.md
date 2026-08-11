@@ -7,7 +7,7 @@
 - Arthur Provenzi Parizotto (@ARTHUR9011)
 - Emilly Nascimento Dias (@lilydias24)
 - Lorenzo Ponsi Ficher (@lorenzoficher)
-- Maria Eduarda Sanchez Chessio (@usuario-github-4)
+- Maria Eduarda Sanchez Chessio (@mariasanchez0)
 - Pietro Mendes Prauchner (@PPrauchner)
 
 ## Sobre o projeto
@@ -23,7 +23,7 @@ Cada etapa fica em seu próprio arquivo, para que as contribuições de cada int
 | 1 - Casos de Abuso e Modelagem STRIDE | [`E1_Casos_de_abuso_e_Stride.md`](docs/E1_Casos_de_abuso_e_Stride.md) | @lilydias24 |
 | 2 - Riscos, Priorização e NIST CSF 2.0 | [`E2_Riscos_e_NIST_CSF.md`](docs/E2_Riscos_e_NIST_CSF.md) | @ARTHUR9011 |
 | 3 - Projeto de uma Arquitetura Segura | [`E3_Arquitetura_segura.md`](docs/E3_Arquitetura_segura.md) | @lorenzoficher |
-| 4 - Código Seguro e Testes de Segurança | [`E4_Codigo_seguro_e_testes.md`](docs/E4_Codigo_seguro_e_testes.md) | @mariasanchez0’s |
+| 4 - Código Seguro e Testes de Segurança | [`E4_Codigo_seguro_e_testes.md`](docs/E4_Codigo_seguro_e_testes.md) | @mariasanchez0 |
 | 5 - Verificação de Vulnerabilidades | [`E5_Verificacao_de_vulnerabilidades.md`](docs/E5_Verificacao_de_vulnerabilidades.md) | @PPrauchner |
 | 6 - Monitoramento e Detecção de Intrusões | [`E6_Monitoramento_e_deteccao.md`](docs/E6_Monitoramento_e_deteccao.md) | @lilydias24 |
 | 7 - DevSecOps e Vídeo Final | [`E7_DevSecOps_e_video.md`](docs/E7_DevSecOps_e_video.md) | @ARTHUR9011 |
@@ -53,7 +53,7 @@ Cada integrante acompanha uma mesma categoria STRIDE do início ao fim do trabal
 | @lilydias24 | Spoofing | T01 | R01 | Credenciais de `Funcionario` (`nomeLogin`/`senhaLogin`) |
 | @ARTHUR9011 | Tampering | T02 | R02 | `PrescricaoMedicamento` / `Tratamento` |
 | @lorenzoficher | Repudiation | T03 | R03 | `Obito.registrarObito()` |
-| @mariasanchez0’s | Information Disclosure | T04 | R04 | Isolamento entre Farmácia e Financeiro |
+| @mariasanchez0 | Information Disclosure | T04 | R04 | Isolamento entre Farmácia e Financeiro |
 | @PPrauchner | Denial of Service + Elevation of Privilege | T05 e T06 | R05 e R06 | SGBD central e `enum nivelAcesso` |
 
 ## Estrutura do repositório
@@ -90,23 +90,25 @@ Pastas a serem criadas conforme as etapas avançarem: `codigo/etapa-4/` (Etapa 4
 
 - [x] 8.1 Identificação do sistema - @lilydias24
 - [x] 8.2 Descrição do sistema - @lilydias24
-- [ ] 8.3 Usuários, ativos e pontos de interação - @ARTHUR9011
-- [ ] 8.4 Visão geral da arquitetura/fluxo - @lorenzoficher (diagramas já versionados; falta o recorte e a análise)
-- [ ] 8.5 Modelagem STRIDE - T01 (Spoofing, @lilydias24) concluída; T02 a T06 pendentes
-- [ ] 8.5.1 Interpretação da análise - @lilydias24 (após T02 a T06)
-- [ ] 8.6 Casos de abuso - CA01 (@lilydias24) concluído; CA02 a CA05 pendentes
-- [ ] 8.7 Considerações finais - @lilydias24 (após 8.3 a 8.6)
+- [x] 8.3 Usuários, ativos e pontos de interação - @ARTHUR9011
+- [x] 8.4 Visão geral da arquitetura/fluxo - @lorenzoficher
+- [x] 8.5 Modelagem STRIDE - T01 (@lilydias24), T02 (@ARTHUR9011), T03 (@lorenzoficher), T04 (@mariasanchez0), T05 e T06 (@PPrauchner)
+- [x] 8.5.1 Interpretação da análise - @lilydias24
+- [x] 8.6 Casos de abuso - CA01 a CA05, um por integrante
+- [x] 8.7 Considerações finais - @lilydias24 (rascunho revisado pelo grupo)
+
+> **Etapa 1 concluída** - todas as seções entregues, com contribuição de cada um dos 5 integrantes.
 
 ### Etapa 2 - Riscos e NIST CSF 2.0
 
 - [x] 13.1 a 13.3 Critérios e cálculo - escalas base definidas (falta exemplificar no contexto do SIGH)
 - [ ] 13.4 e 13.5 Registro e justificativa dos riscos - R01 (@lilydias24) concluído; R02 a R06 pendentes
-- [ ] 13.6 Priorização geral - @mariasanchez0’s
+- [ ] 13.6 Priorização geral - @mariasanchez0
 - [ ] 13.7 Conclusão da análise - @ARTHUR9011
 - [ ] 14.1 Estratégias de tratamento - R01 concluída; demais pendentes
 - [ ] 14.3 Mapeamento NIST - R01 concluído; demais pendentes
 - [ ] 14.4 Plano de tratamento - R01 concluído; demais pendentes
-- [ ] 14.5 Ordem de implementação - @mariasanchez0’s
+- [ ] 14.5 Ordem de implementação - @mariasanchez0
 - [ ] 14.6 Risco residual - R01 concluído; demais pendentes
 - [ ] 15. Considerações finais - @PPrauchner
 
