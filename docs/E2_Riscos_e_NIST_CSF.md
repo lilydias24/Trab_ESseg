@@ -185,13 +185,13 @@ A atenção inicial deve ir para essa faixa Crítica: R02, em que a alteração 
 
 > Seção compilada pelo **@mariasanchez0’s**, com justificativa - depende dos controles de todos os riscos.
 
-*(Pendente. Observação de @lilydias24 para a compilação: o controle C1 - hash e salt - é pré-requisito dos demais controles de R01 e não depende de nenhum outro item do plano, o que o torna candidato natural às primeiras posições.)*
+*(Pendente. Observação de @lilydias24 para a compilação: **R01-C1** - hash e salt - não depende de nenhum outro item do plano e é pré-requisito dos demais controles de R01, o que o torna candidato natural às primeiras posições. Vale considerar também que R01 é habilitador de R02, R03 e R04, de modo que seus controles reduzem a probabilidade efetiva desses riscos mesmo antes de os controles próprios deles serem implantados.)*
 
 ## 14.6 Estimativa do risco residual
 
 | Risco | Nível inicial | Nível residual esperado | Condição para aceitar o residual |
 | --- | --- | --- | --- |
-| R01 | | | |
+| R01 | Crítico (16) | Alto (8) | Controles R01-C1 a R01-C5 comprovadamente operantes (evidências de 14.4); regra 1 de detecção da Etapa 6 ativa e monitorada; revisão trimestral dos logs de autenticação e de bloqueio |
 | R02 | Crítico (12) | Médio (4) | Controles R02-C1 a R02-C5 comprovadamente operantes (evidências de 14.4); alerta da Etapa 6 ativo; revisão da classificação se a segunda assinatura for flexibilizada na rotina |
 | R03 | | | |
 | R04 | | | |
@@ -200,9 +200,13 @@ A atenção inicial deve ir para essa faixa Crítica: R02, em que a alteração 
 
 ### Justificativa do residual de R01 (@lilydias24)
 
-**Probabilidade**
-**Impacto**
-**Condição para aceitar o residual Alto:** 
+**Probabilidade (4 → 2).** Cada controle fecha um dos caminhos que hoje estão abertos: com hash e salt (R01-C1), um vazamento do banco deixa de entregar credenciais utilizáveis; com MFA (R01-C2), a senha isolada passa a ser insuficiente; com bloqueio por tentativas (R01-C3), a força bruta interna deixa de ser viável; com expiração de sessão (R01-C4), o terminal aberto entre plantões deixa de ser porta de entrada; e com a política de senha (R01-C5), o reuso de credencial vazada deixa de valer. Resta o caminho que nenhum desses controles fecha - **phishing capaz de capturar também o segundo fator, ou um dispositivo de MFA comprometido** -, o que corresponde a "possível, mas dependente de uma vulnerabilidade ou condição específica" na escala 13.1.
+
+Não desce a 1, diferente do residual de R02, e a comparação explica por quê: em R02 a barreira final é **outra pessoa** - a segunda assinatura exige o conluio de dois profissionais. Em R01, o segundo fator continua sendo algo que o mesmo titular carrega, e por isso pode ser obtido pela mesma manobra que obtém a senha. Um segundo fator não é uma segunda pessoa.
+
+**Impacto (4, inalterado).** Os cinco controles são preventivos e de detecção: reduzem a chance de o acesso acontecer, não o dano de um acesso que se concretize. Quem entra na conta continua alcançando o prontuário completo e as operações irreversíveis. Reduzir o impacto exigiria mudanças de outra natureza - segregação mais fina de permissões dentro do próprio perfil médico e segunda assinatura obrigatória em operações irreversíveis -, que pertencem ao requisito RS01 e às decisões de arquitetura da Etapa 3.
+
+**Condição para aceitar o residual Alto:** manter a regra 1 de detecção da Etapa 6 ativa e efetivamente monitorada, revisar trimestralmente os logs de autenticação e de bloqueio, e reavaliar a classificação caso a segunda assinatura em operações irreversíveis venha a ser implementada - é a única mudança capaz de tirar este risco do impacto 4.
 
 ### Justificativa do residual de R02 (@ARTHUR9011)
 
