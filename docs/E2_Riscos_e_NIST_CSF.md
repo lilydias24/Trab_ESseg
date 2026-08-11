@@ -58,7 +58,7 @@ Pontuação = Probabilidade × Impacto
 
 | ID | Origem STRIDE | Responsável | Evento de risco | Vulnerabilidade ou condição | Probabilidade | Impacto | Pontuação | Nível |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| R01 | T01 - Spoofing | @lilydias24 | | | | | | |
+| R01 | T01 - Spoofing | @lilydias24 | Uso das credenciais legítimas de um profissional para assumir sua identidade no SIGH e executar consultas ao prontuário e operações clínicas em nome dele | `senhaLogin` armazenada como texto simples na classe `Funcionario`, contrariando o RNF05; autenticação de fator único, sem MFA nem reautenticação em operações sensíveis; sem bloqueio após tentativas malsucedidas; sessões sem expiração por inatividade em terminais compartilhados; o Tópico 9 exclui do escopo o registro de eventos críticos de acesso indevido | 4 | 4 | 16 | Crítico |
 | R02 | T02 - Tampering | @ARTHUR9011 | Alteração indevida da `dosagemMedicamento` ou do `intervaloConsumo` de uma prescrição ativa, executada pela enfermagem como se fosse a prescrição original | `atualizarTratamentosDoPaciente(tratamento)` não recebe o responsável; a regra "apenas médicos autorizados" (UC03) não é validada no servidor; não há faixa terapêutica para os campos; a alteração sobrescreve o registro sem versionamento nem autor | 3 | 4 | 12 | Crítico |
 | R03 | T03 - Repudiation | @lorenzoficher | | | | | | |
 | R04 | T04 - Information Disclosure | @mariasanchez0’s | | | | | | |
@@ -69,10 +69,15 @@ Pontuação = Probabilidade × Impacto
 
 ### R01
 
-**Probabilidade.** 
-**Impacto** 
-**Quem é afetado.** 
-**Por que Crítico é adequado.** 
+**Probabilidade (4 - Alta).** O único obstáculo entre o atacante e a conta é saber a senha, e os caminhos para obtê-la são todos de baixo custo: observação da digitação em terminal compartilhado, reuso de senha já vazada em outro serviço, phishing dirigido ao corpo clínico, ou leitura direta da tabela `Funcionario` - que, sem hash, entrega as credenciais prontas para uso. Sem bloqueio por tentativas malsucedidas, a força bruta a partir da rede interna também está disponível.
+
+Duas condições sustentam o valor 4 sem depender de suposição, porque vêm da documentação do próprio SIGH: o **RNF05** exige criptografia para as informações médicas, mas o modelo guarda `senhaLogin` em texto simples - a proteção está no requisito e não chegou ao projeto; e o **Tópico 9** coloca o registro de eventos críticos de acesso indevido fora do escopo, de modo que uma sequência de tentativas não encontra barreira nem gera alarme. É o critério de "condições previsíveis do sistema" da escala 13.1.
+
+**Impacto (4 - Muito alto).** Uma sessão assumida alcança o prontuário de qualquer paciente - dado pessoal sensível pela LGPD (art. 5º, II) e protegido por sigilo médico - e habilita operações de consequência assistencial imediata: prescrever medicamento, autorizar alta e registrar óbito. As duas últimas são irreversíveis fora do sistema: uma alta indevida coloca um paciente para fora do hospital, e um registro de óbito produz efeitos legais e administrativos que nenhum `rollback` desfaz. Como o SIGH atribui a autoria pela sessão autenticada, as ações constam como sendo do profissional legítimo.
+
+**Quem é afetado.** O paciente, na segurança clínica e na privacidade; o profissional cuja conta foi assumida, responsabilizado por atos que não praticou e sem meios de demonstrar o contrário; e a instituição, exposta perante a LGPD, os conselhos profissionais e eventuais ações judiciais.
+
+**Por que Crítico é adequado.** 4 × 4 = 16 é a pontuação máxima da escala, e o que a justifica não é apenas a soma das duas dimensões: **R01 é o habilitador dos demais riscos do registro**. Uma conta assumida é o ponto de partida natural para a alteração de prescrição (R02), o registro de óbito irrastreável (R03) e a leitura indevida de prontuários (R04) - os casos de abuso CA02, CA03 e CA04 citam explicitamente a conta assumida como caminho de entrada alternativo. Tratar R01 reduz a probabilidade efetiva de todos eles, o que reforça sua posição no topo da priorização.
 
 ### R02
 
