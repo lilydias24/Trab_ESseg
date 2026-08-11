@@ -1,0 +1,27 @@
+# Artefatos gerados pelo Python
+# O código da Etapa 4 (codigo/etapa-4/) gera bytecode ao ser importado pelos
+# testes. Esses arquivos são recriados a cada execução e não devem ser
+# versionados - só o código-fonte e o resultado documentado interessam.
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ambientes virtuais, caso alguém prefira isolar a execução dos testes
+.venv/
+venv/
+env/
+
+# Arquivos de sistema operacional
+# O repositório é editado em Windows com OneDrive e pode ser clonado em macOS
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Configuração local de editor/IDE
+.vscode/
+.idea/
+*.swp
+
+# Observação: as evidências da Etapa 5 (capturas de tela do ZAP) e os diagramas
+# exportados do Lucid DEVEM ser versionados - o enunciado exige o arquivo no
+# repositório, não apenas o link. Não acrescente aqui regras que os excluam.
