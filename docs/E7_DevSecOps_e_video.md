@@ -76,11 +76,48 @@ Cada integrante escreve a parte referente à própria trilha: o que fez, qual de
 | --- | --- | --- | --- |
 | Abertura e apresentação do SIGH | | @lilydias24 | Pendente |
 | Trilha Spoofing → R01 → RS01 → hash de senha → regra 1 | | @lilydias24 | Pendente |
-| Trilha Tampering → R02 → RS02 → regra 2 | | @ARTHUR9011 | Pendente |
+| Trilha Tampering → R02 → RS02 → regra 2 | Da alteração sem autoria à prevenção, auditoria e detecção correlacionada | @ARTHUR9011 | Concluído (aguarda consolidação) |
 | Trilha Repudiation → R03 e arquitetura segura | | @lorenzoficher | Pendente |
 | Trilha Information Disclosure → R04, priorização e achados do ZAP | | @mariasanchez0’s | Pendente |
 | Trilha DoS/EoP → R05 e R06 → RS03 → autorização → regra 3 | | @PPrauchner | Pendente |
 | Encerramento e conclusões | | @mariasanchez0’s (organiza) | Pendente |
+
+### Bloco Tampering - roteiro de @ARTHUR9011
+
+- **Duração-alvo:** 70 a 80 segundos.
+- **Objetivo:** mostrar uma trilha contínua entre ameaça, risco, requisito preventivo e
+  detecção, sem apresentar critérios planejados como testes já executados.
+
+**Narração sugerida:**
+
+> Minha trilha começa no T02, a adulteração de prescrições. A operação de atualizar
+> tratamentos podia sobrescrever dosagem e intervalo sem registrar autor, validar no
+> servidor, conferir a faixa terapêutica ou preservar o histórico. Na Etapa 2, transformei
+> isso no R02: probabilidade 3, impacto 4 e pontuação 12, um risco Crítico porque a
+> alteração pode alcançar o paciente antes da detecção. O tratamento definiu cinco
+> controles: identidade da sessão, papel médico e vínculo validados no servidor, faixa
+> terapêutica, versionamento imutável e reautenticação com confirmação independente. Na
+> Etapa 3, a RS02 converteu os controles em requisito verificável: a operação insegura
+> falha de forma fechada, preserva a versão anterior e registra as duas identidades e o
+> identificador de correlação. A Regra 2 fecha o ciclo usando eventos publicados e
+> recusados. Uma publicação inválida gera alerta Crítico imediato; três recusas suspeitas
+> do mesmo autor ou contra a mesma prescrição em dez minutos geram alerta Alto, sem contar
+> duplicatas. Assim, a trilha conecta prevenção, rastreabilidade e detecção sem permitir
+> que um alerta altere sozinho uma decisão clínica.
+
+**Sequência visual e evidência:**
+
+| Tempo | Mostrar na tela | Mensagem principal |
+| --- | --- | --- |
+| 0-12 s | T02 em [Etapa 1](E1_Casos_de_abuso_e_Stride.md) | Campos e operação vulneráveis no modelo |
+| 12-25 s | Registro e pontuação de R02 em [Etapa 2](E2_Riscos_e_NIST_CSF.md) | Probabilidade 3 × impacto 4 = 12, Crítico |
+| 25-50 s | Enunciado, controles e critérios da RS02 em [Etapa 3](E3_Arquitetura_segura.md) | Prevenção no servidor, confirmação, versionamento e auditoria |
+| 50-75 s | Gatilhos da Regra 2 em [Etapa 6](E6_Monitoramento_e_deteccao.md) | Um evento inválido publicado gera Crítico; 3 recusas/10 min geram Alto |
+
+Durante a gravação, destacar os identificadores `T02`, `R02`, `RS02` e `Regra 2`, sem
+exibir dados clínicos reais. Se for necessário reduzir o tempo, manter pontuação, cinco
+controles e dois gatilhos; exemplos detalhados de falso positivo e resposta ficam no
+documento, não precisam ser narrados.
 
 ## 3. Vídeo final
 
