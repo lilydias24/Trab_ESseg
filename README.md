@@ -77,10 +77,11 @@ Trab_ESseg/
 │   ├── estrutura/                             # Casos de uso, classes, pacotes, componentes, implantação, mapeamento
 │   ├── atividade/                             # ACT01 a ACT10
 │   └── sequencia/                             # DS01 a DS10, DS1.1 e DS1.2
+├── codigo/etapa-4/                            # Práticas de código seguro e testes (Etapa 4)
 └── images/                                    # Outras imagens de apoio
 ```
 
-Pastas a serem criadas conforme as etapas avançarem: `codigo/etapa-4/` (Etapa 4), `evidencias/etapa-5/` (Etapa 5) e `roteiros/` (Etapa 6).
+Pastas a serem criadas conforme as etapas avançarem: `evidencias/etapa-5/` (Etapa 5) e `roteiros/` (Etapa 6).
 
 > Os diagramas são exportações dos documentos do grupo no Lucid, versionadas de fato no repositório - o enunciado não aceita apenas o link para a ferramenta externa. Os links dos documentos-fonte estão em [`diagrams/README.md`](diagrams/README.md).
 
@@ -115,11 +116,11 @@ Pastas a serem criadas conforme as etapas avançarem: `codigo/etapa-4/` (Etapa 4
 
 ### Etapas 3 a 7
 
-- [ ] Etapa 3 - RS02 concluído; RS01 e RS03 pendentes. Diagrama especificado e DA01 concluída (@lorenzoficher); falta exportar o PNG. DA02 e DA03 pendentes
-- [ ] Etapa 4 - duas práticas de código seguro com testes
+- [ ] Etapa 3 - RS01 e RS02 concluídos (aguardam revisão cruzada); RS03 (@PPrauchner) pendente. Diagrama especificado (@lorenzoficher); falta exportar o PNG. DA01 (@lorenzoficher) e DA03 (@lilydias24) concluídas; DA02 (@mariasanchez0) pendente
+- [ ] Etapa 4 - Prática 1 (armazenamento seguro de senhas, @lilydias24) concluída, testes executados; Prática 2 (autorização no servidor, @PPrauchner) pendente
 - [ ] Etapa 5 - uma verificação com até três achados analisados
-- [ ] Etapa 6 - Regra 2 concluída; Regras 1 e 3 e a compilação do roteiro pendentes
-- [ ] Etapa 7 - pipeline especificado e revisado; blocos Tampering e Repudiation do roteiro concluídos; demais blocos, consolidação e gravação pendentes
+- [ ] Etapa 6 - Regras 1 (@lilydias24) e 2 (@ARTHUR9011) concluídas; Regra 3 (@PPrauchner) e a compilação do roteiro pendentes
+- [ ] Etapa 7 - pipeline especificado e revisado; blocos Abertura, Spoofing (@lilydias24), Tampering e Repudiation do roteiro concluídos; blocos Information Disclosure e DoS/EoP, consolidação e gravação pendentes
 
 ## Como contribuir (para o grupo)
 
