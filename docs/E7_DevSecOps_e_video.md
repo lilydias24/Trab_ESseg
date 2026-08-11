@@ -5,8 +5,8 @@
 
 | Item | Responsável | Situação |
 | --- | --- | --- |
-| Pipeline DevSecOps (8 momentos + 3 condições de bloqueio) | @ARTHUR9011 (rascunho), @lorenzoficher (revisão) | Pendente |
-| Roteiro do vídeo - parte de cada trilha | Todos | Pendente |
+| Pipeline DevSecOps (8 momentos + 3 condições de bloqueio) | @ARTHUR9011 (rascunho), @lorenzoficher (revisão) | Concluído (especificação; aguarda revisão) |
+| Roteiro do vídeo - parte de cada trilha | Todos | Em andamento (bloco Tampering concluído) |
 | Organização do roteiro em documento único | @mariasanchez0’s | Pendente |
 | Gravação (5-8 min) e publicação do link | Todos; edição por @ARTHUR9011 | Pendente |
 
@@ -67,6 +67,19 @@ compensatório, responsável que aceita o risco e prazo de expiração; ela fica
 execução e precisa de aprovação independente. Segredo confirmado ou artefato com
 integridade divergente não pode ser liberado por exceção: é necessário revogar/corrigir e
 executar novamente o pipeline.
+
+### Verificação planejada do pipeline
+
+Os cenários abaixo devem virar testes da configuração quando o pipeline for implementado:
+
+| ID | Cenário | Resultado esperado |
+| --- | --- | --- |
+| P7-TV01 | Teste de segurança falha em um pull request | Gate 1 impede o merge e relaciona o teste ao requisito violado |
+| P7-TV02 | Varredura encontra credencial válida no commit | Gate 1 impede o merge; segredo é revogado antes de nova execução |
+| P7-TV03 | Artefato não possui SBOM ou o ZAP encontra achado Alto | Gate 2 impede a promoção para produção e preserva o relatório |
+| P7-TV04 | Hash do artefato de produção difere daquele homologado | Gate 3 impede a implantação sem permitir exceção |
+| P7-TV05 | Exceção não informa aprovador independente ou expiração | Exceção é inválida e o gate permanece bloqueado |
+| P7-TV06 | Todos os controles passam e o mesmo hash percorre homologação e produção | Promoção é liberada e todas as evidências ficam vinculadas ao `pipelineRunId` |
 
 ## 2. Roteiro do vídeo
 
