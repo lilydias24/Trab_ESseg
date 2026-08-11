@@ -9,7 +9,7 @@
 | RS01 - requisito e vulnerabilidade | @lilydias24 | Pendente |
 | RS02 - requisito e vulnerabilidade | @ARTHUR9011 | Concluído (aguarda revisão cruzada) |
 | RS03 - requisito e vulnerabilidade | @PPrauchner | Pendente |
-| Diagrama da arquitetura segura | @lorenzoficher | Pendente |
+| Diagrama da arquitetura segura | @lorenzoficher | Especificado (seções 3.1 a 3.3); falta exportar o PNG do Lucid |
 | Decisão de arquitetura 1 (ligada ao diagrama) | @lorenzoficher | Pendente |
 | Decisão de arquitetura 2 (ligada a RS03) | @mariasanchez0’s | Pendente |
 | Decisão de arquitetura 3 (reforço de autenticação) | @lilydias24 ou @ARTHUR9011 | Pendente |
@@ -194,6 +194,33 @@ legenda do diagrama e serve para conferir se ele mostra o que precisa mostrar.
    próprio, e não como mais uma tabela do banco único - é o ponto da DA01.
 5. **SIGH → «system» Sistema Governamental.** A transmissão do óbito atravessa a fronteira
    da instituição e deve aparecer com o registro probatório do R03-C4 ao lado.
+
+### 3.3 Fluxo de referência - registro de óbito (UC10)
+
+O caminho abaixo é o que o diagrama deve permitir percorrer com o dedo, e é o mesmo do
+DS10 já versionado, agora com os controles no lugar:
+
+```
+Desktop Cliente
+  │  registrarObito(causaCID, dataHoraObito)          ← sem autor, sem carimbo
+  ▼
+API Gateway ──────────────► Serviço de Autenticação   ← valida sessão + reautenticação
+  │                                                      (descarta autor vindo do cliente)
+  ▼
+Serviço de Internação Médica
+  │  ├──────────────────► Serviço de Autorização      ← papel médico + vínculo? (R03-C1)
+  │  ├──────────────────► Serviço de Auditoria        ← append: autor, sessão, terminal,
+  │  │                                                   dataHoraRegistro do servidor
+  │  │                                                   (R03-C2, R03-C3)
+  │  ▼
+  │  SGBD central: grava Obito e encerra o prontuário ← só após o append ter sucesso
+  ▼
+«system» Sistema Governamental                        ← envio + registro probatório (R03-C4)
+```
+
+O ponto que o diagrama precisa comunicar em uma olhada: **a gravação do `Obito` acontece
+depois do registro de auditoria, e não antes**. Se o append falhar, nada é persistido - é
+o que impede que exista um óbito sem rastro, e é a diferença entre auditar e ter auditoria.
 
 ## 4. Decisões de arquitetura
 
