@@ -15,7 +15,7 @@
 | 13.7 Conclusão da análise | @ARTHUR9011 | Rascunho concluído (revisão após R03-R06) |
 | 14.1 Estratégia de tratamento | Todos | R01, R02, R03, R05 e R06 concluídas; R04 pendente |
 | 14.2 Funções do NIST CSF | @lorenzoficher | Concluída |
-| 14.3 Mapeamento risco → NIST | Todos | R01, R02, R05 e R06 concluídos; R03 e R04 pendentes |
+| 14.3 Mapeamento risco → NIST | Todos | R01, R02, R03, R05 e R06 concluídos; R04 pendente |
 | 14.4 Plano de tratamento | Todos | R01, R02, R05 e R06 concluídos; R03 e R04 pendentes |
 | 14.5 Ordem de implementação | @mariasanchez0’s | Pendente |
 | 14.6 Risco residual | Todos | R01, R02, R05 e R06 concluídos; R03 e R04 pendentes |
@@ -302,7 +302,7 @@ registrar, por exemplo, por que R02 não tem Recover e por que R05 não tem Gove
 | --- | :---: | :---: | :---: | :---: | :---: | :---: |
 | R01 | X | | X | X | X | X |
 | R02 | X | | X | X | X | |
-| R03 | | | | | | |
+| R03 | X | | X | X | X | X |
 | R04 | | | | | | |
 | R05 | | X | X | X | X | X |
 | R06 | X | | X | X | X | |
@@ -384,7 +384,47 @@ registrar, por exemplo, por que R02 não tem Recover e por que R05 não tem Gove
   R06. Assumir Recover aqui daria a impressão falsa de que a elevação é reversível em seus
   efeitos, quando o contrário é o ponto: **em R06 tudo tem de ser feito antes**.
 
-> **Pendente:** mapeamento e justificativa de R03 e R04, cada um pelo respectivo responsável (evitar marcar todas as funções sem justificar).
+#### R03 (@lorenzoficher)
+
+- **Govern:** o UC10 diz que somente médicos registram óbito, e o Tópico 9 diz que o
+  registro de eventos críticos está fora do escopo. São duas decisões de governança em
+  sentidos opostos, e nenhuma delas tem dono. Antes de qualquer controle técnico é preciso
+  definir quem pode registrar óbito, quem responde pela trilha de auditoria, por quanto
+  tempo ela é retida e quem tem permissão para consultá-la - uma trilha que qualquer perfil
+  possa ler recria, na privacidade, o problema que resolve na responsabilização.
+- **Protect:** é o núcleo do tratamento, e com um sentido diferente do que tem nos demais
+  riscos. Em R01 e R06, proteger é **impedir** um acesso; aqui é **produzir a prova** no
+  instante do ato - autoria vinda da sessão autenticada, carimbo de tempo do servidor e
+  trilha somente de acréscimo. Nenhum desses controles impede o registro de um óbito
+  indevido; todos tornam impossível que ele seja anônimo.
+- **Detect:** hoje não há nada a observar, porque nada é gravado. Uma vez existindo a
+  trilha, a detecção passa a ter objeto: registro com data e hora informadas muito
+  anteriores ao carimbo do servidor, registro fora da escala de trabalho do médico, ou
+  falha na gravação da própria trilha. Note-se que **R03 não tem regra dedicada** entre as
+  três do roteiro da Etapa 6 - as regras cobrem R01, R02 e R06 -, de modo que essa
+  detecção é entregue como controle deste plano, com evidência própria, e não como
+  dependência daquela etapa.
+- **Respond:** contestada a autoria, a resposta é um procedimento de apuração que consulta
+  a trilha, preserva a evidência antes de qualquer correção e comunica o resultado ao
+  médico envolvido e à direção clínica. Sem esse procedimento definido, a existência da
+  trilha não se converte em capacidade de resposta - alguém precisa saber onde olhar e o
+  que fazer com o que encontrar.
+- **Recover:** marcado, e por uma razão que **nenhum outro risco deste registro tem**: R03
+  é o único cujo efeito atravessou a fronteira da instituição antes da dúvida aparecer. A
+  recuperação aqui é concreta e específica - reabrir o prontuário que o registro encerrou e
+  **retificar o dado já transmitido ao «system» Sistema Governamental**, o que exige saber
+  o que foi enviado e quando, informação que hoje não existe. O limite precisa ficar
+  explícito: o que se recupera é o registro e o seu efeito externo, nunca a prova que não
+  foi capturada. Um óbito registrado por engano pode ser corrigido; a impossibilidade de
+  saber quem o registrou, não.
+- **Por que não Identify:** o ativo, a operação e a lacuna já estão nomeados na Etapa 1 -
+  `Obito.registrarObito(data, hora)` em T03, o fluxo completo em CA03 e a rastreabilidade
+  como ativo **não modelado** na seção 8.3.2. O tratamento de R03 não depende de nenhum
+  levantamento adicional, diferente de R05, em que a cota de conexões só pode ser
+  calibrada depois de medir a capacidade do SGBD. Marcar Identify aqui seria preencher a
+  tabela sem resultado esperado novo.
+
+> **Pendente:** mapeamento e justificativa de R04, pelo respectivo responsável (evitar marcar todas as funções sem justificar).
 
 ## 14.4 Plano de tratamento
 
