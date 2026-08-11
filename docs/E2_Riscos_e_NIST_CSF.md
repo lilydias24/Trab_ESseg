@@ -10,7 +10,7 @@
 | 13.2 Critérios de impacto | @ARTHUR9011 + @lorenzoficher | Concluída (exemplos do SIGH adicionados) |
 | 13.3 Cálculo e classificação | @ARTHUR9011 | Concluída |
 | 13.4 Registro de riscos | Todos (1 risco por pessoa) | R01, R02, R03, R05 e R06 concluídos; R04 pendente |
-| 13.5 Justificativas | Todos | R01, R02, R05 e R06 concluídas; R03 e R04 pendentes |
+| 13.5 Justificativas | Todos | R01, R02, R03, R05 e R06 concluídas; R04 pendente |
 | 13.6 Priorização geral | @mariasanchez0’s (compila) | Pendente |
 | 13.7 Conclusão da análise | @ARTHUR9011 | Rascunho concluído (revisão após R03-R06) |
 | 14.1 Estratégia de tratamento | Todos | R01, R02, R05 e R06 concluídas; R03 e R04 pendentes |
@@ -177,7 +177,63 @@ auditoria, a elevação é silenciosa e permanente. O próprio enunciado (13.3) 
 caso ao advertir que "dois riscos com a mesma pontuação podem receber prioridades
 diferentes": R06 pede urgência acima do que um 8 sugere.
 
-> **Pendente:** justificativas de R03 e R04, cada uma pelo respectivo responsável.
+### R03
+
+**Probabilidade (4 - Alta).** R03 é o único risco deste registro em que **o uso correto do
+sistema já produz a condição do evento**. Nos demais, a probabilidade mede o quanto falta
+para alguém explorar uma lacuna: em R01 é preciso obter uma senha, em R02 é preciso a
+intenção de alterar a prescrição, em R06 é preciso perceber que a validação só existe na
+interface. Aqui não é preciso nada disso. Toda chamada legítima a
+`registrarObito(data, hora)` já nasce sem autor, com data e hora escolhidas por quem
+chama e sem trilha que registre a sessão ou o terminal - o registro não atribuível é o
+**resultado padrão** da operação, não o desvio dela.
+
+Isso corresponde exatamente ao que a escala 13.1 reserva ao valor 4: o evento ocorre "com
+facilidade, frequência ou durante condições previsíveis do sistema", e a condição
+previsível aqui é a rotina. Não é 3 porque 3 exige que o evento seja apenas "plausível em
+situações comuns", e a plausibilidade já foi ultrapassada: não existe execução da operação
+que produza um registro atribuível. Há ainda um segundo vetor, independente da conduta de
+qualquer pessoa e já identificado pelo @PPrauchner na justificativa de R05: a janela de
+indisponibilidade obriga o registro em papel e a digitação posterior, com data e hora
+informadas por quem digita - o que **fabrica a mesma condição em escala e de forma
+inteiramente legítima**.
+
+**Impacto (3 - Alto).** O dano de R03 é legal, administrativo e reputacional, e recai
+sobre o caso apurado: uma responsabilização que não se conclui, um médico titular sem meio
+de demonstrar que não foi o autor e uma instituição sem meio de inocentá-lo. É o critério
+de "prejuízo relevante aos usuários, ao negócio, à administração" da escala 13.2, e é o
+exemplo com que aquela faixa foi ilustrada.
+
+Não é 4, e a diferença precisa ser dita porque o argumento contrário é tentador. R03 **não
+afeta muitos usuários** de uma vez, como R05 e R06, nem produz dano físico irreversível,
+como R02: cada evento diz respeito a um registro, um paciente e um profissional. O que R03
+tem e os outros não é alcance sobre *as demais ameaças* - sem autoria registrada, nenhuma
+delas pode ser comprovada depois, como observa a seção 8.5.1 da Etapa 1. Esse efeito é
+real, mas é **habilitador**, e o documento já decidiu como tratá-lo: na justificativa de
+R06, o @PPrauchner registrou que a natureza habilitadora "deve pesar na priorização de
+13.6, e não na pontuação". Elevar o impacto a 4 por esse motivo pontuaria duas vezes a
+mesma propriedade e contradiria a régua publicada em 13.2. O peso vai para 13.6.
+
+**Quem é afetado.** O médico titular da conta, em primeiro lugar, que responde perante o
+hospital e o conselho profissional por um ato que não tem como provar não ter praticado; a
+família do paciente, que contesta data, hora ou causa e encontra um registro íntegro e
+inexplicável; e a instituição, que perde a capacidade de apurar internamente e de se
+defender externamente. Entre os ativos, o atingido é aquele que a seção 8.3.2 registra
+como **não modelado**: a rastreabilidade das operações. É o único ativo do recorte cuja
+ausência é, ela própria, a vulnerabilidade.
+
+**Por que Crítico é adequado.** 4 × 3 = 12 coloca R03 na faixa Crítica, e a pontuação vem
+inteiramente da probabilidade - o oposto de R06, que chega ao seu nível pelo impacto. Duas
+agravantes que a fórmula não captura, e que pertencem à priorização: a primeira é que o
+efeito **já saiu do domínio do hospital** quando a dúvida aparece, porque o registro foi
+transmitido ao Sistema Governamental por uma integração que a seção 8.2 aponta como sem
+requisito funcional documentado - não se sabe sequer se o que trafegou levava identificação
+de responsável. A segunda é que a ausência de prova **não é recuperável retroativamente**:
+uma senha se troca, um leito se realoca, uma prescrição se versiona a partir de agora, mas
+nenhum controle implantado amanhã produz evidência sobre um registro feito ontem. Todo o
+tratamento de R03 precisa ser anterior ao ato.
+
+> **Pendente:** justificativa de R04, pelo respectivo responsável.
 
 ## 13.6 Priorização geral
 
