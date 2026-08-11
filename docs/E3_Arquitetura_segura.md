@@ -418,9 +418,54 @@ o que impede que exista um óbito sem rastro, e é a diferença entre auditar e 
 - **Alternativas consideradas:**
 - **Consequências:**
 
-### DA03 - *(a definir, reforço de autenticação)* - @lilydias24 ou @ARTHUR9011
+### DA03 - Serviço de autenticação dedicado como emissor único da identidade de sessão - @lilydias24
 
-- **Contexto:**
-- **Decisão:**
-- **Alternativas consideradas:**
-- **Consequências:**
+- **Contexto.** O diagrama de componentes do SIGH mostra 7 microsserviços, cada um com
+  seu firewall antes do DAO, todos atrás de um API Gateway. **Nenhum deles é um serviço
+  de autenticação**: as credenciais são atributos de `Funcionario`, dentro do Serviço de
+  Funcionários, que é também o serviço de cadastro administrativo. Isso produz três
+  efeitos que a análise já registrou: quem alcança o cadastro alcança as credenciais
+  (T06/CA05), não existe um lugar único onde impor MFA, bloqueio e expiração de sessão
+  (R01), e cada serviço fica livre para decidir sozinho o que aceita como identidade -
+  inclusive aceitá-la do corpo da requisição, que é a raiz de T02 e T06.
+- **Decisão.** Introduzir um **serviço de autenticação dedicado**, atrás do API Gateway e
+  separado do Serviço de Funcionários, como **único emissor** da identidade de sessão. As
+  credenciais derivadas, o verificador do segundo fator, o contador de tentativas e o
+  estado de bloqueio passam a residir nele. O Gateway valida a sessão a cada requisição e
+  propaga aos serviços de negócio uma identidade verificada (quem é, qual papel, quando
+  reautenticou). **Os serviços de negócio nunca aceitam identidade vinda do cliente** -
+  apenas a que chega por esse canal verificado.
+- **Alternativas consideradas.**
+  - *Manter a autenticação dentro do Serviço de Funcionários.* Rejeitada: mantém as
+    credenciais no mesmo perímetro do cadastro administrativo, que é exatamente o
+    caminho que CA05 percorre para ler `senhaLogin` de todos os perfis.
+  - *Cada serviço valida credenciais por conta própria.* Rejeitada: multiplica a
+    implementação de MFA e bloqueio por sete, e faz o limite de tentativas ser
+    contornável alternando o serviço atacado.
+  - *Validar a sessão apenas no API Gateway, sem repassar identidade verificada.*
+    Rejeitada por não sobreviver a defesa em profundidade: qualquer chamada que alcance
+    um serviço por outro caminho ficaria sem verificação, e a decisão de autorização
+    dentro do serviço voltaria a depender do que o cliente afirma ser.
+  - *Delegar a um provedor de identidade institucional (SSO externo).* Não rejeitada,
+    apenas adiada. Resolve bem MFA e política de senha, mas acrescenta dependência
+    externa a um sistema com requisito de operação 24h/7d (RNF03) e não transfere a
+    responsabilidade do hospital sobre os dados. Fica registrada como evolução possível
+    depois que o serviço próprio existir e a fronteira estiver clara.
+- **Consequências.**
+  - *Positivas.* Cria o lugar único onde RS01 pode ser implementado de fato, e onde as
+    cláusulas 3 a 7 passam a ter dono. Separa ler o cadastro de ler as credenciais,
+    cortando o encadeamento T06 → T01 descrito em CA05. Fornece a identidade verificada
+    de que **RS02 e RS03 também dependem** - os dois exigem que o servidor saiba quem
+    está chamando, e nenhum dos dois pode garantir isso sozinho.
+  - *Negativas, e esta precisa ficar explícita.* O serviço de autenticação passa a ser
+    **passagem obrigatória de toda operação**, somando-se ao API Gateway e ao SGBD único
+    como mais um ponto de concentração - a mesma característica que sustenta T05/R05. Se
+    ele cair, ninguém entra no sistema, com pacientes internados no prédio. A decisão só
+    é aceitável acompanhada de redundância desse serviço e de uma política explícita para
+    o que acontece durante sua indisponibilidade, que é o papel da cláusula 8 de RS01
+    (*break-glass*). **Este ponto precisa ser conciliado com a DA01**, de responsabilidade
+    do @lorenzoficher, que trata do isolamento e do desenho geral da arquitetura segura.
+  - *Custo.* Exige migrar as credenciais existentes para fora do Serviço de Funcionários
+    e reescrever o fluxo de login do Desktop Cliente - trabalho concentrado, mas feito
+    uma vez só, contra sete implementações na alternativa descartada.
+
