@@ -5,7 +5,7 @@
 
 | Item | Responsável | Situação |
 | --- | --- | --- |
-| Pipeline DevSecOps (8 momentos + 3 condições de bloqueio) | @ARTHUR9011 (rascunho), @lorenzoficher (revisão) | Concluído (especificação; aguarda revisão) |
+| Pipeline DevSecOps (8 momentos + 3 condições de bloqueio) | @ARTHUR9011 (rascunho), @lorenzoficher (revisão) | Concluído (especificação revisada) |
 | Roteiro do vídeo - parte de cada trilha | Todos | Em andamento (bloco Tampering concluído) |
 | Organização do roteiro em documento único | @mariasanchez0’s | Pendente |
 | Gravação (5-8 min) e publicação do link | Todos; edição por @ARTHUR9011 | Pendente |
@@ -80,6 +80,30 @@ Os cenários abaixo devem virar testes da configuração quando o pipeline for i
 | P7-TV04 | Hash do artefato de produção difere daquele homologado | Gate 3 impede a implantação sem permitir exceção |
 | P7-TV05 | Exceção não informa aprovador independente ou expiração | Exceção é inválida e o gate permanece bloqueado |
 | P7-TV06 | Todos os controles passam e o mesmo hash percorre homologação e produção | Promoção é liberada e todas as evidências ficam vinculadas ao `pipelineRunId` |
+
+### Revisão da especificação (@lorenzoficher)
+
+Revisado o desenho do @ARTHUR9011: os 8 momentos cobrem o ciclo, cada um se ancora em uma
+etapa já entregue e os 3 gates falham de forma fechada, o que atende ao que a etapa pede.
+Três observações de complemento, nenhuma delas contradizendo o desenho.
+
+1. **O Momento 8 depende de uma decisão de arquitetura, não só de configuração.** Ele
+   pressupõe "centralizar logs" e "ativar as três regras", e essa capacidade não existe no
+   modelo atual - é o que a **DA01** da [Etapa 3](E3_Arquitetura_segura.md) institui ao
+   criar o Serviço de Auditoria com armazenamento separado. Sem essa decisão implementada,
+   o Momento 8 não tem de onde ler, e as evidências exigidas em 14.4 para R01, R02, R03 e
+   R06 ficam sem origem. Vale explicitar essa dependência na tabela do Momento 8.
+2. **A Condição de bloqueio 3 já cobre o essencial da minha trilha, e convém nomeá-lo.**
+   Ela bloqueia a implantação quando "auditoria/monitoramento exigido pelo risco está
+   indisponível" - isto é, exatamente o R03-C3. Como o R03 é o único risco cujo controle
+   perde valor retroativamente (nenhuma trilha futura produz prova sobre o que já passou),
+   sugiro que este gate seja o único do desenho **sem exceção temporária possível**, no
+   mesmo regime que o texto já reserva a segredo confirmado e a artefato divergente.
+3. **O pipeline precisa auditar a si mesmo.** A seção de evidência já registra
+   `pipelineRunId`, autor do disparo e aprovações, o que é o suficiente. Observo apenas que
+   esse registro deve seguir o mesmo princípio de acréscimo apenas da DA01 - um histórico de
+   execuções que o próprio administrador do CI possa reescrever reproduz, no ambiente de
+   automação, a lacuna que o R03 descreve no ambiente clínico.
 
 ## 2. Roteiro do vídeo
 
