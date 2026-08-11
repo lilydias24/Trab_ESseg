@@ -6,7 +6,7 @@
 | Item | Responsável | Situação |
 | --- | --- | --- |
 | Pipeline DevSecOps (8 momentos + 3 condições de bloqueio) | @ARTHUR9011 (rascunho), @lorenzoficher (revisão) | Concluído (especificação revisada) |
-| Roteiro do vídeo - parte de cada trilha | Todos | Em andamento (bloco Tampering concluído) |
+| Roteiro do vídeo - parte de cada trilha | Todos | Em andamento (blocos Tampering e Repudiation concluídos) |
 | Organização do roteiro em documento único | @mariasanchez0’s | Pendente |
 | Gravação (5-8 min) e publicação do link | Todos; edição por @ARTHUR9011 | Pendente |
 
@@ -114,10 +114,55 @@ Cada integrante escreve a parte referente à própria trilha: o que fez, qual de
 | Abertura e apresentação do SIGH | | @lilydias24 | Pendente |
 | Trilha Spoofing → R01 → RS01 → hash de senha → regra 1 | | @lilydias24 | Pendente |
 | Trilha Tampering → R02 → RS02 → regra 2 | Da alteração sem autoria à prevenção, auditoria e detecção correlacionada | @ARTHUR9011 | Concluído (aguarda consolidação) |
-| Trilha Repudiation → R03 e arquitetura segura | | @lorenzoficher | Pendente |
+| Trilha Repudiation → R03 → DA01 → trilha de auditoria | Da operação sem autor à decisão de arquitetura que produz a prova | @lorenzoficher | Concluído (aguarda consolidação) |
 | Trilha Information Disclosure → R04, priorização e achados do ZAP | | @mariasanchez0’s | Pendente |
 | Trilha DoS/EoP → R05 e R06 → RS03 → autorização → regra 3 | | @PPrauchner | Pendente |
 | Encerramento e conclusões | | @mariasanchez0’s (organiza) | Pendente |
+
+### Bloco Repudiation - roteiro de @lorenzoficher
+
+- **Duração-alvo:** 70 a 80 segundos.
+- **Objetivo:** mostrar que a ameaça desta trilha não é um ataque, e sim a ausência de
+  prova produzida pelo funcionamento normal do sistema - e que por isso ela é a condição de
+  verificação das outras trilhas.
+
+**Narração sugerida:**
+
+> Minha trilha começa no T03, o registro de óbito. A operação `registrarObito` guarda a
+> causa, a data e a hora, mas não guarda quem registrou - e a data e a hora chegam por
+> parâmetro, escolhidas por quem chama. Some-se a isso que o escopo original do SIGH
+> excluiu o registro de eventos críticos, e o resultado é um registro íntegro que ninguém
+> consegue atribuir a ninguém. Na Etapa 2 isso virou o R03, e ele é o único risco do
+> trabalho com probabilidade 4 sem precisar de atacante: não existe execução dessa operação
+> que produza um registro rastreável, então a condição do risco é o uso normal do sistema.
+> Impacto 3, pontuação 12, Crítico. O tratamento tem cinco controles, e o que os une é que
+> nenhum deles impede o óbito de ser registrado - todos impedem que ele seja anônimo:
+> autoria vinda da sessão, carimbo de tempo do servidor separado do momento clínico
+> informado, trilha somente de acréscimo, registro do que foi transmitido ao Sistema
+> Governamental e confirmação por uma segunda identidade. Na Etapa 3, isso virou a decisão
+> DA01: a trilha de auditoria como serviço próprio, com armazenamento separado do banco
+> central, em que os serviços podem acrescentar e ninguém pode alterar. Essa decisão não
+> atende só a minha trilha - as evidências que o R01, o R02 e o R06 exigem dependem todas
+> dessa mesma trilha existir. E ela tem um custo que vale dizer: se a auditoria for condição
+> da operação, ela vira um ponto de indisponibilidade, o que conversa direto com o R05 -
+> por isso o evento é gravado em buffer durável antes de responder ao usuário. O residual
+> cai para Médio, e não para baixo, por uma razão honesta: o servidor carimba quando o
+> registro foi feito, não quando a morte aconteceu.
+
+**Sequência visual e evidência:**
+
+| Tempo | Mostrar na tela | Mensagem principal |
+| --- | --- | --- |
+| 0-15 s | T03 e CA03 na [Etapa 1](E1_Casos_de_abuso_e_Stride.md), com a assinatura `registrarObito(data, hora)` | A operação não recebe o responsável e o tempo é informado, não carimbado |
+| 15-30 s | Registro e justificativa de R03 na [Etapa 2](E2_Riscos_e_NIST_CSF.md) | Probabilidade 4 sem atacante: o uso correto do sistema já produz a condição |
+| 30-50 s | Controles R03-C1 a R03-C5 em 14.4 | Os controles não impedem o registro; impedem que ele seja anônimo |
+| 50-70 s | DA01 e o diagrama da arquitetura segura na [Etapa 3](E3_Arquitetura_segura.md) | Trilha como serviço próprio, append-only, fora do SGBD central - e o trade-off com R05 |
+| 70-80 s | Linha do R03 em 14.6 | Residual Médio, com a limitação declarada do carimbo clínico |
+
+Durante a gravação, destacar os identificadores `T03`, `R03`, `DA01` e a expressão
+**somente de acréscimo**. Se for necessário reduzir o tempo, o que não pode sair é o
+argumento da probabilidade 4 sem atacante e a DA01 - o restante é detalhe. Não apresentar
+os critérios de verificação como testes já executados: o SIGH não tem implementação.
 
 ### Bloco Tampering - roteiro de @ARTHUR9011
 
