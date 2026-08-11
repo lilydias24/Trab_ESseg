@@ -148,6 +148,51 @@ Cada integrante escreve a parte referente à própria trilha: o que fez, qual de
 | 15-30 s | `diagrams/estrutura/Diagramas_SIGH - Componentes.png` | Sete microsserviços, API Gateway e SGBD único |
 | 30-45 s | Tabela de trilhas do [README](../README.md) | Uma categoria STRIDE por integrante, do início ao fim |
 
+### Bloco Spoofing - roteiro de @lilydias24
+
+- **Duração-alvo:** 70 a 80 segundos.
+- **Objetivo:** mostrar a trilha completa de uma ameaça que é, ao mesmo tempo, a mais
+  simples de explicar e a que habilita as demais - e ser honesta sobre o que o tratamento
+  não resolve.
+
+**Narração sugerida:**
+
+> Minha trilha começa no T01, o roubo de identidade. No modelo de domínio do SIGH, a
+> senha do funcionário é um campo de texto comum, sem hash e sem salt, e saber a senha é
+> tudo que o sistema exige para acreditar que você é aquela pessoa. Isso contradiz o
+> próprio RNF05 do projeto, que exige criptografia para as informações médicas: a proteção
+> estava no requisito e não chegou ao desenho. Na Etapa 2 isso virou o R01, com
+> probabilidade 4 e impacto 4 - pontuação 16, o máximo da escala. Ele é o mais alto não só
+> pelo dano próprio, mas porque é a porta: os casos de abuso das outras trilhas citam a
+> conta assumida como caminho de entrada. Na Etapa 3, a RS01 converteu isso em requisito -
+> senha derivada com salt, segundo fator, reautenticação antes de prescrever, dar alta ou
+> registrar óbito, bloqueio por tentativas e expiração de sessão. E uma cláusula que
+> aprendi a considerar obrigatória em hospital: um caminho de exceção auditado, porque
+> impedir um médico de prescrever numa emergência transfere o dano para o paciente. Na
+> Etapa 4, implementei o armazenamento seguro: dois testes escritos antes do código, e o
+> caso malicioso é o vazamento da tabela do CA01 - o atacante reenvia o valor gravado como
+> se fosse a senha, e é recusado. A Regra 1 fecha o ciclo detectando rajadas de falha,
+> sucesso logo depois delas e sessões simultâneas em alas diferentes, sem confundir isso
+> com a troca de turno num terminal compartilhado. Mesmo assim o risco residual continua
+> Alto, e isso é proposital: o segundo fator ainda é algo que a mesma pessoa carrega. Um
+> segundo fator não é uma segunda pessoa.
+
+**Sequência visual e evidência:**
+
+| Tempo | Mostrar na tela | Mensagem principal |
+| --- | --- | --- |
+| 0-15 s | T01 na [Etapa 1](E1_Casos_de_abuso_e_Stride.md) e o campo `senhaLogin` no diagrama de classes | A senha em texto simples contradiz o RNF05 do próprio projeto |
+| 15-28 s | Registro de R01 na [Etapa 2](E2_Riscos_e_NIST_CSF.md) | 4 × 4 = 16, Crítico, e habilitador das outras trilhas |
+| 28-45 s | Cláusulas e critérios de RS01 na [Etapa 3](E3_Arquitetura_segura.md) | MFA, reautenticação em operação irreversível e exceção assistencial auditada |
+| 45-62 s | Saída real dos testes na [Etapa 4](E4_Codigo_seguro_e_testes.md) | O vazamento da tabela deixa de ser reutilizável - teste executado |
+| 62-78 s | Gatilhos da Regra 1 na [Etapa 6](E6_Monitoramento_e_deteccao.md) e o residual Alto na Etapa 2 | Detecção que não confunde ataque com troca de turno; e o que o controle não resolve |
+
+Durante a gravação, destacar os identificadores `T01`, `R01`, `RS01`, `R01-C1` e
+`Regra 1`. A saída dos testes da Etapa 4 é a única evidência **executada** de toda a
+minha trilha - o restante é especificação, e deve ser apresentado como tal. Se for
+preciso cortar tempo, manter a pontuação 16, o resultado do caso malicioso e a frase
+final sobre o residual; a cláusula de exceção assistencial pode ficar só no documento.
+
 ### Bloco Repudiation - roteiro de @lorenzoficher
 
 - **Duração-alvo:** 70 a 80 segundos.
