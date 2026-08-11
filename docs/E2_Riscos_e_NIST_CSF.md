@@ -7,7 +7,7 @@
 | Seção | Responsável | Situação |
 | --- | --- | --- |
 | 13.1 Critérios de probabilidade | @ARTHUR9011 + @lorenzoficher | Concluída (exemplos do SIGH adicionados) |
-| 13.2 Critérios de impacto | @ARTHUR9011 + @lorenzoficher | Escala base definida |
+| 13.2 Critérios de impacto | @ARTHUR9011 + @lorenzoficher | Concluída (exemplos do SIGH adicionados) |
 | 13.3 Cálculo e classificação | @ARTHUR9011 | Concluída |
 | 13.4 Registro de riscos | Todos (1 risco por pessoa) | R01, R02, R05 e R06 concluídos; R03 e R04 pendentes |
 | 13.5 Justificativas | Todos | R01, R02, R05 e R06 concluídas; R03 e R04 pendentes |
@@ -34,14 +34,18 @@
 
 ## 13.2 Critérios de impacto
 
-| Valor | Classificação | Critério |
-| --- | --- | --- |
-| 1 | Baixo | Causa pequeno transtorno e pode ser corrigido rapidamente |
-| 2 | Moderado | Causa interrupção ou inconsistência limitada, com possibilidade de recuperação |
-| 3 | Alto | Causa prejuízo relevante aos usuários, ao negócio, à administração ou à privacidade |
-| 4 | Muito alto | Pode afetar muitos usuários, comprometer operações críticas ou causar prejuízo grave |
+| Valor | Classificação | Critério | Exemplo no contexto do SIGH |
+| --- | --- | --- | --- |
+| 1 | Baixo | Causa pequeno transtorno e pode ser corrigido rapidamente | Indisponibilidade momentânea do agendamento de consultas (RF04): o horário é remarcado no mesmo dia, sem perda de dado clínico e sem efeito sobre paciente internado |
+| 2 | Moderado | Causa interrupção ou inconsistência limitada, com possibilidade de recuperação | Alocação concorrente do mesmo `LeitoHospitalar` a dois pacientes: gera remanejamento e retrabalho no setor de internação, mas a `Ocupacao` é corrigida pela própria equipe, sem dano ao paciente |
+| 3 | Alto | Causa prejuízo relevante aos usuários, ao negócio, à administração ou à privacidade | Registro de óbito sem autoria comprovável: a apuração de responsabilidade não se conclui e expõe o médico titular e a instituição, mas o efeito é legal e administrativo, sem dano físico e restrito ao caso apurado (T03) |
+| 4 | Muito alto | Pode afetar muitos usuários, comprometer operações críticas ou causar prejuízo grave | Alteração da `dosagemMedicamento` de uma prescrição ativa: o dano é físico, potencialmente fatal e irreversível assim que o medicamento é administrado (T02); ou a queda simultânea dos módulos assistenciais, que atinge todos os perfis com pacientes internados no prédio (T05) |
 
-> **Pendente (@lorenzoficher):** acrescentar a cada faixa um exemplo concreto do contexto do SIGH, no mesmo formato adotado em 13.1.
+As duas escalas separam **o que torna o evento provável** do **quanto ele custa quando
+ocorre**, e a diferença aparece na origem de cada uma: a probabilidade é decidida por
+controles que existem ou não existem no projeto, enquanto o impacto é decidido pela
+natureza do ativo atingido. Por isso um mesmo controle costuma mover apenas uma das
+colunas - o que é retomado nas estimativas de risco residual em 14.6.
 
 ## 13.3 Cálculo e classificação dos riscos
 
