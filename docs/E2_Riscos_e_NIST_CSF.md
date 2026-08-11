@@ -118,7 +118,7 @@ A atenção inicial deve ir para essa faixa Crítica: R02, em que a alteração 
 
 | Risco | Estratégia escolhida | Justificativa |
 | --- | --- | --- |
-| R01 | | |
+| R01 | Reduzir | Autenticar profissionais é função indispensável do SIGH, então não há como Evitar. Compartilhar atenderia só em parte: delegar a autenticação a um provedor de identidade institucional transfere a implementação, mas não a responsabilidade do hospital sobre os dados nem a consequência clínica de um acesso indevido. Aceitar é insustentável em um risco de pontuação máxima que habilita todos os demais. Resta Reduzir, e o espaço é amplo porque nenhuma barreira usual existe hoje: a redução ataca as condições que tornam a probabilidade alta - armazenamento inadequado da senha, fator único e ausência de bloqueio e de detecção |
 | R02 | Reduzir | Alterar prescrição é função essencial do sistema, então o risco não pode ser Evitado; a responsabilidade clínica não pode ser transferida a terceiro, então não há o que Compartilhar; e um risco Crítico com dano potencialmente fatal não pode ser Aceito. Resta Reduzir: controles que diminuam a probabilidade da alteração indevida e aumentem a chance de detecção antes da administração do medicamento |
 | R03 | | |
 | R04 | | |
@@ -142,7 +142,7 @@ A atenção inicial deve ir para essa faixa Crítica: R02, em que a alteração 
 
 | Risco | Govern | Identify | Protect | Detect | Respond | Recover |
 | --- | :---: | :---: | :---: | :---: | :---: | :---: |
-| R01 | | | | | | |
+| R01 | X | | X | X | X | X |
 | R02 | X | | X | X | X | |
 | R03 | | | | | | |
 | R04 | | | | | | |
@@ -151,12 +151,14 @@ A atenção inicial deve ir para essa faixa Crítica: R02, em que a alteração 
 
 ### Justificativa do mapeamento
 
-- **Govern**
-- **Identify**
-- **Protect**
-- **Detect**
-- **Respond** 
-- **Recover**
+#### R01 (@lilydias24)
+
+- **Govern:** o risco nasce da ausência de uma política institucional de credenciais - não há regra definida de complexidade, expiração, não reuso, nem responsável designado pela gestão das contas de profissionais. Sem essa decisão no nível de governança, os controles técnicos não têm parâmetro para serem configurados: "bloquear após N tentativas" só existe depois que alguém define o N e quem responde pelo desbloqueio.
+- **Protect:** é o núcleo do tratamento. Hash com salt, autenticação multifator, bloqueio por tentativas e expiração de sessão atuam diretamente sobre as condições que tornam a probabilidade alta.
+- **Detect:** hoje uma sequência de tentativas malsucedidas ou um login fora do padrão do profissional passa despercebido - o Tópico 9 coloca esse registro fora do escopo. A detecção é o que permite perceber o abuso **antes** de a sessão ser usada, e é exatamente a regra 1 do roteiro previsto para a Etapa 6.
+- **Respond:** havendo suspeita de conta comprometida, é preciso procedimento definido - bloquear a conta, encerrar as sessões ativas e comunicar o profissional titular e a chefia -, e não apenas abrir um chamado.
+- **Recover:** marcado aqui, diferente de R02, e a diferença é o que justifica a marcação. Em R02 não existe recuperação para uma dose já administrada; em R01 existe recuperação real e necessária: rotacionar as credenciais, revogar sessões e, sobretudo, **auditar e reverter o que a sessão comprometida produziu** - prescrições, altas e registros gerados em nome do titular. Sem esse passo, o incidente termina com a senha trocada e os atos indevidos ainda válidos no prontuário.
+- **Por que não Identify:** o ativo (`Funcionario.senhaLogin`), os perfis e a vulnerabilidade já foram levantados na Etapa 1 (T01/CA01). O tratamento de R01 não depende de nenhum trabalho adicional de identificação, e marcar a função aqui seria apenas preencher a tabela.
 
 #### R02 (@ARTHUR9011)
 
@@ -172,7 +174,7 @@ A atenção inicial deve ir para essa faixa Crítica: R02, em que a alteração 
 
 | Risco | Estratégia | Controles propostos | Funções relacionadas | Responsáveis | Evidências e verificação |
 | --- | --- | --- | --- | --- | --- |
-| R01 | | | | | |
+| R01 | Reduzir | **R01-C1** - armazenar `senhaLogin` com hash e salt por algoritmo próprio para senhas (Argon2id, ou bcrypt com custo ≥ 12), migrando as senhas existentes na próxima autenticação de cada profissional; **R01-C2** - autenticação multifator no login e reautenticação antes de operações sensíveis (prescrever, autorizar alta, registrar óbito); **R01-C3** - bloqueio temporário da conta após 5 tentativas malsucedidas em 15 minutos, com alerta gerado; **R01-C4** - encerramento automático da sessão após 10 minutos de inatividade, tratando o terminal compartilhado como o padrão e não como exceção; **R01-C5** - política de senha com comprimento mínimo, proibição de reuso e verificação contra listas públicas de senhas vazadas | Govern, Protect, Detect, Respond, Recover | @lilydias24 | Amostra da tabela `Funcionario` exibindo apenas hash, sem senha em claro; testes com caso válido e caso malicioso da prática de armazenamento seguro de senhas (Etapa 4); registro de configuração do MFA e da política de bloqueio; log de tentativas malsucedidas e de bloqueios efetivados; alerta da regra 1 do roteiro de detecção (Etapa 6) disparando em cenário simulado |
 | R02 | Reduzir | **R02-C1** - a operação de alteração passa a registrar o responsável obtido da sessão autenticada no servidor (nunca informado pelo cliente), cumprindo a regra do UC03; **R02-C2** - validação de papel no servidor: apenas médico, e médico vinculado ao paciente; **R02-C3** - validação de faixa terapêutica por medicamento, com bloqueio de valores fora da faixa; **R02-C4** - versionamento da prescrição em trilha imutável (valor anterior, novo valor, autor, data/hora); **R02-C5** - segunda assinatura de outro profissional + reautenticação para alterar prescrição ativa | Govern, Protect, Detect, Respond | @ARTHUR9011 | Testes com caso válido e caso malicioso (Etapa 4); log de auditoria consultável com autor e valor anterior; alerta da regra 2 do roteiro de detecção (Etapa 6) disparando em alteração fora de faixa ou sem segunda assinatura |
 | R03 | | | | | |
 | R04 | | | | | |
