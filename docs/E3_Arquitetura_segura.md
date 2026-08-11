@@ -82,10 +82,37 @@ cenários forem demonstrados por testes automatizados e pela consulta à auditor
 | Requisito | Vulnerabilidade relacionada | Referência | Responsável |
 | --- | --- | --- | --- |
 | RS01 | Improper Authentication | CWE-287 (a confirmar/complementar) | @lilydias24 |
-| RS02 | Insufficient Verification of Data Authenticity | CWE-345 (a confirmar/complementar) | @ARTHUR9011 |
+| RS02 | Ausência de autorização no servidor, confiança em validações do cliente, entrada clínica sem validação e auditoria insuficiente | CWE-862, CWE-602, CWE-20 e CWE-778; OWASP A01, A06 e A09:2025 | @ARTHUR9011 |
 | RS03 | Missing Authorization / Broken Access Control | CWE-862, OWASP A01 (a confirmar/complementar) | @PPrauchner |
 
 *(Cada responsável descreve a vulnerabilidade com as próprias palavras, relacionando-a ao ponto concreto do SIGH.)*
+
+### Vulnerabilidades relacionadas a RS02 (@ARTHUR9011)
+
+Como o SIGH não está implementado, os itens abaixo são **fraquezas potenciais indicadas
+pelo modelo**, e não vulnerabilidades confirmadas em código. Elas devem ser verificadas
+pelos critérios de RS02 e pelos testes de segurança das etapas seguintes.
+
+| Referência | Relação concreta com o SIGH |
+| --- | --- |
+| [CWE-862 - Missing Authorization](https://cwe.mitre.org/data/definitions/862.html) | A regra do UC03 exige médico autorizado, mas `atualizarTratamentosDoPaciente(tratamento)` não demonstra uma checagem de papel e de vínculo com o paciente no servidor. É a fraqueza principal de RS02. |
+| [CWE-602 - Client-Side Enforcement of Server-Side Security](https://cwe.mitre.org/data/definitions/602.html) | Se o Desktop Cliente apenas ocultar a opção para outros perfis, a proteção pode ser contornada por uma chamada modificada. A decisão precisa ser repetida no servidor com dados da sessão. |
+| [CWE-20 - Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html) | O modelo não especifica validação de `dosagemMedicamento` e `intervaloConsumo` contra limites terapêuticos antes de persistir a mudança. |
+| [CWE-778 - Insufficient Logging](https://cwe.mitre.org/data/definitions/778.html) | A alteração destrutiva sem autor, versão anterior e horário do servidor impede detectar e reconstruir a adulteração. |
+
+No OWASP Top 10:2025, a relação principal é com
+[A01 - Broken Access Control](https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/),
+pois um usuário pode executar uma função fora de sua autorização; o desenho também se
+relaciona a
+[A06 - Insecure Design](https://owasp.org/Top10/2025/A06_2025-Insecure_Design/),
+pela ausência das regras clínicas no fluxo confiável, e a
+[A09 - Security Logging and Alerting Failures](https://owasp.org/Top10/2025/A09_2025-Security_Logging_and_Alerting_Failures/),
+pela falta de evidência e alerta sobre alterações suspeitas.
+
+A referência anterior a **CWE-345 - Insufficient Verification of Data Authenticity**
+permanece útil como conceito geral de autenticidade, mas não como mapeamento principal:
+ela é abstrata demais para distinguir as quatro falhas concretas acima e sua própria
+ficha recomenda preferir uma fraqueza mais específica quando disponível.
 
 ## 3. Diagrama da arquitetura segura
 
