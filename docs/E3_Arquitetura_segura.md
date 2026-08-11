@@ -21,10 +21,61 @@
 | ID | Risco de origem | Requisito de segurança | Responsável |
 | --- | --- | --- | --- |
 | RS01 | R01 - Spoofing | O sistema deve exigir autenticação multifator no login e reautenticação antes de operações sensíveis envolvendo a conta de `Funcionario` | @lilydias24 |
-| RS02 | R02 - Tampering | Toda alteração de `PrescricaoMedicamento` deve ser assinada digitalmente pelo médico responsável e registrada em trilha de auditoria | @ARTHUR9011 |
+| RS02 | R02 - Tampering | Toda alteração de prescrição ativa deve ser autorizada e validada no servidor, confirmada por segundo profissional e registrada com autoria e versionamento em trilha de auditoria imutável | @ARTHUR9011 |
 | RS03 | R06 - Elevation of Privilege | O sistema deve validar `nivelAcesso` no servidor em toda operação administrativa, e não apenas ocultar opções na interface | @PPrauchner |
 
 *(Detalhar cada requisito: enunciado completo, comportamento esperado e critério de verificação.)*
+
+### RS02 - Integridade e rastreabilidade da prescrição ativa (@ARTHUR9011)
+
+**Risco de origem.** R02 - alteração indevida de `dosagemMedicamento` ou
+`intervaloConsumo` de uma `PrescricaoMedicamento` ativa, executada pela enfermagem como
+se fosse a versão legítima. O requisito atua antes de a mudança chegar à administração
+do medicamento, porque o dano clínico não pode ser desfeito pelo sistema depois desse
+momento.
+
+**Enunciado completo.** Toda solicitação de alteração de uma prescrição ativa deve ser
+processada no servidor e somente pode produzir uma nova versão vigente quando, na mesma
+transação, o SIGH:
+
+1. obtiver o autor da sessão autenticada, sem aceitar identidade informada pelo cliente;
+2. confirmar que o autor é médico e está vinculado ao atendimento do paciente;
+3. validar `dosagemMedicamento` e `intervaloConsumo` contra a faixa terapêutica cadastrada
+   para o medicamento;
+4. exigir reautenticação do autor e confirmação de um segundo profissional autorizado,
+   diferente do autor da mudança;
+5. preservar a versão anterior e acrescentar uma nova versão à trilha de auditoria; e
+6. tornar a nova versão disponível para administração somente depois que todas as
+   verificações e o registro de auditoria forem concluídos com sucesso.
+
+**Comportamento esperado.** A trilha deve ser somente de acréscimo e registrar, no
+mínimo, o identificador da prescrição e do paciente, medicamento, dose e intervalo
+anteriores e novos, justificativa, autor, segundo confirmador, data/hora fornecida pelo
+servidor e identificador de correlação da operação. Nenhum desses dados de autoria pode
+vir do corpo enviado pelo Desktop Cliente. Se autorização, vínculo, faixa terapêutica,
+reautenticação, confirmação independente ou gravação da auditoria falhar, a operação deve
+falhar de forma fechada: a versão vigente permanece inalterada, nenhuma atualização
+parcial é persistida e a tentativa recusada é registrada para detecção.
+
+Neste requisito, **confirmação** ou **coassinatura** significa uma aprovação eletrônica
+atribuída a outra sessão autenticada e vinculada à versão exata da prescrição. Ela não é
+tratada como assinatura digital criptográfica baseada em certificado. Se o grupo optar
+por uma assinatura digital nesse sentido estrito, será necessária uma decisão de
+arquitetura própria para identidade do signatário, gestão e revogação de chaves,
+formato assinado e verificação de longo prazo.
+
+**Critérios de verificação.** O requisito é considerado atendido quando os seguintes
+cenários forem demonstrados por testes automatizados e pela consulta à auditoria:
+
+| ID | Cenário | Resultado verificável |
+| --- | --- | --- |
+| RS02-CA01 | Médico vinculado informa valores dentro da faixa, reautentica e recebe confirmação válida de outro profissional | Uma nova versão torna-se vigente e a anterior permanece consultável; a auditoria contém todos os campos obrigatórios |
+| RS02-CA02 | Perfil não médico tenta alterar a prescrição | A solicitação é recusada, a versão vigente não muda e a tentativa fica registrada |
+| RS02-CA03 | Médico não vinculado ao paciente tenta alterar a prescrição | A solicitação é recusada, a versão vigente não muda e a tentativa fica registrada |
+| RS02-CA04 | Dose ou intervalo está fora da faixa terapêutica | A solicitação é recusada antes de ficar disponível para administração e a divergência fica registrada |
+| RS02-CA05 | Reautenticação está ausente/inválida, não há segundo confirmador ou autor e confirmador são a mesma pessoa | A solicitação é recusada e nenhuma nova versão é criada |
+| RS02-CA06 | O registro da auditoria falha durante a alteração | Toda a transação é revertida; a prescrição anterior continua vigente e não há versão parcial |
+| RS02-CA07 | Um usuário da aplicação tenta alterar ou excluir uma versão já registrada | A operação é recusada e a trilha preserva integralmente o histórico |
 
 ## 2. Vulnerabilidades catalogadas (CWE/OWASP)
 
