@@ -14,7 +14,7 @@
 | 13.6 Priorização geral | @mariasanchez0’s (compila) | Pendente |
 | 13.7 Conclusão da análise | @ARTHUR9011 | Rascunho concluído (revisão após R03-R06) |
 | 14.1 Estratégia de tratamento | Todos | R01, R02, R03, R05 e R06 concluídas; R04 pendente |
-| 14.2 Funções do NIST CSF | @lorenzoficher | Tabela base definida |
+| 14.2 Funções do NIST CSF | @lorenzoficher | Concluída |
 | 14.3 Mapeamento risco → NIST | Todos | R01, R02, R05 e R06 concluídos; R03 e R04 pendentes |
 | 14.4 Plano de tratamento | Todos | R01, R02, R05 e R06 concluídos; R03 e R04 pendentes |
 | 14.5 Ordem de implementação | @mariasanchez0’s | Pendente |
@@ -281,6 +281,20 @@ A atenção inicial deve ir para essa faixa Crítica: R02, em que a alteração 
 | Detect | Identificar eventos suspeitos, falhas e possíveis incidentes |
 | Respond | Conter, analisar, comunicar e tratar incidentes |
 | Recover | Restaurar serviços e dados e reduzir os prejuízos causados |
+
+Duas observações orientam o uso da tabela no mapeamento de 14.3. A primeira é que
+**Govern é a função introduzida pela versão 2.0** do framework e não fica ao lado das
+outras cinco: ela as atravessa, definindo quem decide, sob qual política e com qual
+prioridade. É por isso que ela aparece marcada nos riscos deste registro em que a regra
+existe apenas como texto de caso de uso, sem dono - situação de R02 (UC03), de R03 (UC10)
+e de R06 (`nivelAcesso`) -, e não aparece em R05, em que a política existe nos requisitos
+não funcionais e o que falta é contrapartida de projeto.
+
+A segunda é que as seis funções **não são etapas de um processo em sequência**, e marcar
+todas seria transformar o mapeamento em formalidade. Cada risco deve marcar apenas as
+funções em que exista um resultado esperado distinto, e as justificativas abaixo explicam
+tanto as marcações quanto as ausências - critério que os riscos já mapeados seguiram ao
+registrar, por exemplo, por que R02 não tem Recover e por que R05 não tem Govern.
 
 ## 14.3 Mapeamento dos riscos para as funções do NIST CSF
 
