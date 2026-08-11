@@ -20,7 +20,7 @@
 | Regra | Risco observado | Fonte de dados | Condição de alerta | Ação esperada | Responsável |
 | --- | --- | --- | --- | --- | --- |
 | 1 | R01 - Spoofing | Logs de autenticação | Muitas tentativas malsucedidas seguidas para a mesma conta | | @lilydias24 |
-| 2 | R02 - Tampering | Logs de alteração de prescrição | Alteração de dosagem fora do padrão registrado, sem segunda assinatura | | @ARTHUR9011 |
+| 2 | R02 - Tampering | Eventos de segurança e trilha de auditoria das prescrições | Publicação que viola uma invariante de RS02 ou 3 recusas suspeitas pelo mesmo autor/prescrição em 10 minutos | Acionar resposta clínica e de segurança conforme a severidade, preservando as evidências | @ARTHUR9011 |
 | 3 | R06 - Elevation of Privilege | Logs de autorização | Tentativa de acesso a função administrativa por usuário sem `nivelAcesso` compatível | | @PPrauchner |
 
 ## Regra 1 - Tentativas de autenticação suspeitas (@lilydias24)
@@ -32,14 +32,68 @@
 - **Ação esperada da equipe:**
 - **Falsos positivos previstos:**
 
-## Regra 2 - *(a definir)* (@ARTHUR9011)
+## Regra 2 - Tentativa de adulteração de prescrição ativa (@ARTHUR9011)
 
-- **Risco observado:** R02
-- **Fonte de dados:**
-- **Condição de alerta:**
-- **O que o alerta indica:**
-- **Ação esperada da equipe:**
-- **Falsos positivos previstos:**
+- **Risco observado:** R02 - alteração indevida de `dosagemMedicamento` ou
+  `intervaloConsumo` de uma prescrição ativa.
+- **Fonte de dados:** eventos de segurança produzidos pelo fluxo de alteração e trilha
+  de auditoria imutável de `PrescricaoMedicamento`, centralizados para correlação.
+- **Condição de alerta (limiar e janela):** alerta **Crítico** diante de uma única
+  publicação que viole uma invariante de RS02; alerta **Alto** a partir de 3 tentativas
+  recusadas suspeitas, agrupadas pelo mesmo autor **ou** pela mesma prescrição em uma
+  janela deslizante de 10 minutos.
+- **O que o alerta indica:** possível tentativa repetida de contornar autorização,
+  faixa terapêutica, reautenticação ou confirmação independente; no caso Crítico, indica
+  que um controle preventivo pode ter sido contornado e uma versão insegura pode ter
+  ficado disponível para administração.
+
+### Contrato mínimo dos eventos
+
+O serviço confiável, e não o Desktop Cliente, deve preencher os campos usados pela regra.
+Cada solicitação gera um evento terminal `PRESCRIPTION_CHANGE_PUBLISHED` ou
+`PRESCRIPTION_CHANGE_DENIED`. A central de logs valida o esquema antes de aceitar o
+evento e conta uma única vez cada par `correlationId` + `eventType`.
+
+| Campo | Uso na detecção |
+| --- | --- |
+| `eventTime`, `eventType`, `correlationId` | Ordenação, janela e deduplicação da tentativa |
+| `prescriptionId`, `patientId`, `baseVersion`, `newVersion` | Correlação da prescrição e detecção de sobrescrita/versionamento inconsistente |
+| `medicationId`, `therapeuticCatalogVersion`, `withinTherapeuticRange` | Comprovação de que dose e intervalo foram validados contra uma referência conhecida |
+| `authorId`, `authorRole`, `authorLinkedToPatient`, `reauthenticationValid` | Autoria obtida da sessão e verificações de autorização de R02-C1/R02-C2 |
+| `confirmerId`, `confirmerAuthorized`, `confirmedProposalVersion` | Independência e vínculo da confirmação com a versão proposta |
+| `outcome`, `denyReason`, `sourceService`, `deviceId`, `networkZone` | Resultado, motivo e contexto técnico para triagem |
+
+O evento enviado à plataforma de monitoramento usa identificadores internos e indicadores
+derivados. Nome do paciente, texto livre da justificativa, credenciais, tokens e outros
+dados clínicos desnecessários não devem ser copiados. Os valores clínicos completos
+permanecem na trilha restrita e só são consultados por pessoal autorizado durante a
+investigação.
+
+### Lógica de correlação
+
+**Gatilho A - Crítico e imediato.** Um único evento
+`PRESCRIPTION_CHANGE_PUBLISHED` dispara o alerta quando qualquer condição abaixo for
+verdadeira:
+
+- `withinTherapeuticRange` é falso;
+- o autor não é médico vinculado ao paciente ou a reautenticação é inválida;
+- o segundo confirmador está ausente, não é autorizado, é igual ao autor ou confirmou
+  outra versão proposta; ou
+- `baseVersion` não era a versão vigente no instante da publicação, a nova versão não
+  possui auditoria correspondente ou há evidência de alteração/exclusão da trilha.
+
+**Gatilho B - Alto por repetição.** Eventos `PRESCRIPTION_CHANGE_DENIED` são contados
+quando `denyReason` for `OUT_OF_THERAPEUTIC_RANGE`, `UNAUTHORIZED_ROLE`,
+`DOCTOR_NOT_LINKED_TO_PATIENT`, `REAUTHENTICATION_FAILED`,
+`MISSING_OR_INVALID_CONFIRMATION` ou `AUDIT_TAMPER_ATTEMPT`. A terceira ocorrência em 10
+minutos para o mesmo `authorId` ou `prescriptionId` abre um único alerta, ao qual as
+ocorrências seguintes da janela são anexadas.
+
+`STALE_BASE_VERSION` isolado não entra no Gatilho B, pois pode resultar de concorrência
+legítima; ele permanece disponível para investigação e passa a ser suspeito somente se
+vier acompanhado de um dos motivos acima. Uma recusa isolada também fica registrada, mas
+não gera alerta Alto. Os limiares são valores iniciais e devem ser recalibrados com dados
+operacionais sem enfraquecer o Gatilho A.
 
 ## Regra 3 - *(a definir)* (@PPrauchner)
 
