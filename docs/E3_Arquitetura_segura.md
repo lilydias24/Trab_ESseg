@@ -180,6 +180,21 @@ legenda do diagrama e serve para conferir se ele mostra o que precisa mostrar.
 | **Serviço de Auditoria** | Recebe e retém, somente por acréscimo, os eventos de segurança e as versões de dado clínico. Único componente com permissão de escrita no armazenamento de auditoria | RS02; controles R02-C4, R03-C3 e R06-C3 - e é o objeto da decisão DA01 |
 | **Catálogo Clínico versionado** | Fornece as faixas terapêuticas por medicamento que a RS02 exige validar | RS02; controle R02-C3 |
 
+### 3.2 Fronteiras de confiança que o diagrama precisa deixar visíveis
+
+1. **Cliente → API Gateway.** Tudo o que vem do Desktop Cliente é entrada não confiável,
+   inclusive identidade, papel, autor e data/hora. O diagrama deve deixar claro que esses
+   campos são **descartados** no Gateway e reconstruídos a partir da sessão.
+2. **Serviços de negócio → Serviço de Autorização.** A decisão de autorização fica fora
+   do serviço que executa a operação. É o que impede que "ocultar o botão na interface"
+   volte a ser o controle, como em CWE-602.
+3. **Serviços de negócio → Serviço de Auditoria.** Seta de **mão única**, rotulada
+   `append`. Nenhum serviço de negócio alcança o armazenamento de auditoria diretamente.
+4. **Armazenamento de auditoria ≠ SGBD central.** Precisa aparecer como armazenamento
+   próprio, e não como mais uma tabela do banco único - é o ponto da DA01.
+5. **SIGH → «system» Sistema Governamental.** A transmissão do óbito atravessa a fronteira
+   da instituição e deve aparecer com o registro probatório do R03-C4 ao lado.
+
 ## 4. Decisões de arquitetura
 
 ### DA01 - *(a definir)* - @lorenzoficher
