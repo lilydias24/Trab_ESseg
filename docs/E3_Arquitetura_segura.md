@@ -224,12 +224,27 @@ o que impede que exista um óbito sem rastro, e é a diferença entre auditar e 
 
 ## 4. Decisões de arquitetura
 
-### DA01 - *(a definir)* - @lorenzoficher
+### DA01 - Trilha de auditoria como serviço próprio, somente de acréscimo e com armazenamento separado do SGBD central - @lorenzoficher
 
-- **Contexto:**
-- **Decisão:**
-- **Alternativas consideradas:**
-- **Consequências:**
+- **Contexto.** A arquitetura atual não tem onde registrar quem fez o quê: os 7
+  microsserviços gravam no mesmo SGBD central e o Tópico 9 do documento original coloca o
+  registro de eventos críticos fora do escopo. Isso não é uma lacuna de uma trilha só. As
+  evidências que **quatro** riscos da Etapa 2 exigem em 14.4 dependem da mesma capacidade
+  inexistente: R01 pede log de tentativas e de bloqueios, R02 pede log consultável com
+  autor e valor anterior, R03 pede autoria e carimbo de tempo do servidor, R06 pede trilha
+  imutável de alteração de perfil. As três regras da Etapa 6 consomem exatamente esses
+  eventos. Decidir onde a trilha vive é, portanto, uma decisão de arquitetura do grupo
+  inteiro, e não um detalhe da trilha Repudiation.
+
+- **Decisão.** Criar um **Serviço de Auditoria** com armazenamento próprio, distinto do
+  SGBD central, exposto aos demais serviços por uma interface de **acréscimo apenas**. As
+  contas usadas pelos serviços de negócio têm permissão de `append` e não têm `update` nem
+  `delete`; nenhum perfil da aplicação - incluindo Diretor - alcança a alteração ou a
+  exclusão de uma entrada. Os campos de autoria e de tempo são preenchidos pelo próprio
+  serviço a partir da sessão autenticada e do relógio do servidor, nunca copiados do corpo
+  da requisição. Para as operações irreversíveis do recorte - registrar óbito (UC10) e
+  autorizar alta (UC06) -, o acréscimo é **condição da operação**: se ele falhar, a
+  transação de negócio é revertida.
 
 ### DA02 - *(a definir, ligada a RS03)* - @mariasanchez0’s
 
