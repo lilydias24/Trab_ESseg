@@ -101,24 +101,25 @@ Pastas a serem criadas conforme as etapas avançarem: `codigo/etapa-4/` (Etapa 4
 
 ### Etapa 2 - Riscos e NIST CSF 2.0
 
-- [x] 13.1 a 13.3 Critérios e cálculo - escalas base definidas (falta exemplificar no contexto do SIGH)
-- [ ] 13.4 e 13.5 Registro e justificativa dos riscos - R01 (@lilydias24) concluído; R02 a R06 pendentes
-- [ ] 13.6 Priorização geral - @mariasanchez0
-- [ ] 13.7 Conclusão da análise - @ARTHUR9011
-- [ ] 14.1 Estratégias de tratamento - R01 concluída; demais pendentes
-- [ ] 14.3 Mapeamento NIST - R01 concluído; demais pendentes
-- [ ] 14.4 Plano de tratamento - R01 concluído; demais pendentes
-- [ ] 14.5 Ordem de implementação - @mariasanchez0
-- [ ] 14.6 Risco residual - R01 concluído; demais pendentes
-- [ ] 15. Considerações finais - @PPrauchner
+- [x] 13.1 a 13.3 Critérios e cálculo - escalas definidas e exemplificadas no contexto do SIGH
+- [ ] 13.4 e 13.5 Registro e justificativa dos riscos - R01, R02, R03, R05 e R06 concluídos; R04 (@mariasanchez0) pendente
+- [ ] 13.6 Priorização geral - @mariasanchez0 (destravada: depende só de R04)
+- [x] 13.7 Conclusão da análise - @ARTHUR9011 (rascunho; revisão após R04)
+- [ ] 14.1 Estratégias de tratamento - R01, R02, R03, R05 e R06 concluídas; R04 pendente
+- [x] 14.2 Funções do NIST CSF - @lorenzoficher
+- [ ] 14.3 Mapeamento NIST - R01, R02, R03, R05 e R06 concluídos; R04 pendente
+- [ ] 14.4 Plano de tratamento - R01, R02, R03, R05 e R06 concluídos; R04 pendente
+- [ ] 14.5 Ordem de implementação - @mariasanchez0 (destravada: depende só de R04)
+- [ ] 14.6 Risco residual - R01, R02, R03, R05 e R06 concluídos; R04 pendente
+- [ ] 15. Considerações finais - @PPrauchner (rascunho sobre recorte parcial; revisão após R04)
 
 ### Etapas 3 a 7
 
-- [ ] Etapa 3 - três requisitos, três vulnerabilidades, um diagrama e três decisões
+- [ ] Etapa 3 - RS02 concluído; RS01 e RS03 pendentes. Diagrama especificado e DA01 concluída (@lorenzoficher); falta exportar o PNG. DA02 e DA03 pendentes
 - [ ] Etapa 4 - duas práticas de código seguro com testes
 - [ ] Etapa 5 - uma verificação com até três achados analisados
-- [ ] Etapa 6 - roteiro com três regras de detecção
-- [ ] Etapa 7 - pipeline, roteiro e vídeo final
+- [ ] Etapa 6 - Regra 2 concluída; Regras 1 e 3 e a compilação do roteiro pendentes
+- [ ] Etapa 7 - pipeline especificado e revisado; blocos Tampering e Repudiation do roteiro concluídos; demais blocos, consolidação e gravação pendentes
 
 ## Como contribuir (para o grupo)
 
