@@ -10,7 +10,7 @@
 | RS02 - requisito e vulnerabilidade | @ARTHUR9011 | Concluído (aguarda revisão cruzada) |
 | RS03 - requisito e vulnerabilidade | @PPrauchner | Pendente |
 | Diagrama da arquitetura segura | @lorenzoficher | Especificado (seções 3.1 a 3.3); falta exportar o PNG do Lucid |
-| Decisão de arquitetura 1 (ligada ao diagrama) | @lorenzoficher | Pendente |
+| Decisão de arquitetura 1 (ligada ao diagrama) | @lorenzoficher | Concluída (DA01) |
 | Decisão de arquitetura 2 (ligada a RS03) | @mariasanchez0’s | Pendente |
 | Decisão de arquitetura 3 (reforço de autenticação) | @lilydias24 ou @ARTHUR9011 | Pendente |
 
@@ -245,6 +245,43 @@ o que impede que exista um óbito sem rastro, e é a diferença entre auditar e 
   da requisição. Para as operações irreversíveis do recorte - registrar óbito (UC10) e
   autorizar alta (UC06) -, o acréscimo é **condição da operação**: se ele falhar, a
   transação de negócio é revertida.
+
+- **Alternativas consideradas.**
+  - *Tabela de auditoria no próprio SGBD central, escrita por cada serviço.* Rejeitada por
+    dois motivos independentes. Quem tem permissão de escrita no banco para gravar o
+    registro tem, pela mesma credencial, permissão para alterá-lo - a trilha ficaria sob o
+    controle de quem ela audita, que é precisamente a condição que R06 explora. E o banco
+    único já é o ponto de concentração que sustenta R05: um comprometimento ou uma queda
+    alcançaria o dado e a sua prova no mesmo movimento.
+  - *Auditoria implementada dentro de cada microsserviço.* Rejeitada por repetir sete vezes
+    a mesma implementação, com sete oportunidades de divergência de formato - inviabilizando
+    a correlação por `correlationId` de que a Regra 2 da Etapa 6 depende - e por manter a
+    trilha dentro da fronteira do componente auditado.
+  - *Encaminhar tudo a um SIEM externo como solução única.* Rejeitada como substituto,
+    aceita como complemento. Um SIEM é ferramenta de detecção e correlação e costuma
+    aplicar amostragem e retenção curta; a trilha exigida por R03 precisa de custódia
+    íntegra e de longo prazo, porque serve de prova em apuração de conselho profissional ou
+    em juízo. O SIEM consome o que o Serviço de Auditoria retém, não o contrário.
+
+- **Consequências.**
+  - *Positivas.* Uma única implementação satisfaz as evidências dos quatro riscos e habilita
+    as três regras da Etapa 6. A separação de armazenamento faz com que comprometer o dado
+    e apagar o seu rastro passem a exigir **dois** comprometimentos. E a autoria deixa de
+    depender do que o cliente envia, o que é o núcleo de RS02 e de R03-C1.
+  - *Negativas, e a principal precisa ser dita.* Tornar o acréscimo condição da operação
+    cria um **acoplamento de disponibilidade**: se o Serviço de Auditoria cair, as operações
+    irreversíveis param. Isso é, em si, um caminho de negação de serviço, e portanto uma
+    interação direta com o R05 do @PPrauchner - a decisão que melhora a rastreabilidade
+    piora a disponibilidade. A mitigação adotada é um **buffer local durável** em cada
+    serviço de negócio: o evento é gravado localmente de forma persistente antes da resposta
+    ao usuário e entregue ao Serviço de Auditoria com garantia de entrega, de modo que uma
+    indisponibilidade curta não interrompe o atendimento e nenhum evento se perde. A regra
+    permanece: nenhuma operação irreversível se conclui sem que o evento esteja **durável em
+    algum lugar**.
+  - *Custo.* Um componente novo para operar, monitorar e dimensionar, e uma decisão de
+    retenção e de acesso que a função Govern do mapeamento de R03 exige tomar - uma trilha
+    que qualquer perfil possa consultar recria, na privacidade, o problema que resolve na
+    responsabilização.
 
 ### DA02 - *(a definir, ligada a RS03)* - @mariasanchez0’s
 
