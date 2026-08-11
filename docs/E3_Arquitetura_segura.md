@@ -7,7 +7,7 @@
 | Item | Responsável | Situação |
 | --- | --- | --- |
 | RS01 - requisito e vulnerabilidade | @lilydias24 | Pendente |
-| RS02 - requisito e vulnerabilidade | @ARTHUR9011 | Pendente |
+| RS02 - requisito e vulnerabilidade | @ARTHUR9011 | Concluído (aguarda revisão cruzada) |
 | RS03 - requisito e vulnerabilidade | @PPrauchner | Pendente |
 | Diagrama da arquitetura segura | @lorenzoficher | Pendente |
 | Decisão de arquitetura 1 (ligada ao diagrama) | @lorenzoficher | Pendente |
@@ -24,7 +24,7 @@
 | RS02 | R02 - Tampering | Toda alteração de prescrição ativa deve ser autorizada e validada no servidor, confirmada por segundo profissional e registrada com autoria e versionamento em trilha de auditoria imutável | @ARTHUR9011 |
 | RS03 | R06 - Elevation of Privilege | O sistema deve validar `nivelAcesso` no servidor em toda operação administrativa, e não apenas ocultar opções na interface | @PPrauchner |
 
-*(Detalhar cada requisito: enunciado completo, comportamento esperado e critério de verificação.)*
+> RS02 está detalhado abaixo. RS01 e RS03 permanecem com seus respectivos responsáveis.
 
 ### RS02 - Integridade e rastreabilidade da prescrição ativa (@ARTHUR9011)
 
@@ -85,7 +85,7 @@ cenários forem demonstrados por testes automatizados e pela consulta à auditor
 | RS02 | Ausência de autorização no servidor, confiança em validações do cliente, entrada clínica sem validação e auditoria insuficiente | CWE-862, CWE-602, CWE-20 e CWE-778; OWASP A01, A06 e A09:2025 | @ARTHUR9011 |
 | RS03 | Missing Authorization / Broken Access Control | CWE-862, OWASP A01 (a confirmar/complementar) | @PPrauchner |
 
-*(Cada responsável descreve a vulnerabilidade com as próprias palavras, relacionando-a ao ponto concreto do SIGH.)*
+> O mapeamento de RS02 está detalhado abaixo. RS01 e RS03 permanecem com seus respectivos responsáveis.
 
 ### Vulnerabilidades relacionadas a RS02 (@ARTHUR9011)
 
@@ -113,6 +113,43 @@ A referência anterior a **CWE-345 - Insufficient Verification of Data Authentic
 permanece útil como conceito geral de autenticidade, mas não como mapeamento principal:
 ela é abstrata demais para distinguir as quatro falhas concretas acima e sua própria
 ficha recomenda preferir uma fraqueza mais específica quando disponível.
+
+### Rastreabilidade de RS02
+
+RS02 concretiza os controles R02-C1 a R02-C5 definidos no plano de tratamento da
+[Etapa 2](E2_Riscos_e_NIST_CSF.md). A tabela evita que um controle seja considerado
+implementado apenas porque aparece no texto do requisito.
+
+| Controle de R02 | Realização em RS02 | Critérios que o verificam | Evidência esperada quando houver implementação |
+| --- | --- | --- | --- |
+| R02-C1 - autor obtido da sessão | Cláusulas 1 e 5; autoria nunca é aceita do cliente | RS02-CA01, RS02-CA02 e RS02-CA06 | Teste que adultera o autor no corpo e comprova que a auditoria registra o usuário da sessão |
+| R02-C2 - papel e vínculo validados no servidor | Cláusula 2 e falha fechada | RS02-CA02 e RS02-CA03 | Testes de autorização com perfil não médico e médico não vinculado, ambos sem mudança persistida |
+| R02-C3 - faixa terapêutica | Cláusula 3 | RS02-CA04 | Testes de limite inferior, limite superior e valores imediatamente fora dos limites para dose e intervalo |
+| R02-C4 - versionamento imutável | Cláusulas 5 e 6; comportamento esperado da auditoria | RS02-CA01, RS02-CA06 e RS02-CA07 | Consulta exibindo valor anterior e novo; tentativa de alteração/exclusão recusada; falha de auditoria causando rollback |
+| R02-C5 - reautenticação e segunda confirmação | Cláusula 4 | RS02-CA01 e RS02-CA05 | Testes sem reautenticação, sem confirmador e com autor igual ao confirmador, além do fluxo válido com duas identidades |
+
+**Contratos necessários para a arquitetura segura.** O diagrama da seção 3 deve permitir
+identificar, ainda que em nível lógico:
+
+- a sessão autenticada como fonte de identidade, papel e instante da reautenticação;
+- a política de autorização que verifica papel médico e vínculo com o paciente;
+- o catálogo clínico versionado que fornece as faixas terapêuticas;
+- o fluxo de confirmação independente vinculado à versão proposta;
+- o armazenamento transacional das versões da prescrição; e
+- a trilha de auditoria somente de acréscimo, separada da permissão de alterar a
+  prescrição.
+
+Esses são contratos, e não uma prescrição de quantidade de microsserviços. Eles podem ser
+implementados em componentes separados ou no mesmo serviço, desde que as fronteiras de
+autorização, transação e auditoria permaneçam explícitas e verificáveis.
+
+**Dependências para as próximas etapas.** Os testes listados nesta seção são critérios
+de arquitetura enquanto o SIGH não possui implementação; portanto, não devem ser
+apresentados como evidência executada. Quando existir código, o resultado automatizado e
+a consulta à auditoria comprovarão os controles. A Regra 2 da Etapa 6 deve consumir tanto
+alterações concluídas quanto tentativas recusadas, usando o identificador de correlação,
+para detectar valor fora da faixa, autorização inválida ou ausência de confirmação sem
+depender de uma alteração insegura ter sido persistida.
 
 ## 3. Diagrama da arquitetura segura
 
