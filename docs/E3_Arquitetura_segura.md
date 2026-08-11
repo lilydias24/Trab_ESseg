@@ -24,7 +24,80 @@
 | RS02 | R02 - Tampering | Toda alteração de prescrição ativa deve ser autorizada e validada no servidor, confirmada por segundo profissional e registrada com autoria e versionamento em trilha de auditoria imutável | @ARTHUR9011 |
 | RS03 | R06 - Elevation of Privilege | O sistema deve validar `nivelAcesso` no servidor em toda operação administrativa, e não apenas ocultar opções na interface | @PPrauchner |
 
-> RS02 está detalhado abaixo. RS01 e RS03 permanecem com seus respectivos responsáveis.
+> RS01 e RS02 estão detalhados abaixo. RS03 permanece com seu responsável.
+
+### RS01 - Autenticação forte e reautenticação em operações sensíveis (@lilydias24)
+
+**Risco de origem.** R01 - uso das credenciais legítimas de um profissional para assumir
+sua identidade no SIGH. O requisito atua sobre as duas condições que dão ao risco
+probabilidade 4: a senha guardada de forma diretamente reutilizável e o fato de saber a
+senha ser suficiente para agir como o titular.
+
+**Enunciado completo.** O SIGH deve:
+
+1. persistir `senhaLogin` apenas como valor derivado por função própria para senhas
+   (Argon2id, ou scrypt/bcrypt quando aquele não estiver disponível), com **salt
+   aleatório e distinto por credencial**, nunca em texto simples nem por função de
+   propósito geral como MD5 ou SHA-256 isolado;
+2. verificar a credencial por comparação em tempo constante e, quando os parâmetros de
+   custo forem reforçados, regravar o registro de forma transparente na primeira
+   autenticação bem-sucedida, sem exigir troca de senha;
+3. exigir **segundo fator no login**, vinculado à pessoa e não ao terminal, uma vez que
+   os postos de atendimento são compartilhados;
+4. exigir **reautenticação com segundo fator**, dentro de uma janela curta e explícita,
+   imediatamente antes de prescrever medicamento, autorizar alta e registrar óbito - as
+   três operações que a Etapa 1 identificou como de efeito clínico ou irreversível;
+5. aplicar bloqueio temporário progressivo por conta **e** por origem após tentativas
+   malsucedidas, sem que a mensagem de erro permita distinguir conta existente de
+   inexistente;
+6. encerrar a sessão por inatividade e vinculá-la ao dispositivo e à zona de rede em que
+   foi aberta, exigindo nova autenticação quando esse vínculo mudar;
+7. emitir evento de segurança para toda tentativa de autenticação, reautenticação,
+   bloqueio, desbloqueio e alteração de credencial, com autoria e data/hora fornecidas
+   pelo servidor; e
+8. oferecer um caminho de exceção assistencial (*break-glass*) para quando o segundo
+   fator estiver indisponível durante o atendimento, com acesso em escopo reduzido, por
+   tempo limitado, mediante identificação de um segundo profissional e com registro
+   destacado para revisão obrigatória.
+
+**Comportamento esperado.** A falha é fechada: sem credencial válida, sem segundo fator
+válido ou sem reautenticação dentro da janela, a operação sensível não é executada e
+nenhum efeito parcial é persistido. A identidade nunca é aceita do corpo enviado pelo
+Desktop Cliente - vem sempre da sessão autenticada no servidor. Nem a senha em claro, nem
+o valor derivado, nem os códigos do segundo fator podem aparecer em log, em mensagem de
+erro ou em resposta de API.
+
+A cláusula 8 existe por uma razão específica deste sistema, e precisa ser lida junto com
+as demais: **um hospital não pode tratar o bloqueio de acesso como resultado seguro por
+padrão.** Impedir um médico de prescrever durante uma emergência transfere o dano para o
+paciente - exatamente o bem que as outras cláusulas protegem. Por isso a exceção é
+prevista, delimitada e auditada, em vez de acontecer informalmente pelo empréstimo de
+credencial entre colegas, que é justamente o comportamento descrito em CA01.
+
+**Limite reconhecido do requisito.** O segundo fator reduz a probabilidade do risco, mas
+não substitui uma segunda pessoa: continua sendo algo que o próprio titular carrega e
+pode ser obtido pela mesma manobra que obtém a senha (*phishing* em tempo real). É por
+isso que o residual de R01 permanece Alto na [Etapa 2](E2_Riscos_e_NIST_CSF.md) mesmo com
+RS01 implementado, e por isso a cláusula 4 se limita a reautenticar, sem exigir
+coassinatura - exigir segunda identidade em operação irreversível é uma decisão que o
+grupo pode tomar depois, e que teria de ser pesada contra o custo assistencial de travar
+uma alta ou um registro de óbito.
+
+**Critérios de verificação.** O requisito é considerado atendido quando os cenários
+abaixo forem demonstrados por testes automatizados e pela consulta aos eventos de
+segurança:
+
+| ID | Cenário | Resultado verificável |
+| --- | --- | --- |
+| RS01-CA01 | Profissional cadastra a senha e autentica com ela, apresentando o segundo fator | Autenticação aceita; o valor persistido em `senhaLogin` não contém a senha e difere do de outra conta com a mesma senha |
+| RS01-CA02 | Atacante de posse do conteúdo da tabela `Funcionario` reenvia o valor armazenado como se fosse a senha | Autenticação recusada; o vazamento não é diretamente reutilizável |
+| RS01-CA03 | Senha correta apresentada sem o segundo fator | Autenticação recusada e nenhuma sessão é aberta |
+| RS01-CA04 | Sessão válida tenta prescrever, autorizar alta ou registrar óbito fora da janela de reautenticação | Operação recusada; nenhum efeito parcial persistido |
+| RS01-CA05 | Sequência de tentativas malsucedidas contra a mesma conta e contra várias contas da mesma origem | Bloqueio progressivo aplicado nos dois eixos; as mensagens não distinguem conta existente de inexistente |
+| RS01-CA06 | Sessão permanece inativa além do limite, ou é reapresentada de outro dispositivo ou zona de rede | Sessão encerrada e nova autenticação exigida |
+| RS01-CA07 | Parâmetros de custo são reforçados e o profissional autentica em seguida | Registro regravado com os novos parâmetros, de forma transparente, sem troca de senha |
+| RS01-CA08 | Fluxo de exceção assistencial é acionado sem o segundo fator | Acesso concedido em escopo e prazo reduzidos, com segundo profissional identificado e registro destacado para revisão |
+| RS01-CA09 | Log e resposta de erro são inspecionados após uma falha de autenticação | Nenhuma senha, valor derivado ou código de segundo fator aparece |
 
 ### RS02 - Integridade e rastreabilidade da prescrição ativa (@ARTHUR9011)
 
@@ -87,11 +160,66 @@ cenários forem demonstrados por testes automatizados e pela consulta à auditor
 
 | Requisito | Vulnerabilidade relacionada | Referência | Responsável |
 | --- | --- | --- | --- |
-| RS01 | Improper Authentication | CWE-287 (a confirmar/complementar) | @lilydias24 |
+| RS01 | Senha persistida em texto simples, autenticação de fator único, ausência de limite de tentativas e sessão sem expiração | CWE-256, CWE-308, CWE-307, CWE-613 e CWE-287 | @lilydias24 |
 | RS02 | Ausência de autorização no servidor, confiança em validações do cliente, entrada clínica sem validação e auditoria insuficiente | CWE-862, CWE-602, CWE-20 e CWE-778; OWASP A01, A06 e A09:2025 | @ARTHUR9011 |
 | RS03 | Missing Authorization / Broken Access Control | CWE-862, OWASP A01 (a confirmar/complementar) | @PPrauchner |
 
-> O mapeamento de RS02 está detalhado abaixo. RS01 e RS03 permanecem com seus respectivos responsáveis.
+> Os mapeamentos de RS01 e RS02 estão detalhados abaixo. RS03 permanece com seu responsável.
+
+### Vulnerabilidades relacionadas a RS01 (@lilydias24)
+
+Como o SIGH não está implementado, os itens abaixo são **fraquezas potenciais indicadas
+pelo modelo**, e não vulnerabilidades confirmadas em código. A primeira delas, porém, é
+menos hipotética que as demais: `senhaLogin` aparece como atributo de texto simples no
+modelo de domínio, e o RNF05 exige criptografia para as informações médicas - a
+contradição está documentada no próprio projeto.
+
+| Referência | Relação concreta com o SIGH |
+| --- | --- |
+| [CWE-256 - Plaintext Storage of a Password](https://cwe.mitre.org/data/definitions/256.html) | `Funcionario.senhaLogin` é um atributo de texto sem indicação de derivação. É a fraqueza principal de RS01: torna um vazamento do SGBD central imediatamente utilizável contra todas as contas. |
+| [CWE-916 - Use of Password Hash With Insufficient Computational Effort](https://cwe.mitre.org/data/definitions/916.html) | Aplicar um hash de propósito geral, sem salt e sem fator de trabalho, resolveria a aparência do problema sem resolver o problema. É a armadilha que a cláusula 1 fecha ao exigir função própria para senhas. |
+| [CWE-308 - Use of Single-factor Authentication](https://cwe.mitre.org/data/definitions/308.html) | A autenticação se resume à comparação de `nomeLogin` e `senhaLogin`: quem sabe a senha é o titular, para todos os efeitos do sistema. |
+| [CWE-307 - Improper Restriction of Excessive Authentication Attempts](https://cwe.mitre.org/data/definitions/307.html) | O modelo não prevê bloqueio nem atraso após tentativas malsucedidas, o que viabiliza força bruta a partir da própria rede interna. |
+| [CWE-613 - Insufficient Session Expiration](https://cwe.mitre.org/data/definitions/613.html) | Sem expiração por inatividade, o terminal compartilhado deixado aberto entre plantões é uma sessão válida à disposição de quem passar. |
+| [CWE-287 - Improper Authentication](https://cwe.mitre.org/data/definitions/287.html) | Permanece como categoria-mãe do requisito, útil para a rastreabilidade geral, mas abstrata demais para orientar controle: as cinco fraquezas acima é que dizem o que precisa mudar. |
+
+No **OWASP Top 10**, a relação principal é com a categoria de **falhas de identificação e
+autenticação** e, pelo armazenamento da senha, com a de **falhas criptográficas**. O
+grupo está citando a edição 2025 (ver o mapeamento de RS02); a numeração exata dessas duas
+categorias nessa edição deve ser conferida na lista vigente antes da entrega final, para
+não citar identificador de edição diferente. As referências de controle usadas aqui, e
+que não dependem dessa numeração, são o
+[OWASP Authentication Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html)
+e o
+[OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html),
+este último aplicado na prática da [Etapa 4](E4_Codigo_seguro_e_testes.md).
+
+### Rastreabilidade de RS01
+
+RS01 concretiza os controles R01-C1 a R01-C5 definidos no plano de tratamento da
+[Etapa 2](E2_Riscos_e_NIST_CSF.md).
+
+| Controle de R01 | Realização em RS01 | Critérios que o verificam | Evidência esperada |
+| --- | --- | --- | --- |
+| R01-C1 - hash e salt | Cláusulas 1 e 2 | RS01-CA01, RS01-CA02 e RS01-CA07 | Já demonstrada na [Etapa 4](E4_Codigo_seguro_e_testes.md): testes executados de caso válido e de posse do conteúdo da tabela |
+| R01-C2 - MFA e reautenticação | Cláusulas 3, 4 e 8 | RS01-CA03, RS01-CA04 e RS01-CA08 | Testes sem segundo fator, fora da janela de reautenticação e pelo fluxo de exceção assistencial |
+| R01-C3 - bloqueio por tentativas | Cláusula 5 | RS01-CA05 | Teste de bloqueio por conta e por origem, com mensagens indistinguíveis |
+| R01-C4 - expiração de sessão | Cláusula 6 | RS01-CA06 | Teste de inatividade e de reapresentação da sessão em outro dispositivo ou zona |
+| R01-C5 - política de senha | Cláusulas 1 e 2, mais a política institucional prevista na função Govern do mapeamento NIST | RS01-CA01 e RS01-CA07 | Política publicada e verificação contra listas públicas de senhas vazadas |
+
+**Contratos necessários para a arquitetura segura.** O diagrama da seção 3 deve permitir
+identificar, ainda que em nível lógico:
+
+- um **serviço de autenticação** como emissor único da identidade de sessão, separado
+  dos serviços de negócio (ver DA03);
+- o armazenamento das credenciais derivadas, isolado do restante do cadastro de
+  `Funcionario`, de modo que ler o cadastro não implique ler as credenciais;
+- o verificador do segundo fator e o registro da janela de reautenticação, consultáveis
+  pelos serviços que executam operações sensíveis;
+- o contador de tentativas e o estado de bloqueio, compartilhados entre instâncias para
+  que o limite não seja contornado alternando de servidor; e
+- o canal de eventos de segurança que alimenta a Regra 1 da
+  [Etapa 6](E6_Monitoramento_e_deteccao.md).
 
 ### Vulnerabilidades relacionadas a RS02 (@ARTHUR9011)
 
