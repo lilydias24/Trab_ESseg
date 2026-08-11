@@ -4,14 +4,14 @@
 > **Líder da etapa:** @lilydias24
 > É exigido um **roteiro com 3 regras de detecção**, reaproveitando os riscos já registrados na [Etapa 2](E2_Riscos_e_NIST_CSF.md).
 
- - A compilação final do roteiro fica em `roteiros/E6-deteccao-de-intrusoes.md`.
+- A compilação final do roteiro fica em `roteiros/E6-deteccao-de-intrusoes.md`.
 
 | Regra | Risco observado | Responsável | Situação |
 | --- | --- | --- | --- |
 | 1 | R01 - Spoofing | @lilydias24 | Pendente |
-| 2 | R02 - Tampering | @ARTHUR9011 | Pendente |
+| 2 | R02 - Tampering | @ARTHUR9011 | Concluída (especificação; aguarda implementação do SIGH) |
 | 3 | R06 - Elevation of Privilege | @PPrauchner | Pendente |
-| Compilação do roteiro final | @lilydias24 | Pendente |
+| Compilação | Roteiro final | @lilydias24 | Pendente |
 
 ---
 
