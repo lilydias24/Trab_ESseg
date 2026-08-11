@@ -166,7 +166,19 @@ depender de uma alteração insegura ter sido persistida.
 ![Arquitetura segura do SIGH](../diagrams/estrutura/SIGH%20-%20Arquitetura%20segura.png)
 -->
 
-*(Pendente.)*
+O diagrama parte da arquitetura já modelada - Desktop Cliente, API Gateway e 7
+microsserviços em 5 camadas sobre um SGBD central - e acrescenta os três componentes que
+os requisitos desta etapa exigem, sem redesenhar o que já existe. A leitura abaixo é a
+legenda do diagrama e serve para conferir se ele mostra o que precisa mostrar.
+
+### 3.1 Componentes acrescentados
+
+| Componente | O que faz | Requisito que o exige |
+| --- | --- | --- |
+| **Serviço de Autenticação** | Verifica credenciais, aplica o segundo fator, emite a sessão e responde pela reautenticação em operações sensíveis. Passa a ser a **única** origem de identidade do sistema | RS01; controles R01-C1 a R01-C4 |
+| **Serviço de Autorização** | Decide, no servidor, se a sessão pode executar a operação, combinando papel, `nivelAcesso` e vínculo com o paciente. Consultado por todos os serviços de negócio antes de qualquer operação sensível | RS02 e RS03; controles R02-C2, R06-C1 e R03-C1 |
+| **Serviço de Auditoria** | Recebe e retém, somente por acréscimo, os eventos de segurança e as versões de dado clínico. Único componente com permissão de escrita no armazenamento de auditoria | RS02; controles R02-C4, R03-C3 e R06-C3 - e é o objeto da decisão DA01 |
+| **Catálogo Clínico versionado** | Fornece as faixas terapêuticas por medicamento que a RS02 exige validar | RS02; controle R02-C3 |
 
 ## 4. Decisões de arquitetura
 
