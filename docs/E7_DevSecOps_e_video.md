@@ -111,13 +111,42 @@ Cada integrante escreve a parte referente à própria trilha: o que fez, qual de
 
 | Bloco | Conteúdo | Responsável | Situação |
 | --- | --- | --- | --- |
-| Abertura e apresentação do SIGH | | @lilydias24 | Pendente |
-| Trilha Spoofing → R01 → RS01 → hash de senha → regra 1 | | @lilydias24 | Pendente |
+| Abertura e apresentação do SIGH | | @lilydias24 | Concluído (aguarda consolidação) |
+| Trilha Spoofing → R01 → RS01 → hash de senha → regra 1 | | @lilydias24 | Concluído (aguarda consolidação) |
 | Trilha Tampering → R02 → RS02 → regra 2 | Da alteração sem autoria à prevenção, auditoria e detecção correlacionada | @ARTHUR9011 | Concluído (aguarda consolidação) |
 | Trilha Repudiation → R03 → DA01 → trilha de auditoria | Da operação sem autor à decisão de arquitetura que produz a prova | @lorenzoficher | Concluído (aguarda consolidação) |
 | Trilha Information Disclosure → R04, priorização e achados do ZAP | | @mariasanchez0’s | Pendente |
 | Trilha DoS/EoP → R05 e R06 → RS03 → autorização → regra 3 | | @PPrauchner | Pendente |
 | Encerramento e conclusões | | @mariasanchez0’s (organiza) | Pendente |
+
+### Abertura - roteiro de @lilydias24
+
+- **Duração-alvo:** 45 a 55 segundos.
+- **Objetivo:** situar o sistema e o método em poucos segundos, para que os cinco blocos
+  seguintes possam ir direto ao ponto sem repetir contexto.
+
+**Narração sugerida:**
+
+> O sistema analisado é o SIGH, um sistema integrado de gestão hospitalar que o grupo já
+> havia modelado em trabalho anterior. Recortamos cinco módulos: cadastro e prontuário de
+> pacientes, atendimento e consultas, internação e leitos, farmácia e prescrição, e
+> financeiro. Escolhemos esse sistema porque ele reúne o que uma análise STRIDE precisa -
+> vários perfis com permissões diferentes, integração com sistemas externos, dados de
+> saúde, que são dados pessoais sensíveis, e operações que não têm desfazimento, como a
+> alta hospitalar e o registro de óbito. Como já tínhamos os diagramas de classes,
+> componentes e sequência, cada ameaça pôde ser ancorada em um campo, uma operação ou um
+> componente reais, e não em suposições. O trabalho foi dividido por categoria do STRIDE:
+> cada integrante levou uma categoria do início ao fim - da ameaça ao risco, do risco ao
+> requisito, do requisito ao código e à regra de detecção. É isso que vocês vão ver a
+> seguir, uma trilha por pessoa.
+
+**Sequência visual e evidência:**
+
+| Tempo | Mostrar na tela | Mensagem principal |
+| --- | --- | --- |
+| 0-15 s | Seções 8.1 e 8.2 da [Etapa 1](E1_Casos_de_abuso_e_Stride.md) | Qual é o sistema e por que ele foi escolhido |
+| 15-30 s | `diagrams/estrutura/Diagramas_SIGH - Componentes.png` | Sete microsserviços, API Gateway e SGBD único |
+| 30-45 s | Tabela de trilhas do [README](../README.md) | Uma categoria STRIDE por integrante, do início ao fim |
 
 ### Bloco Repudiation - roteiro de @lorenzoficher
 
