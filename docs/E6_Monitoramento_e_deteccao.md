@@ -8,7 +8,7 @@
 
 | Regra | Risco observado | Responsável | Situação |
 | --- | --- | --- | --- |
-| 1 | R01 - Spoofing | @lilydias24 | Pendente |
+| 1 | R01 - Spoofing | @lilydias24 | Concluída (especificação; aguarda implementação do SIGH) |
 | 2 | R02 - Tampering | @ARTHUR9011 | Concluída (especificação; aguarda implementação do SIGH) |
 | 3 | R06 - Elevation of Privilege | @PPrauchner | Pendente |
 | Compilação | Roteiro final | @lilydias24 | Pendente |
@@ -19,18 +19,145 @@
 
 | Regra | Risco observado | Fonte de dados | Condição de alerta | Ação esperada | Responsável |
 | --- | --- | --- | --- | --- | --- |
-| 1 | R01 - Spoofing | Logs de autenticação | Muitas tentativas malsucedidas seguidas para a mesma conta | | @lilydias24 |
+| 1 | R01 - Spoofing | Eventos de segurança do serviço de autenticação (RS01, cláusula 7), correlacionados com os de operação sensível | Crítico: sucesso após rajada de falhas, sessões simultâneas em zonas distintas, ou operação sensível de dispositivo desconhecido. Alto: 5 falhas em 15 min na mesma conta, ou mesma origem falhando contra 10 contas | Confirmar a sessão com o titular fora do sistema antes de revogar; havendo comprometimento, revisar o que foi executado durante a sessão | @lilydias24 |
 | 2 | R02 - Tampering | Eventos de segurança e trilha de auditoria das prescrições | Publicação que viola uma invariante de RS02 ou 3 recusas suspeitas pelo mesmo autor/prescrição em 10 minutos | Acionar resposta clínica e de segurança conforme a severidade, preservando as evidências | @ARTHUR9011 |
 | 3 | R06 - Elevation of Privilege | Logs de autorização | Tentativa de acesso a função administrativa por usuário sem `nivelAcesso` compatível | | @PPrauchner |
 
-## Regra 1 - Tentativas de autenticação suspeitas (@lilydias24)
+## Regra 1 - Uso indevido de credencial de profissional (@lilydias24)
 
-- **Risco observado:** R01
-- **Fonte de dados:**
-- **Condição de alerta (limiar e janela):**
-- **O que o alerta indica:**
-- **Ação esperada da equipe:**
-- **Falsos positivos previstos:**
+- **Risco observado:** R01 - uso das credenciais legítimas de um profissional para
+  assumir sua identidade no SIGH.
+- **Fonte de dados:** eventos de segurança emitidos pelo serviço de autenticação (DA03),
+  conforme a cláusula 7 de [RS01](E3_Arquitetura_segura.md), correlacionados com os
+  eventos de operação sensível dos serviços de negócio.
+- **Condição de alerta (limiar e janela):** alerta **Crítico** diante de um único sinal de
+  comprometimento consumado - autenticação bem-sucedida logo após uma rajada de falhas, ou
+  sessões simultâneas da mesma conta em zonas de rede distintas. Alerta **Alto** a partir
+  de 5 falhas em 15 minutos contra a mesma conta, ou de falhas da mesma origem contra 10
+  contas distintas na mesma janela.
+- **O que o alerta indica:** no caso Alto, tentativa de adivinhação ou de reuso de senhas
+  vazadas; no caso Crítico, que a tentativa provavelmente teve êxito e a conta pode estar
+  sendo operada por outra pessoa.
+
+### Contrato mínimo dos eventos
+
+O serviço de autenticação, e não o Desktop Cliente, preenche os campos usados pela regra.
+**Nenhum evento pode conter a senha, o valor derivado dela ou o código do segundo fator** -
+a cláusula 9 dos critérios de RS01 existe exatamente para isso, e uma regra de detecção que
+vazasse credencial reproduziria o risco que pretende observar.
+
+| Campo | Uso na detecção |
+| --- | --- |
+| `eventTime`, `eventType`, `correlationId` | Ordenação, janela e deduplicação da tentativa |
+| `subjectId`, `subjectRole` | Conta alvo e perfil; identificador interno, nunca o `nomeLogin` digitado |
+| `outcome`, `failureReason` | `SUCCESS`, `BAD_CREDENTIAL`, `MFA_FAILED`, `ACCOUNT_LOCKED`, `BREAK_GLASS_USED` |
+| `mfaPresented`, `mfaValid`, `reauthAt` | Distinguem falha de senha de falha de segundo fator e alimentam a checagem de operação sensível |
+| `deviceId`, `networkZone`, `sourceService` | Contexto técnico; a zona é a ala/setor, não o endereço do paciente |
+| `knownDeviceForSubject` | Indicador derivado: se aquele profissional já autenticou naquele terminal antes |
+
+### Lógica de correlação
+
+**Gatilho A - Crítico e imediato.** Um único evento `SUCCESS` dispara alerta quando:
+
+- for precedido, para a mesma conta, por 5 ou mais falhas nos 15 minutos anteriores
+  (adivinhação bem-sucedida); **ou**
+- existir outra sessão ativa da mesma conta em `networkZone` diferente, com sobreposição
+  temporal que nenhum deslocamento dentro do hospital explicaria; **ou**
+- for seguido, em menos de 2 minutos, por prescrição, autorização de alta ou registro de
+  óbito **a partir de um `deviceId` nunca visto para aquele profissional**
+  (`knownDeviceForSubject` falso).
+
+**Gatilho B - Alto por repetição.** Contam para o limiar os eventos `BAD_CREDENTIAL` e
+`MFA_FAILED`. A quinta ocorrência em 15 minutos para o mesmo `subjectId` abre um único
+alerta, ao qual as seguintes da janela são anexadas. Em paralelo, falhas da mesma origem
+(`deviceId` + `networkZone`) contra **10 contas distintas** na mesma janela abrem um alerta
+de pulverização de senhas, que é o padrão que precede o Gatilho A.
+
+`ACCOUNT_LOCKED` não conta para o limiar - é a consequência do bloqueio de RS01, não uma
+tentativa nova, e contá-lo duplicaria o mesmo evento. `BREAK_GLASS_USED` **nunca** gera
+alerta de intrusão, mas entra obrigatoriamente na fila de revisão prevista na cláusula 8
+de RS01: é acesso legítimo por definição e precisa ser conferido depois, não interrompido
+durante um atendimento.
+
+### Ação esperada da equipe
+
+**Alerta Crítico:**
+
+1. abrir incidente único pelo `correlationId` e notificar Segurança da Informação e a
+   chefia da unidade do profissional;
+2. contatar o profissional titular por canal fora do sistema para confirmar se a sessão é
+   dele - **antes** de revogar, porque revogar a sessão de um médico em atendimento é uma
+   ação com custo assistencial;
+3. preservar eventos, identidade das sessões e contexto técnico em repositório restrito;
+4. se o titular não reconhecer a sessão, revogá-la, forçar troca de credencial e **revisar
+   o que foi executado durante ela** - prescrições, altas e registros -, acionando os donos
+   de R02 e R03 conforme o que tiver sido tocado; e
+5. registrar o resultado, inclusive quando for falso positivo, para recalibrar o limiar.
+
+**Alerta Alto:** Segurança correlaciona as tentativas com dispositivo, zona e escala de
+trabalho do profissional. Se houver indício de ataque, aplica bloqueio da origem e
+comunica o titular; se for erro operacional - senha esquecida após troca, teclado com
+layout trocado, terminal com sessão anterior aberta -, registra, orienta e mantém o
+histórico para ajuste do limiar.
+
+O alerta nunca deve, sozinho, encerrar a sessão de um profissional em atendimento. A
+contenção técnica e a continuidade assistencial precisam ficar separadas e auditadas -
+mesmo princípio que a Regra 2 aplica à decisão clínica.
+
+### Falsos positivos previstos
+
+Três deles são específicos deste sistema e mereceram ajuste no desenho da regra:
+
+- **Terminal compartilhado.** Nos postos de atendimento, muitos profissionais autenticam
+  do mesmo `deviceId` ao longo do dia. Isso é operação normal, **não** pulverização de
+  senhas - por isso o Gatilho B só considera a origem quando as tentativas são de
+  **falha**, e não de sucesso.
+- **Troca de turno.** A passagem de plantão concentra logins em poucos minutos, com
+  senhas digitadas às pressas. É a janela de maior taxa de erro legítimo do dia, e o
+  limiar de 5 falhas foi escolhido acima do erro típico por esse motivo.
+- **Deslocamento entre alas.** Um profissional que atende em duas unidades pode aparecer
+  em zonas diferentes em intervalo curto. Por isso o Gatilho A exige **sobreposição** de
+  sessões ativas, e não apenas mudança de zona.
+
+Somam-se os casos gerais: senha recém-trocada digitada por hábito, sincronização de
+relógio do gerador de segundo fator e reenvio do cliente por instabilidade de rede -
+eventos repetidos com o mesmo `correlationId` são duplicatas técnicas e devem ser
+eliminados antes da contagem.
+
+### Verificação da regra
+
+Como o SIGH não possui implementação, estes são casos de teste planejados, e não
+evidências já executadas:
+
+| ID | Entrada simulada | Resultado esperado |
+| --- | --- | --- |
+| R1-TV01 | Login válido com segundo fator, em terminal já conhecido do profissional | Nenhum alerta; evento permanece pesquisável |
+| R1-TV02 | 5 falhas de senha na mesma conta em 15 minutos | Exatamente um alerta Alto contendo as cinco correlações |
+| R1-TV03 | 5 falhas seguidas de um sucesso na mesma conta | Alerta Crítico pelo Gatilho A, além do Alto já aberto |
+| R1-TV04 | Falhas da mesma origem contra 10 contas distintas em 15 minutos | Um alerta Alto de pulverização de senhas |
+| R1-TV05 | 12 logins bem-sucedidos de profissionais diferentes no mesmo terminal em 10 minutos | **Nenhum alerta** - é a troca de turno em posto compartilhado |
+| R1-TV06 | Sessões ativas simultâneas da mesma conta em duas zonas de rede | Alerta Crítico por sessão concorrente |
+| R1-TV07 | Login bem-sucedido seguido, em 1 minuto, de registro de óbito a partir de dispositivo desconhecido | Alerta Crítico pelo terceiro caso do Gatilho A |
+| R1-TV08 | Uso do fluxo `BREAK_GLASS_USED` durante emergência | Nenhum alerta de intrusão; entrada obrigatória na fila de revisão |
+| R1-TV09 | Evento contendo senha, valor derivado ou código de segundo fator | Evento em quarentena e falha de esquema; credencial não chega ao índice de segurança |
+| R1-TV10 | Ausência de dois *heartbeats* consecutivos, emitidos a cada minuto | Alerta operacional após 2 minutos; Regra 1 marcada como sem cobertura |
+
+### Dependências operacionais e referências
+
+A regra depende de o serviço de autenticação da DA03 existir e emitir os eventos da
+cláusula 7 de RS01 - sem emissor único, os eventos ficariam espalhados pelos sete
+microsserviços e a correlação por conta deixaria de ser confiável. Os produtores devem
+usar relógio sincronizado e canal autenticado para armazenamento central protegido contra
+alteração. Um *heartbeat* por minuto distingue ausência de tentativas de falha de coleta.
+
+A especificação segue o
+[OWASP Logging Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html),
+quanto a eventos correlacionáveis, proteção dos logs e tratamento de dado sensível, e o
+[OWASP Authentication Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html),
+quanto a mensagens de erro que não diferenciam conta existente de inexistente - o que vale
+também para o que a regra publica. O procedimento de triagem e resposta é alinhado ao
+[NIST SP 800-61r3](https://csrc.nist.gov/pubs/sp/800/61/r3/final), na mesma linha adotada
+pela Regra 2.
 
 ## Regra 2 - Tentativa de adulteração de prescrição ativa (@ARTHUR9011)
 
