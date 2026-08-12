@@ -9,7 +9,7 @@
 | RS01 - requisito e vulnerabilidade | @lilydias24 | Concluído (aguarda revisão cruzada) |
 | RS02 - requisito e vulnerabilidade | @ARTHUR9011 | Concluído (aguarda revisão cruzada) |
 | RS03 - requisito e vulnerabilidade | @PPrauchner | Pendente |
-| Diagrama da arquitetura segura | @lorenzoficher | Especificado (seções 3.1 a 3.3); falta exportar o PNG do Lucid |
+| Diagrama da arquitetura segura | @lorenzoficher | Concluído (seções 3.1 a 3.3 e PNG versionado) |
 | Decisão de arquitetura 1 (ligada ao diagrama) | @lorenzoficher | Concluída (DA01) |
 | Decisão de arquitetura 2 (ligada a RS03) | @mariasanchez0’s | Pendente |
 | Decisão de arquitetura 3 (reforço de autenticação) | @lilydias24 | Concluída (DA03; ponto de contato com a DA01 sinalizado) |
@@ -288,11 +288,9 @@ depender de uma alteração insegura ter sido persistida.
 
 ## 3. Diagrama da arquitetura segura
 
-> Responsável: **@lorenzoficher** - parte de `diagrams/estrutura/Diagramas_SIGH - Componentes.png` (já versionado) e acrescenta serviço de autenticação, serviço de autorização e componente de logs/auditoria. Exportar como `diagrams/estrutura/SIGH - Arquitetura segura.png`.
+> Responsável: **@lorenzoficher** - parte de `diagrams/estrutura/Diagramas_SIGH - Componentes.png` (já versionado) e acrescenta o serviço de autenticação instituído pela DA03, o serviço de autorização, o serviço de auditoria instituído pela DA01 e o catálogo clínico. Versionado como `diagrams/estrutura/Diagramas_SIGH - Arquitetura segura.png`.
 
-<!-- Descomentar quando o diagrama estiver exportado:
-![Arquitetura segura do SIGH](../diagrams/estrutura/SIGH%20-%20Arquitetura%20segura.png)
--->
+![Arquitetura segura do SIGH](../diagrams/estrutura/Diagramas_SIGH%20-%20Arquitetura%20segura.png)
 
 O diagrama parte da arquitetura já modelada - Desktop Cliente, API Gateway e 7
 microsserviços em 5 camadas sobre um SGBD central - e acrescenta os três componentes que
