@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | RS01 - requisito e vulnerabilidade | @lilydias24 | Concluído (aguarda revisão cruzada) |
 | RS02 - requisito e vulnerabilidade | @ARTHUR9011 | Concluído (aguarda revisão cruzada) |
-| RS03 - requisito e vulnerabilidade | @PPrauchner | Pendente |
+| RS03 - requisito e vulnerabilidade | @PPrauchner | Concluído (aguarda revisão cruzada); depende da DA02 para a decisão de arquitetura correspondente |
 | Diagrama da arquitetura segura | @lorenzoficher | Especificado (seções 3.1 a 3.3); falta exportar o PNG do Lucid |
 | Decisão de arquitetura 1 (ligada ao diagrama) | @lorenzoficher | Concluída (DA01) |
 | Decisão de arquitetura 2 (ligada a RS03) | @mariasanchez0’s | Pendente |
@@ -248,9 +248,9 @@ primeiros são exatamente os testes escritos na [Etapa 4](E4_Codigo_seguro_e_tes
 | --- | --- | --- | --- |
 | RS01 | Senha persistida em texto simples, autenticação de fator único, ausência de limite de tentativas e sessão sem expiração | CWE-256, CWE-308, CWE-307, CWE-613 e CWE-287 | @lilydias24 |
 | RS02 | Ausência de autorização no servidor, confiança em validações do cliente, entrada clínica sem validação e auditoria insuficiente | CWE-862, CWE-602, CWE-20 e CWE-778; OWASP A01, A06 e A09:2025 | @ARTHUR9011 |
-| RS03 | Missing Authorization / Broken Access Control | CWE-862, OWASP A01 (a confirmar/complementar) | @PPrauchner |
+| RS03 | Autorização ausente no servidor, campo de privilégio gravável pelo próprio titular junto com o cadastro e gestão indevida de privilégio | CWE-862, CWE-915, CWE-269 e CWE-639; OWASP A01:2025 e ASVS V4 | @PPrauchner |
 
-> Os mapeamentos de RS01 e RS02 estão detalhados abaixo. RS03 permanece com seu responsável.
+> Os três mapeamentos estão detalhados abaixo, cada um na subseção do seu responsável.
 
 ### Vulnerabilidades relacionadas a RS01 (@lilydias24)
 
@@ -371,6 +371,88 @@ a consulta à auditoria comprovarão os controles. A Regra 2 da Etapa 6 deve con
 alterações concluídas quanto tentativas recusadas, usando o identificador de correlação,
 para detectar valor fora da faixa, autorização inválida ou ausência de confirmação sem
 depender de uma alteração insegura ter sido persistida.
+
+### Vulnerabilidades relacionadas a RS03 (@PPrauchner)
+
+Como o SIGH não está implementado, os itens abaixo são **fraquezas potenciais indicadas
+pelo modelo**, e não vulnerabilidades confirmadas em código - a mesma ressalva que a
+[Etapa 1](E1_Casos_de_abuso_e_Stride.md) registra ao dizer que só é possível afirmar que o
+modelo *não especifica* a verificação, nunca que o sistema *não a faz*. Duas delas, porém,
+são menos hipotéticas que as demais: `nivelAcesso` é o único atributo de autorização do
+modelo inteiro (observação 1 da seção 8.3) e ele aparece como atributo comum do cadastro,
+sem operação própria - as duas coisas estão no diagrama de classes, não em uma suposição.
+
+| Referência | Relação concreta com o SIGH |
+| --- | --- |
+| [CWE-862 - Missing Authorization](https://cwe.mitre.org/data/definitions/862.html) | É a fraqueza principal de RS03. O modelo não expõe nenhuma verificação de alçada no servidor antes de gravar o cadastro de `Funcionario`: a restrição de perfil aparece na montagem da tela, e o firewall declarado antes de cada DAO separa serviço de serviço, sem distinguir qual perfil emitiu a chamada dentro de uma sessão já autenticada. |
+| [CWE-915 - Improperly Controlled Modification of Dynamically-Determined Object Attributes](https://cwe.mitre.org/data/definitions/915.html) | É o mecanismo exato de CA05, passo 3: `nivelAcesso` viaja no mesmo salvamento dos demais dados do cadastro, de modo que **alterar o próprio privilégio não exige uma operação diferente de alterar o próprio telefone** - basta um campo a mais no corpo. É a fraqueza que a cláusula 3 fecha ao tirar o campo da via de salvamento. |
+| [CWE-269 - Improper Privilege Management](https://cwe.mitre.org/data/definitions/269.html) | O modelo não define quem concede, quem aprova nem quem revoga `nivelAcesso`: o enum existe, o fluxo de atribuição não. Sem isso, o titular é, por omissão, autoridade sobre o próprio nível - e uma promoção não tem como ser distinguida de uma correção de cadastro. |
+| [CWE-639 - Authorization Bypass Through User-Controlled Key](https://cwe.mitre.org/data/definitions/639.html) | Complementa a leitura em massa da cláusula 8: os identificadores do SIGH são sequenciais - `buscarPacientePorIdentificador(idPaciente)` é o caso citado em CA01 e CA05 -, e o alcance obtido pela elevação se converte em varredura simplesmente variando o identificador, sem nova decisão de autorização por registro acessado. |
+
+Duas fraquezas já mapeadas em outros requisitos valem igualmente aqui e **não são
+repetidas** para não inflar a lista: **CWE-602 - Client-Side Enforcement of Server-Side
+Security**, mapeada em RS02, descreve com precisão o "ocultar o botão em vez de recusar a
+chamada" que RS03 combate; e **CWE-778 - Insufficient Logging**, também de RS02, é o que
+torna a elevação silenciosa e permanente, condição registrada em T06 e no Tópico 9 do
+documento original.
+
+No **OWASP Top 10:2025**, a relação principal é com
+[A01 - Broken Access Control](https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/),
+que é a mesma categoria de RS02 - e a coincidência é informativa, não um problema de
+mapeamento: os dois requisitos atacam a mesma classe de falha em pontos diferentes do
+sistema, RS02 na operação clínica e RS03 na operação administrativa que **concede** a
+permissão de executá-la. O desenho também toca
+[A06 - Insecure Design](https://owasp.org/Top10/2025/A06_2025-Insecure_Design/), pela
+ausência de um fluxo de atribuição de privilégio no modelo.
+
+As referências de controle usadas aqui, que não dependem da numeração da edição, são o
+[OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html)
+- de onde vêm a negação por padrão da cláusula 2 e a reavaliação por requisição da
+cláusula 6 - e o capítulo **V4 - Access Control** do
+[OWASP ASVS](https://owasp.org/www-project-application-security-verification-standard/),
+que o §20 do enunciado sugere para selecionar requisitos verificáveis e que sustenta os
+critérios RS03-CA03 (decisão no servidor, não na interface) e RS03-CA06 (negação por
+omissão de regra).
+
+### Rastreabilidade de RS03
+
+RS03 concretiza os controles R06-C1 a R06-C4 definidos no plano de tratamento da
+[Etapa 2](E2_Riscos_e_NIST_CSF.md).
+
+| Controle de R06 | Realização em RS03 | Critérios que o verificam | Evidência esperada quando houver implementação |
+| --- | --- | --- | --- |
+| R06-C1 - revalidação de autorização no servidor, com o `nivelAcesso` do corpo descartado | Cláusulas 1, 2, 4 e 6 | RS03-CA02, RS03-CA03, RS03-CA06 e RS03-CA07 | Os dois testes da [Etapa 4](E4_Codigo_seguro_e_testes.md), mais o teste que envia a requisição direto ao endpoint e o que verifica a recusa por omissão de regra |
+| R06-C2 - `nivelAcesso` imutável pelo próprio titular, mudança só por fluxo de aprovação | Cláusula 3 | RS03-CA01, RS03-CA04 e RS03-CA05 | Promoção legítima por sessão Diretor sobre outro funcionário; tentativa sobre o próprio registro recusada; gravação de dados funcionais que ignora o campo de privilégio |
+| R06-C3 - trilha imutável de toda alteração de perfil, com autor, valor anterior e novo e data/hora do servidor | Cláusula 5 | RS03-CA01, RS03-CA02 e RS03-CA04 | Consulta à trilha exibindo alterações efetivadas **e** recusadas, com autoria vinda da sessão - garantida pelo Serviço de Auditoria da DA01 |
+| R06-C4 - alerta ao Diretor e à Segurança da Informação a cada elevação | Cláusula 7 | RS03-CA02 | Regra 3 da [Etapa 6](E6_Monitoramento_e_deteccao.md) disparando em uma elevação simulada, com destinatário definido |
+
+A cláusula 8 não realiza um controle de R06: ela fecha a continuação do CA05, em que o
+privilégio obtido vira varredura do cadastro e, pelo volume sobre o SGBD único, alcança a
+disponibilidade tratada em **R05**. Está aqui porque o requisito ficaria incompleto sem
+ela - conter a elevação e deixar aberta a leitura em massa que a motiva resolveria metade
+do caso de abuso.
+
+**Contratos necessários para a arquitetura segura.** O diagrama da seção 3 deve permitir
+identificar, ainda que em nível lógico:
+
+- o **Serviço de Autorização** como componente distinto do Serviço de Funcionários - a
+  decisão não pode viver dentro do serviço que ela autoriza, ou volta a ser possível
+  alcançá-la pelo mesmo caminho que se quer barrar;
+- o ponto do **API Gateway** em que identidade, papel e `nivelAcesso` vindos do cliente
+  são descartados, e não apenas ignorados (fronteira 1 da seção 3.2);
+- a **operação própria de alteração de perfil**, separada do salvamento do cadastro, com
+  o aprovador como identidade distinta do solicitante;
+- o **canal de eventos de autorização** - concessões e recusas - alimentando o Serviço de
+  Auditoria e, a partir dele, a Regra 3 da Etapa 6; e
+- o ponto em que as **credenciais deixam de estar no Serviço de Funcionários** (DA03): sem
+  isso, o alcance administrativo continua alcançando `senhaLogin`, e o impacto 4 de R06
+  permanece por construção.
+
+**Dependências para as próximas etapas.** Os critérios acima são critérios de arquitetura
+enquanto o SIGH não possui implementação, e não devem ser apresentados como evidência
+executada. A **DA02**, ligada a este requisito, ainda não foi escrita - é ela que deve
+registrar formalmente a decisão de onde a autorização passa a ser decidida e por qual
+componente, e RS03 pressupõe essa decisão tomada.
 
 ## 3. Diagrama da arquitetura segura
 
