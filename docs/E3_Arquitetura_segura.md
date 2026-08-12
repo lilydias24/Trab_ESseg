@@ -18,11 +18,16 @@
 
 ## 1. Requisitos de segurança
 
-| ID | Risco de origem | Requisito de segurança | Responsável |
-| --- | --- | --- | --- |
-| RS01 | R01 - Spoofing | O sistema deve exigir autenticação multifator no login e reautenticação antes de operações sensíveis envolvendo a conta de `Funcionario` | @lilydias24 |
-| RS02 | R02 - Tampering | Toda alteração de prescrição ativa deve ser autorizada e validada no servidor, confirmada por segundo profissional e registrada com autoria e versionamento em trilha de auditoria imutável | @ARTHUR9011 |
-| RS03 | R06 - Elevation of Privilege | O sistema deve validar `nivelAcesso` no servidor em toda operação administrativa, e não apenas ocultar opções na interface | @PPrauchner |
+| ID | Risco de origem | Requisito de segurança | Critério de verificação | Responsável |
+| --- | --- | --- | --- | --- |
+| RS01 | R01 - Spoofing | O sistema deve exigir autenticação multifator no login e reautenticação antes de operações sensíveis envolvendo a conta de `Funcionario` | Operação sensível pedida sem segundo fator válido ou fora da janela de reautenticação é recusada, e o valor persistido em `senhaLogin` não é diretamente reutilizável (RS01-CA01 a RS01-CA09) | @lilydias24 |
+| RS02 | R02 - Tampering | Toda alteração de prescrição ativa deve ser autorizada e validada no servidor, confirmada por segundo profissional e registrada com autoria e versionamento em trilha de auditoria imutável | Alteração sem autorização no servidor, fora da faixa terapêutica ou sem o segundo confirmador não publica versão vigente, e a tentativa fica registrada na auditoria (RS02-CA01 a RS02-CA08) | @ARTHUR9011 |
+| RS03 | R06 - Elevation of Privilege | O sistema deve validar `nivelAcesso` no servidor em toda operação administrativa, e não apenas ocultar opções na interface | Requisição que altera `nivelAcesso` partindo de sessão sem alçada é recusada com HTTP 403 e registrada na trilha, mesmo quando enviada direto ao endpoint, sem passar pela interface (RS03-CA01 a RS03-CA08) | @PPrauchner |
+
+> A coluna *Critério de verificação* foi acrescentada porque o §18.1 do enunciado a exige
+> na tabela de requisitos - o requisito precisa ser "específico e verificável", e é essa
+> coluna que demonstra o segundo adjetivo. Cada célula resume em uma linha os critérios
+> detalhados na subseção do requisito correspondente; nenhum critério novo foi criado aqui.
 
 > RS01 e RS02 estão detalhados abaixo. RS03 permanece com seu responsável.
 
