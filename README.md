@@ -116,7 +116,7 @@ Pastas a serem criadas conforme as etapas avançarem: `evidencias/etapa-5/` (Eta
 
 ### Etapas 3 a 7
 
-- [ ] Etapa 3 - RS01 e RS02 concluídos (aguardam revisão cruzada); RS03 (@PPrauchner) pendente. Diagrama da arquitetura segura concluído e versionado (@lorenzoficher). DA01 (@lorenzoficher) e DA03 (@lilydias24) concluídas; DA02 (@mariasanchez0) pendente
+- [ ] Etapa 3 - RS01 e RS02 concluídos (aguardam revisão cruzada); RS03 (@PPrauchner) pendente. Diagrama da arquitetura segura concluído e versionado (@lorenzoficher). DA01 (@lorenzoficher) e DA03 (@lilydias24) concluídas, com a conciliação entre as duas registrada (@lorenzoficher); DA02 (@mariasanchez0) pendente
 - [ ] Etapa 4 - Prática 1 (armazenamento seguro de senhas, @lilydias24) concluída, testes executados; Prática 2 (autorização no servidor, @PPrauchner) pendente
 - [ ] Etapa 5 - uma verificação com até três achados analisados
 - [ ] Etapa 6 - Regras 1 (@lilydias24) e 2 (@ARTHUR9011) concluídas; Regra 3 (@PPrauchner) e a compilação do roteiro pendentes

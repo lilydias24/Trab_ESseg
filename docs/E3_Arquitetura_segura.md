@@ -13,6 +13,7 @@
 | Decisão de arquitetura 1 (ligada ao diagrama) | @lorenzoficher | Concluída (DA01) |
 | Decisão de arquitetura 2 (ligada a RS03) | @mariasanchez0’s | Pendente |
 | Decisão de arquitetura 3 (reforço de autenticação) | @lilydias24 | Concluída (DA03; ponto de contato com a DA01 sinalizado) |
+| Conciliação entre DA01 e DA03 | @lorenzoficher | Concluída (responde ao ponto levantado na DA03) |
 
 ---
 
@@ -467,3 +468,63 @@ o que impede que exista um óbito sem rastro, e é a diferença entre auditar e 
     e reescrever o fluxo de login do Desktop Cliente - trabalho concentrado, mas feito
     uma vez só, contra sete implementações na alternativa descartada.
 
+### Conciliação entre a DA01 e a DA03 - @lorenzoficher
+
+A DA03 registrou, nas suas consequências negativas, que o serviço de autenticação passa a
+ser passagem obrigatória de toda operação, e pediu que esse ponto fosse conciliado com a
+DA01. O pedido procede: as duas decisões acrescentam, cada uma, um componente obrigatório
+ao mesmo caminho, e o efeito sobre o R05 do @PPrauchner é somado, não paralelo. O que
+segue é o que muda na DA01 por causa da DA03, e a regra que resolve a interação.
+
+**Os dois acoplamentos não têm o mesmo tamanho, e tratá-los como iguais seria um erro de
+priorização.** O Serviço de Autenticação está no caminho de *toda* operação, inclusive de
+uma consulta de prontuário: se ele cai, ninguém entra. O Serviço de Auditoria é condição
+apenas das operações irreversíveis - registrar óbito (UC10) e autorizar alta (UC06) - e,
+mesmo nessas, o que a DA01 exige não é que o serviço esteja no ar, e sim que o evento
+esteja durável, o que o buffer local já garante. Numa indisponibilidade curta, a queda da
+autenticação para o hospital; a da auditoria não para nada. A redundância que a DA03 pede
+é, portanto, mais urgente que a da DA01, e a ordem de implementação de 14.5 deve refletir
+isso.
+
+**O buffer tem limite, e o limite precisa ser declarado em projeto.** A vantagem descrita
+acima vale enquanto o buffer local absorver a indisponibilidade. Esgotado o espaço
+reservado, a durabilidade deixa de ser garantida e o acoplamento volta inteiro: a operação
+irreversível passa a falhar de forma fechada, como manda o R03-C5. A escolha continua
+sendo a da DA01 - entre concluir sem prova e não concluir, não se conclui -, mas o ponto
+em que ela é exercida não pode ser descoberto durante o incidente. O buffer é dimensionado
+para a janela de indisponibilidade que o tratamento de R05 admite como tolerável, e a sua
+ocupação recebe alerta próprio, no mesmo regime do R05-C5, para que a reposição do Serviço
+de Auditoria ocorra antes do esgotamento e não depois.
+
+**A regra que concilia as duas: a autenticação pode degradar, a auditoria não.** A
+cláusula 8 de RS01 prevê o *break-glass* para quando o segundo fator estiver indisponível
+durante o atendimento. Esse é exatamente o momento em que a prova vale mais, e não menos,
+porque se trata de um acesso que contornou a autenticação normal. O caminho de exceção da
+DA03 não é, por isso, exceção ao acréscimo da DA01 - ele **eleva** a exigência probatória
+em vez de reduzi-la. É o mesmo regime proposto para a Condição de bloqueio 3 do pipeline
+na [Etapa 7](E7_DevSecOps_e_video.md): o único portão sem exceção temporária possível é o
+que produz evidência, porque nenhuma trilha futura produz prova sobre o que já passou.
+
+**Disso decorre uma exigência nova para a trilha: registrar a qualidade da identidade, e
+não apenas a identidade.** A justificativa do residual de R03 na
+[Etapa 2](E2_Riscos_e_NIST_CSF.md) já reconhece que a trilha prova qual sessão registrou,
+não quem estava no teclado. A DA03 torna essa dependência concreta e, ao mesmo tempo,
+delimitável: como passa a existir um emissor único de identidade, ele pode informar ao
+Serviço de Auditoria *como* aquela identidade foi estabelecida - senha e segundo fator,
+reautenticação dentro da janela, ou *break-glass* com o segundo profissional
+identificado. Sem esse campo, um óbito registrado em *break-glass* e um óbito registrado
+com autenticação plena ficam indistinguíveis na trilha, o que recriaria, dentro do
+próprio controle, a ambiguidade que o R03 descreve.
+
+**Ordem entre as duas decisões: a DA03 vem antes da DA01, ou junto, nunca depois.** A
+autoria que a trilha registra vale exatamente o que valer a autenticação que a sustenta -
+uma trilha em operação sobre uma autenticação que ainda guarda `senhaLogin` em texto
+simples produz registros bem formados e fracamente atribuíveis. É o mesmo argumento do
+residual de R03, agora com componente e responsável definidos.
+
+**O que fica em aberto para o grupo.** A conciliação não elimina o fato de a arquitetura
+passar a ter quatro passagens obrigatórias: Gateway, autenticação, SGBD central e, nas
+operações irreversíveis, o acréscimo à trilha. A regra de degradação prevista em R05-C5
+precisa dizer explicitamente o que é suspenso e o que é preservado durante a saturação, e
+o acréscimo à trilha tem de estar no conjunto preservado. Isso é matéria da RS03 e da
+DA02, e fica registrado aqui como dependência.
