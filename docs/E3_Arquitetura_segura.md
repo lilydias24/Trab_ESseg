@@ -29,7 +29,7 @@
 > coluna que demonstra o segundo adjetivo. Cada célula resume em uma linha os critérios
 > detalhados na subseção do requisito correspondente; nenhum critério novo foi criado aqui.
 
-> RS01 e RS02 estão detalhados abaixo. RS03 permanece com seu responsável.
+> Os três requisitos estão detalhados abaixo, cada um na subseção do seu responsável.
 
 ### RS01 - Autenticação forte e reautenticação em operações sensíveis (@lilydias24)
 
@@ -160,6 +160,87 @@ cenários forem demonstrados por testes automatizados e pela consulta à auditor
 | RS02-CA06 | O registro da auditoria falha durante a alteração | Toda a transação é revertida; a prescrição anterior continua vigente e não há versão parcial |
 | RS02-CA07 | Um usuário da aplicação tenta alterar ou excluir uma versão já registrada | A operação é recusada e a trilha preserva integralmente o histórico |
 | RS02-CA08 | Duas alterações concorrentes tentam partir da mesma versão-base | No máximo uma delas torna-se vigente; a outra recebe conflito, não sobrescreve dados e precisa passar novamente pelas validações e pela confirmação sobre a nova base |
+
+### RS03 - Autorização de operação administrativa decidida no servidor (@PPrauchner)
+
+**Risco de origem.** R06 - um `Administrador` de nível Supervisor persiste
+`nivelAcesso: Diretor` no próprio cadastro e passa a operar com alçada de Diretor sobre o
+Serviço de Funcionários. O requisito atua sobre a condição exata que dá a R06 sua
+probabilidade 2 na [Etapa 2](E2_Riscos_e_NIST_CSF.md): a decisão de autorização existir
+apenas na montagem da interface, de modo que o campo trafega no salvamento comum do
+cadastro (CA05, passo 3) e nada no servidor verifica se quem pediu tem alçada sobre ele.
+
+Vale fixar por que este requisito não é uma variação de RS01. Em R06 **a identidade não
+foi falsificada, foi promovida**: o ator autentica com a própria senha e a sessão é
+legítima do início ao fim. Autenticar melhor - que é o que RS01 faz - não impede nada
+aqui, porque nunca houve dúvida sobre quem é o usuário. A dúvida é sobre o que ele pode.
+
+**Enunciado completo.** Toda operação administrativa do Serviço de Funcionários -
+alteração de perfil, cadastro de profissional, gestão de escalas e de medicamentos e
+listagem em massa do cadastro - só pode ser executada quando o SIGH:
+
+1. obtiver perfil e `nivelAcesso` do solicitante **da sessão autenticada** emitida pelo
+   serviço de autenticação (DA03), **descartando** identidade, papel e `nivelAcesso`
+   recebidos no corpo, na URL ou em cabeçalho da requisição **antes** de qualquer
+   validação - e não apenas ignorando-os na decisão;
+2. submeter a operação a uma decisão de autorização **explícita e no servidor**, tomada
+   fora do componente que a executa (Serviço de Autorização da seção 3.1), com **negação
+   por padrão**: operação administrativa sem regra correspondente é recusada, nunca
+   permitida por omissão;
+3. tratar `nivelAcesso` como campo **não gravável pela via de salvamento do cadastro**: a
+   mudança de perfil só ocorre por operação própria de alteração de perfil, exigindo
+   alçada de Diretor, e o titular **nunca** é autorizado sobre o próprio registro - quem
+   solicita a promoção não é quem a aprova;
+4. recusar a requisição não autorizada com **HTTP 403**, sem executar efeito parcial
+   algum: a verificação precede a persistência e a operação inteira é revertida se
+   qualquer etapa falhar; a resposta não revela quais campos ou perfis existem;
+5. registrar na trilha de auditoria imutável (DA01) tanto as alterações **efetivadas**
+   quanto as **recusadas**, com autor obtido da sessão, perfil vigente no momento,
+   valor anterior, valor novo, terminal de origem e data/hora carimbados pelo servidor;
+6. **reavaliar a autorização a cada requisição** e reemitir a identidade de sessão quando
+   o perfil mudar: sessão aberta antes da promoção não carrega a alçada nova, e sessão de
+   perfil rebaixado perde a alçada antiga imediatamente, sem depender de novo login;
+7. emitir alerta ao Diretor e à Segurança da Informação **no momento** de toda elevação de
+   perfil efetivada, e não em relatório posterior - é a fonte da Regra 3 da
+   [Etapa 6](E6_Monitoramento_e_deteccao.md); e
+8. aplicar a mesma decisão às **leituras em massa** do cadastro, com limite de volume e
+   registro por consulta. A cláusula existe porque em CA05 o dano não vem da promoção em
+   si, e sim do que ela permite ler em seguida - o cadastro completo de todas as unidades,
+   com `nomeLogin` e `senhaLogin` de todos os perfis - e porque esse mesmo volume, sobre o
+   SGBD único, é o caminho de indisponibilidade de R05.
+
+**Comportamento esperado.** A falha é fechada e a decisão é do servidor, sempre: ocultar
+a opção na interface deixa de ser um controle e passa a ser conveniência de usabilidade.
+O `nivelAcesso` que chega do Desktop Cliente é **descartado**, não validado - a diferença
+importa, porque validar um valor controlado pelo cliente ainda é confiar nele. Nenhuma
+credencial de outro funcionário aparece em resposta de listagem administrativa: o cadastro
+retorna dados funcionais, não os campos de autenticação, que residem no serviço de
+autenticação a partir da DA03.
+
+**Limite reconhecido do requisito.** RS03 fecha o caminho de CA05, mas não fecha a
+promoção legítima indevida: uma conta de Diretor comprometida, ou o conluio de quem
+aprova, continua produzindo uma elevação válida - agora datada, atribuída e alertada, o
+que muda a detecção, não a possibilidade. E o requisito **não reduz o impacto de R06**: se
+a elevação ocorrer, o alcance permanece o mesmo enquanto `senhaLogin` estiver em texto
+simples, porque o dano de R06 se realiza sobre as credenciais que RS01 protege. Por isso o
+residual de R06 na [Etapa 2](E2_Riscos_e_NIST_CSF.md) mantém impacto 4 mesmo com todos os
+controles próprios implantados: **a redução do impacto de R06 depende de RS01, não de
+RS03.** Os dois requisitos precisam avançar juntos.
+
+**Critérios de verificação.** O requisito é considerado atendido quando os cenários abaixo
+forem demonstrados por testes automatizados e pela consulta à trilha de auditoria. Os dois
+primeiros são exatamente os testes escritos na [Etapa 4](E4_Codigo_seguro_e_testes.md).
+
+| ID | Cenário | Resultado verificável |
+| --- | --- | --- |
+| RS03-CA01 | Sessão com `nivelAcesso = Diretor` promove outro funcionário a GerenteSetor | Alteração aceita; a trilha registra autor, valor anterior, valor novo e data/hora do servidor |
+| RS03-CA02 | Sessão com `nivelAcesso = Supervisor` envia o próprio cadastro com `nivelAcesso: "Diretor"` no corpo | HTTP 403; o campo permanece `Supervisor`; a tentativa é registrada e o alerta da Regra 3 dispara |
+| RS03-CA03 | A mesma requisição de CA02 é enviada **direto ao endpoint**, sem passar pela interface | Resultado idêntico ao de RS03-CA02 - a recusa não depende da tela ter ou não montado a opção |
+| RS03-CA04 | Requisição legítima de alteração de dados funcionais traz `nivelAcesso` alterado junto no corpo | Os dados funcionais são gravados e o `nivelAcesso` permanece inalterado, sem erro silencioso: a tentativa de gravá-lo é registrada |
+| RS03-CA05 | Diretor tenta elevar o **próprio** `nivelAcesso` | HTTP 403 - a alçada não alcança o próprio registro, e a promoção exige aprovador distinto do solicitante |
+| RS03-CA06 | Novo endpoint administrativo entra no serviço sem regra de autorização declarada | Toda chamada é recusada por omissão de regra, e não permitida - a negação por padrão é verificada, não presumida |
+| RS03-CA07 | Sessão aberta antes de uma promoção legítima chama operação exclusiva do perfil novo; e sessão de perfil rebaixado chama operação do perfil antigo | A primeira é recusada até a identidade de sessão ser reemitida; a segunda é recusada imediatamente |
+| RS03-CA08 | Sessão administrativa percorre o cadastro completo de funcionários de todas as unidades | O limite de volume é aplicado, nenhum campo de autenticação é retornado e cada consulta fica registrada |
 
 ## 2. Vulnerabilidades catalogadas (CWE/OWASP)
 
