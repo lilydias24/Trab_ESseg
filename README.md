@@ -105,7 +105,7 @@ Pastas a serem criadas conforme as etapas avançarem: `evidencias/etapa-5/` (Eta
 - [x] 13.1 a 13.3 Critérios e cálculo - escalas definidas e exemplificadas no contexto do SIGH
 - [x] 13.4 e 13.5 Registro e justificativa dos riscos - todos os seis riscos concluídos (R04 por @mariasanchez0)
 - [x] 13.6 Priorização geral - @mariasanchez0
-- [x] 13.7 Conclusão da análise - @ARTHUR9011 (rascunho; revisão pendente agora que R04, 13.6 e 14.5 foram concluídos)
+- [x] 13.7 Conclusão da análise - @ARTHUR9011 (revisada após a conclusão de R04, 13.6 e 14.5)
 - [x] 14.1 Estratégias de tratamento - todos os seis riscos concluídos
 - [x] 14.2 Funções do NIST CSF - @lorenzoficher
 - [x] 14.3 Mapeamento NIST - todos os seis riscos concluídos
@@ -116,11 +116,11 @@ Pastas a serem criadas conforme as etapas avançarem: `evidencias/etapa-5/` (Eta
 
 ### Etapas 3 a 7
 
-- [ ] Etapa 3 - RS01 e RS02 concluídos (aguardam revisão cruzada); RS03 (@PPrauchner) pendente. Diagrama especificado (@lorenzoficher); falta exportar o PNG. DA01 (@lorenzoficher), DA02 (@mariasanchez0) e DA03 (@lilydias24) concluídas
+- [ ] Etapa 3 - RS01 e RS02 concluídos (aguardam revisão cruzada); RS03 (@PPrauchner) pendente. Diagrama da arquitetura segura concluído e versionado (@lorenzoficher). DA01 (@lorenzoficher), DA02 (@mariasanchez0) e DA03 (@lilydias24) concluídas
 - [ ] Etapa 4 - Prática 1 (armazenamento seguro de senhas, @lilydias24) concluída, testes executados; Prática 2 (autorização no servidor, @PPrauchner) pendente
 - [ ] Etapa 5 - uma verificação com até três achados analisados
 - [ ] Etapa 6 - Regras 1 (@lilydias24) e 2 (@ARTHUR9011) concluídas; Regra 3 (@PPrauchner) e a compilação do roteiro pendentes
-- [ ] Etapa 7 - pipeline especificado e revisado; blocos Abertura, Spoofing (@lilydias24), Tampering, Repudiation e Information Disclosure (@mariasanchez0) do roteiro concluídos; bloco DoS/EoP (@PPrauchner), gravação e publicação pendentes
+- [ ] Etapa 7 - pipeline concluído com as observações da revisão incorporadas; blocos Abertura, Spoofing (@lilydias24), Tampering e Repudiation concluídos; Information Disclosure (@mariasanchez0) aguarda os achados do ZAP; bloco DoS/EoP (@PPrauchner), gravação e publicação pendentes
 
 ## Como contribuir (para o grupo)
 

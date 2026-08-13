@@ -12,7 +12,7 @@
 | 13.4 Registro de riscos | Todos (1 risco por pessoa) | Todos concluídos |
 | 13.5 Justificativas | Todos | Todos concluídos |
 | 13.6 Priorização geral | @mariasanchez0 (compila) | Concluído |
-| 13.7 Conclusão da análise | @ARTHUR9011 | Rascunho concluído (revisão após R03-R06) |
+| 13.7 Conclusão da análise | @ARTHUR9011 | Concluída (revisada após R04, 13.6 e 14.5) |
 | 14.1 Estratégia de tratamento | Todos | Todos concluídos |
 | 14.2 Funções do NIST CSF | @lorenzoficher | Concluído |
 | 14.3 Mapeamento risco → NIST | Todos | Todos concluídos |
@@ -274,9 +274,22 @@ Esta ordem é a base da compilação de 14.5, e deve ser revista se os controles
 
 A análise partiu das ameaças da Etapa 1 e as converteu em riscos comparáveis por uma mesma régua: probabilidade × impacto, nas escalas de 1 a 4 definidas em 13.1 e 13.2. Dois padrões já aparecem nos riscos registrados. Primeiro, os riscos do topo da tabela não são os de ataque mais sofisticado, e sim os que dependem apenas de condições comuns de uso do SIGH - uma senha em texto simples, uma sessão aberta em terminal compartilhado, uma operação que não verifica quem a chama. Segundo, probabilidade e impacto têm origens distintas: a probabilidade vem quase sempre de controles ausentes (autenticação de fator único, validação apenas na interface, ausência de trilha), enquanto o impacto vem da natureza do ativo (dado clínico, prescrição, registro de óbito). Isso orienta o tratamento: reduzir probabilidade é tarefa de engenharia, mas o impacto, na maior parte dos casos, não se reduz - o que dá prioridade aos riscos Críticos, em que as duas dimensões se encontram.
 
-A atenção inicial deve ir para essa faixa Crítica: R02, em que a alteração de uma prescrição alcança o paciente fisicamente antes de qualquer detecção, e R01, que além do dano próprio funciona como porta de entrada dos demais riscos - toda ameaça do recorte fica mais provável a partir de uma conta assumida. A classificação deve ser revisada em três momentos: quando R03-R06 forem registrados e a priorização geral (13.6) puder ser compilada; quando os controles de 14.4 forem implementados e verificados, passando a valer os residuais de 14.6; e se o contexto operacional mudar - novos módulos no recorte, nova integração externa ou um incidente real que contradiga alguma estimativa.
+Com os seis riscos registrados, a priorização confirma que a pontuação é o ponto de partida,
+mas não substitui a análise de dependências. R01 exige atenção inicial por viabilizar vários
+dos demais riscos, e R06 vem logo depois mesmo classificado como Alto: corrigir a autorização
+no servidor reduz, de uma vez, os caminhos de R02 e R04. Na sequência, R04 representa o
+maior alcance por incidente; R02 preserva a maior urgência clínica por poder causar dano
+físico irreversível; R03 sustenta a capacidade de provar e apurar os outros eventos; e R05,
+embora Crítico, é o único cujo dano admite recuperação direta pela restauração do serviço.
+Essa ordem mantém as notas calculadas pela régua comum e leva as agravantes para a
+priorização, sem inflar artificialmente probabilidade ou impacto.
 
-> *Rascunho do líder da etapa; revisão prevista quando R03-R06 estiverem registrados.*
+A análise deve ser revista quando os controles de 14.4 forem implementados e verificados,
+momento em que passam a valer as estimativas residuais de 14.6, ou antes disso se mudar o
+contexto operacional - por exemplo, com novos módulos no recorte, uma nova integração
+externa, alteração relevante no perfil de uso ou um incidente real que contradiga alguma
+estimativa. Até que as condições de aceitação de 14.6 sejam comprovadas, a decisão deve
+continuar baseada nos riscos inerentes e na ordem consolidada em 13.6 e 14.5.
 
 ## 14.1 Estratégias de tratamento
 
