@@ -11,7 +11,7 @@
 | RS03 - requisito e vulnerabilidade | @PPrauchner | Pendente |
 | Diagrama da arquitetura segura | @lorenzoficher | Concluído (seções 3.1 a 3.3 e PNG versionado) |
 | Decisão de arquitetura 1 (ligada ao diagrama) | @lorenzoficher | Concluída (DA01) |
-| Decisão de arquitetura 2 (ligada a RS03) | @mariasanchez0’s | Pendente |
+| Decisão de arquitetura 2 (ligada a RS03) | @mariasanchez0 | Concluída (DA02) |
 | Decisão de arquitetura 3 (reforço de autenticação) | @lilydias24 | Concluída (DA03; ponto de contato com a DA01 sinalizado) |
 | Conciliação entre DA01 e DA03 | @lorenzoficher | Concluída (responde ao ponto levantado na DA03) |
 
@@ -410,12 +410,22 @@ o que impede que exista um óbito sem rastro, e é a diferença entre auditar e 
     que qualquer perfil possa consultar recria, na privacidade, o problema que resolve na
     responsabilização.
 
-### DA02 - *(a definir, ligada a RS03)* - @mariasanchez0’s
+### DA02 - Serviço de Autorização centralizado como ponto único de decisão de acesso - @mariasanchez0
 
-- **Contexto:**
-- **Decisão:**
-- **Alternativas consideradas:**
-- **Consequências:**
+- **Contexto.** Três exigências diferentes, de três trilhas diferentes, pedem a mesma capacidade que o modelo atual não tem: RS02 exige confirmar papel médico e vínculo com o paciente antes de alterar uma prescrição; RS03 exige validar `nivelAcesso` no servidor em toda operação administrativa; e o plano de tratamento de R04 (Etapa 2) exige verificar vínculo entre o profissional autenticado e o paciente consultado antes de entregar prontuário, farmácia ou dado financeiro. Hoje nenhuma dessas checagens tem dono: o diagrama de componentes mostra 7 microsserviços, cada um livre para decidir sozinho o que aceita como autorização - inclusive aceitá-la do corpo da requisição ou apenas ocultar a opção na interface, que é exatamente o que CWE-602 descreve e o que o passo 3 do CA05 explora. A seção 3.1 já nomeou um **Serviço de Autorização** como componente da arquitetura segura, consultado por todos os serviços de negócio antes de qualquer operação sensível; esta decisão formaliza o que esse componente é, por que ele existe separado dos serviços de negócio e o que ele resolve que sete implementações independentes não resolveriam.
+
+- **Decisão.** Criar um **Serviço de Autorização** dedicado, posicionado depois do API Gateway e do Serviço de Autenticação (DA03), como **único ponto de decisão** sobre se uma sessão pode executar uma operação sobre um recurso. Ele recebe a identidade já verificada pela DA03 (quem é, qual papel, quando reautenticou), o tipo de operação solicitada e o identificador do recurso envolvido, e responde permitir ou negar combinando três fontes: o papel do profissional, o `nivelAcesso` quando o solicitante for Administrador, e o vínculo declarado entre o profissional e o paciente (atendimento em curso, internação ativa ou plantão vigente). As políticas de autorização vivem como regras declaráveis dentro deste serviço - não espalhadas pelo código de cada microsserviço - e toda decisão, permitida ou negada, é registrada no Serviço de Auditoria (DA01), com autor, operação, recurso e resultado. Nenhum serviço de negócio decide autorização por conta própria: ele executa a operação **depois** de receber a permissão, nunca antes nem em paralelo.
+
+- **Alternativas consideradas.**
+  - *Manter a autorização embutida em cada um dos 7 microsserviços.* Rejeitada por repetir a mesma checagem sete vezes, com sete oportunidades de divergência - é literalmente o estado atual que produziu T02, T04 e T06, e a mesma razão pela qual a DA03 centralizou a autenticação em vez de deixá-la em cada serviço.
+  - *Autorização resolvida na interface do Desktop Cliente, ocultando opções por perfil.* Rejeitada explicitamente: é a vulnerabilidade que RS02 e RS03 existem para fechar (CWE-602), e o passo 3 do CA05 já demonstra como ela se contorna reenviando a requisição sem passar pela tela.
+  - *Fundir autorização e autenticação em um único serviço (estender a DA03).* Rejeitada porque as duas mudam em ritmos diferentes: identidade muda raramente (login, MFA), enquanto papel e vínculo mudam a cada atendimento, internação ou troca de plantão. Fundir os dois tornaria o serviço de autenticação também responsável por decidir o que cada sessão pode acessar, ampliando o raio de impacto de qualquer falha nele e contrariando a separação de responsabilidades que a própria DA03 estabelece entre "quem você é" e "o que você pode fazer".
+  - *Adotar um motor de políticas de terceiro, hospedado fora do perímetro do hospital.* Não rejeitada, apenas adiada: resolveria bem a expressão declarativa de políticas, mas tornaria toda operação sensível dependente de uma chamada de rede a um serviço fora do controle do hospital - o mesmo problema de disponibilidade e de custódia de dado sensível que a DA01 já rejeitou para a trilha de auditoria. Fica registrada como opção de **implementação interna** do Serviço de Autorização (o motor de políticas hospedado dentro do perímetro), não como serviço terceirizado.
+
+- **Consequências.**
+  - *Positivas.* Uma única implementação satisfaz RS02 (papel e vínculo), RS03 (`nivelAcesso`) e o controle R04-C2 (vínculo profissional-paciente) ao mesmo tempo - é a mesma propriedade que a Etapa 2 já atribuiu ao R06-C1 isoladamente, e esta decisão é o que a torna possível na arquitetura: um único serviço, não uma coincidência entre implementações separadas. Toda negativa de acesso fica registrada via DA01, o que dá à Regra 3 da Etapa 6 e à detecção de padrão de consulta de R04-C5 um evento concreto para observar. E fecha definitivamente o CWE-602: a interface pode continuar ocultando opções por conveniência de uso, mas deixa de ser, em qualquer hipótese, o controle de segurança.
+  - *Negativas.* O Serviço de Autorização se torna **passagem obrigatória** de toda operação sensível, somando-se ao API Gateway, ao Serviço de Autenticação e ao SGBD central como mais um ponto de concentração - a mesma característica que sustenta R05. Se ele cair, nenhuma prescrição, alta, registro de óbito, alteração de perfil ou consulta vinculada se completa, porque a decisão de negar por padrão (falha fechada, no mesmo regime de RS01 e RS02) impede prosseguir sem resposta do serviço. **Este ponto precisa ser conciliado com a DA01 e a DA03**, no mesmo sentido que a DA03 já sinalizou em relação à DA01: redundância do serviço e uma política explícita de latência máxima antes de recusar, para que uma indisponibilidade curta não pare o hospital inteiro.
+  - *Custo.* Definir e manter as políticas de papel × `nivelAcesso` × vínculo como um artefato próprio, versionado e revisável - trabalho concentrado em um lugar, mas que precisa de dono, no mesmo sentido que a função Govern já cobra dos mapeamentos de R04 e R06. E cada um dos 7 serviços de negócio precisa adicionar uma chamada síncrona a este serviço antes de qualquer operação sensível, o que é esforço de integração, mas evita sete implementações divergentes na alternativa descartada.
 
 ### DA03 - Serviço de autenticação dedicado como emissor único da identidade de sessão - @lilydias24
 
