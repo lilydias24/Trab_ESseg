@@ -120,7 +120,7 @@ Pastas a serem criadas conforme as etapas avançarem: `evidencias/etapa-5/` (Eta
 - [ ] Etapa 4 - Prática 1 (armazenamento seguro de senhas, @lilydias24) concluída, testes executados; Prática 2 (autorização no servidor, @PPrauchner) pendente
 - [ ] Etapa 5 - uma verificação com até três achados analisados
 - [ ] Etapa 6 - Regras 1 (@lilydias24) e 2 (@ARTHUR9011) concluídas; Regra 3 (@PPrauchner) e a compilação do roteiro pendentes
-- [ ] Etapa 7 - pipeline especificado e revisado; blocos Abertura, Spoofing (@lilydias24), Tampering, Repudiation e Information Disclosure (@mariasanchez0) do roteiro concluídos; bloco DoS/EoP (@PPrauchner), gravação e publicação pendentes
+- [ ] Etapa 7 - pipeline concluído com as observações da revisão incorporadas; blocos Abertura, Spoofing (@lilydias24), Tampering e Repudiation concluídos; Information Disclosure (@mariasanchez0) aguarda os achados do ZAP; bloco DoS/EoP (@PPrauchner), gravação e publicação pendentes
 
 ## Como contribuir (para o grupo)
 

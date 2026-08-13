@@ -5,8 +5,8 @@
 
 | Item | Responsável | Situação |
 | --- | --- | --- |
-| Pipeline DevSecOps (8 momentos + 3 condições de bloqueio) | @ARTHUR9011 (rascunho), @lorenzoficher (revisão) | Concluído (especificação revisada) |
-| Roteiro do vídeo - parte de cada trilha | Todos | Em andamento (blocos Spoofing, Tampering, Repudiation e Information Disclosure concluídos; falta DoS/EoP) |
+| Pipeline DevSecOps (8 momentos + 3 condições de bloqueio) | @ARTHUR9011 (rascunho), @lorenzoficher (revisão) | Concluído (observações da revisão incorporadas) |
+| Roteiro do vídeo - parte de cada trilha | Todos | Em andamento (Abertura e blocos Spoofing, Tampering e Repudiation concluídos; Information Disclosure aguarda o ZAP; falta DoS/EoP) |
 | Organização do roteiro em documento único | @mariasanchez0 | Concluído (blocos Information Disclosure e Encerramento adicionados; falta o bloco DoS/EoP do @PPrauchner) |
 | Gravação (5-8 min) e publicação do link | Todos; edição por @ARTHUR9011 | Pendente |
 
@@ -31,7 +31,7 @@ próprio ambiente de automação, seguindo o
 | 5 | Verificar dependências e gerar o artefato | Executar SCA, conferir arquivo de lock, licenças e dependências; gerar SBOM; empacotar uma vez e registrar hash, assinatura ou proveniência do artefato | Implementações da Etapa 4 e controles de cadeia de fornecimento do SSDF | Pipeline automático; @ARTHUR9011 mantém a definição do gate e o autor trata os achados |
 | 6 | Promover para homologação e testar dinamicamente | Implantar o mesmo artefato em ambiente isolado, injetar segredos fora do repositório, executar regressão de segurança e DAST com ZAP | [Etapa 5](E5_Verificacao_de_vulnerabilidades.md) | @PPrauchner conduz a sessão; @mariasanchez0’s analisa os achados; autor corrige |
 | 7 | Aprovar e implantar a versão | Conferir os gates, aprovações e exceções vigentes; promover exatamente o artefato testado; validar configuração, migração e plano de reversão | Riscos residuais da Etapa 2 e correções das Etapas 4-5 | Responsável pela release e aprovador independente designados pelo grupo |
-| 8 | Monitorar, responder e retroalimentar | Centralizar logs, ativar as três regras, tratar incidentes e devolver achados ao backlog, ao STRIDE e ao registro de riscos | [Etapa 6](E6_Monitoramento_e_deteccao.md) e risco residual da Etapa 2 | Donos das regras; @lilydias24 consolida o roteiro; dono da trilha trata a causa |
+| 8 | Monitorar, responder e retroalimentar | Centralizar logs, ativar as três regras, tratar incidentes e devolver achados ao backlog, ao STRIDE e ao registro de riscos | Serviço de Auditoria da DA01 na [Etapa 3](E3_Arquitetura_segura.md), [Etapa 6](E6_Monitoramento_e_deteccao.md) e risco residual da Etapa 2 | Donos das regras; @lilydias24 consolida o roteiro; dono da trilha trata a causa |
 
 Os nomes da última coluna preservam atribuições já existentes. Onde o repositório ainda
 não nomeia uma pessoa, a tabela registra o papel que o grupo precisa designar antes de
@@ -45,6 +45,11 @@ artefato. Relatórios completos ficam em armazenamento controlado; o PR recebe a
 resumo necessário, sem credenciais, tokens ou dados clínicos. O artefato é gerado uma
 única vez no Momento 5 e promovido pelo mesmo hash nos Momentos 6 e 7, evitando que uma
 versão diferente daquela testada chegue à produção.
+
+O histórico das execuções também é uma evidência de segurança e deve ser somente de
+acréscimo, seguindo o mesmo princípio da DA01. A conta que administra o CI pode consultar e
+reter esse histórico, mas não reescrever nem excluir execuções, resultados ou aprovações;
+eventuais correções são novos registros vinculados ao `pipelineRunId` original.
 
 Branch principal, configuração do pipeline e ambientes de release exigem proteção contra
 alteração direta. Contas de serviço usam privilégio mínimo, segredos vêm de mecanismo
@@ -65,8 +70,10 @@ Todos os gates falham de forma fechada: ausência de resultado equivale a falha,
 aprovação. Uma exceção exige risco identificado, justificativa, escopo, controle
 compensatório, responsável que aceita o risco e prazo de expiração; ela fica anexada à
 execução e precisa de aprovação independente. Segredo confirmado ou artefato com
-integridade divergente não pode ser liberado por exceção: é necessário revogar/corrigir e
-executar novamente o pipeline.
+integridade divergente não pode ser liberado por exceção. A indisponibilidade de auditoria
+ou monitoramento exigido pelo risco também não admite exceção temporária, pois uma trilha
+criada depois não recupera a prova do que já ocorreu. Nesses casos, é necessário
+revogar/corrigir ou restaurar o controle e executar novamente o pipeline.
 
 ### Verificação planejada do pipeline
 
@@ -80,6 +87,7 @@ Os cenários abaixo devem virar testes da configuração quando o pipeline for i
 | P7-TV04 | Hash do artefato de produção difere daquele homologado | Gate 3 impede a implantação sem permitir exceção |
 | P7-TV05 | Exceção não informa aprovador independente ou expiração | Exceção é inválida e o gate permanece bloqueado |
 | P7-TV06 | Todos os controles passam e o mesmo hash percorre homologação e produção | Promoção é liberada e todas as evidências ficam vinculadas ao `pipelineRunId` |
+| P7-TV07 | Auditoria ou monitoramento exigido pelo risco está indisponível e é solicitada uma exceção temporária | Gate 3 impede a implantação e rejeita a exceção até que o controle seja restaurado |
 
 ### Revisão da especificação (@lorenzoficher)
 
@@ -105,16 +113,21 @@ Três observações de complemento, nenhuma delas contradizendo o desenho.
    execuções que o próprio administrador do CI possa reescrever reproduz, no ambiente de
    automação, a lacuna que o R03 descreve no ambiente clínico.
 
+> **Resultado da revisão:** as três observações foram incorporadas à especificação: a DA01
+> passou a constar como origem do Momento 8, o histórico do pipeline foi definido como
+> somente de acréscimo e a indisponibilidade de auditoria/monitoramento passou a rejeitar
+> qualquer exceção temporária no Gate 3.
+
 ## 2. Roteiro do vídeo
 
 Cada integrante escreve a parte referente à própria trilha: o que fez, qual decisão tomou e qual foi o resultado.
 
 | Bloco | Conteúdo | Responsável | Situação |
 | --- | --- | --- | --- |
-| Abertura e apresentação do SIGH | | @lilydias24 | Concluído (aguarda consolidação) |
-| Trilha Spoofing → R01 → RS01 → hash de senha → regra 1 | | @lilydias24 | Concluído (aguarda consolidação) |
-| Trilha Tampering → R02 → RS02 → regra 2 | Da alteração sem autoria à prevenção, auditoria e detecção correlacionada | @ARTHUR9011 | Concluído (aguarda consolidação) |
-| Trilha Repudiation → R03 → DA01 → trilha de auditoria | Da operação sem autor à decisão de arquitetura que produz a prova | @lorenzoficher | Concluído (aguarda consolidação) |
+| Abertura e apresentação do SIGH | | @lilydias24 | Concluído (incluído no documento único) |
+| Trilha Spoofing → R01 → RS01 → hash de senha → regra 1 | | @lilydias24 | Concluído (incluído no documento único) |
+| Trilha Tampering → R02 → RS02 → regra 2 | Da alteração sem autoria à prevenção, auditoria e detecção correlacionada | @ARTHUR9011 | Concluído (incluído no documento único) |
+| Trilha Repudiation → R03 → DA01 → trilha de auditoria | Da operação sem autor à decisão de arquitetura que produz a prova | @lorenzoficher | Concluído (incluído no documento único) |
 | Trilha Information Disclosure → R04, priorização e achados do ZAP | Da ausência de segunda barreira após o login à decisão de arquitetura DA02 e à detecção de padrão de consulta | @mariasanchez0 | Rascunho concluído (aguarda achados do ZAP da Etapa 5 para o trecho final) |
 | Trilha DoS/EoP → R05 e R06 → RS03 → autorização → regra 3 | | @PPrauchner | Pendente |
 | Encerramento e conclusões | Síntese das cinco trilhas nas três decisões de arquitetura e no que ainda falta implementar | @mariasanchez0 (organiza) | Concluído (rascunho; ajustar duração após o bloco DoS/EoP entrar) |
@@ -312,8 +325,8 @@ documento, não precisam ser narrados.
 Durante a gravação, destacar os identificadores `T04`, `R04`, `DA02` e o número **16** ao
 lado do de R01, para reforçar visualmente o empate. Se a Etapa 5 já tiver achados de
 controle de acesso quebrado (IDOR ou equivalente) no momento da gravação, inserir uma
-frase final relacionando o achado ao R04; se não estiver pronta, manter o bloco como está
-- o argumento de R04 e DA02 já fecha a trilha com evidência própria.
+frase final relacionando o achado ao R04. Se não estiver pronta, manter o bloco como está;
+o argumento de R04 e DA02 já fecha a trilha com evidência própria.
 
 > **Pendente:** completar o trecho de achados do ZAP assim que a Etapa 5 (@PPrauchner
 > conduz a sessão, @mariasanchez0 analisa) estiver concluída.
@@ -326,8 +339,8 @@ frase final relacionando o achado ao R04; se não estiver pronta, manter o bloco
 
 **Narração sugerida:**
 
-> As cinco trilhas partiram do mesmo método - ameaça, risco, requisito, código e detecção
-> - e chegaram a uma conclusão em comum: quase todo o risco do SIGH nasce da mesma
+> As cinco trilhas partiram do mesmo método - ameaça, risco, requisito, código e detecção -
+> e chegaram a uma conclusão em comum: quase todo o risco do SIGH nasce da mesma
 > lacuna, a ausência de uma segunda verificação depois do login, seja para autenticar
 > quem está entrando, para autorizar o que essa sessão pode fazer, ou para provar depois
 > o que foi feito. Spoofing e Elevation of Privilege habilitam os demais; Tampering e
