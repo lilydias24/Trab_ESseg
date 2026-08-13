@@ -6,8 +6,8 @@
 | Item | Responsável | Situação |
 | --- | --- | --- |
 | Pipeline DevSecOps (8 momentos + 3 condições de bloqueio) | @ARTHUR9011 (rascunho), @lorenzoficher (revisão) | Concluído (especificação revisada) |
-| Roteiro do vídeo - parte de cada trilha | Todos | Em andamento (blocos Tampering e Repudiation concluídos) |
-| Organização do roteiro em documento único | @mariasanchez0’s | Pendente |
+| Roteiro do vídeo - parte de cada trilha | Todos | Em andamento (blocos Spoofing, Tampering, Repudiation e Information Disclosure concluídos; falta DoS/EoP) |
+| Organização do roteiro em documento único | @mariasanchez0 | Concluído (blocos Information Disclosure e Encerramento adicionados; falta o bloco DoS/EoP do @PPrauchner) |
 | Gravação (5-8 min) e publicação do link | Todos; edição por @ARTHUR9011 | Pendente |
 
 ---
@@ -115,9 +115,9 @@ Cada integrante escreve a parte referente à própria trilha: o que fez, qual de
 | Trilha Spoofing → R01 → RS01 → hash de senha → regra 1 | | @lilydias24 | Concluído (aguarda consolidação) |
 | Trilha Tampering → R02 → RS02 → regra 2 | Da alteração sem autoria à prevenção, auditoria e detecção correlacionada | @ARTHUR9011 | Concluído (aguarda consolidação) |
 | Trilha Repudiation → R03 → DA01 → trilha de auditoria | Da operação sem autor à decisão de arquitetura que produz a prova | @lorenzoficher | Concluído (aguarda consolidação) |
-| Trilha Information Disclosure → R04, priorização e achados do ZAP | | @mariasanchez0’s | Pendente |
+| Trilha Information Disclosure → R04, priorização e achados do ZAP | Da ausência de segunda barreira após o login à decisão de arquitetura DA02 e à detecção de padrão de consulta | @mariasanchez0 | Rascunho concluído (aguarda achados do ZAP da Etapa 5 para o trecho final) |
 | Trilha DoS/EoP → R05 e R06 → RS03 → autorização → regra 3 | | @PPrauchner | Pendente |
-| Encerramento e conclusões | | @mariasanchez0’s (organiza) | Pendente |
+| Encerramento e conclusões | Síntese das cinco trilhas nas três decisões de arquitetura e no que ainda falta implementar | @mariasanchez0 (organiza) | Concluído (rascunho; ajustar duração após o bloco DoS/EoP entrar) |
 
 ### Abertura - roteiro de @lilydias24
 
@@ -274,6 +274,84 @@ Durante a gravação, destacar os identificadores `T02`, `R02`, `RS02` e `Regra 
 exibir dados clínicos reais. Se for necessário reduzir o tempo, manter pontuação, cinco
 controles e dois gatilhos; exemplos detalhados de falso positivo e resposta ficam no
 documento, não precisam ser narrados.
+
+### Bloco Information Disclosure - roteiro de @mariasanchez0
+
+- **Duração-alvo:** 60 a 70 segundos.
+- **Objetivo:** mostrar que a ameaça desta trilha não exige nenhuma técnica de invasão -
+  só a ausência de uma segunda barreira depois do login - e situar o que a Etapa 5 (ZAP)
+  deve procurar para testar essa mesma lacuna na prática.
+
+**Narração sugerida:**
+
+> Minha trilha começa no T04, a exposição de informação. No SIGH, Farmácia e Financeiro
+> não têm microsserviço próprio - eles moram dentro do Serviço de Paciente e do Serviço
+> de Atendimento -, e o identificador do paciente é sequencial, sem verificação de vínculo
+> entre quem consulta e quem está sendo consultado. Isso significa que qualquer perfil
+> autenticado, não só médico, alcança prontuário, alergias, prescrição, convênio e valor
+> cobrado no mesmo movimento, e variar um número é suficiente para percorrer a base
+> inteira. Na Etapa 2, isso virou o R04: probabilidade 4, impacto 4, pontuação 16 - empata
+> com o risco de maior nota do trabalho, e a razão é a mesma raiz, a ausência de uma
+> segunda barreira depois do login. O tratamento tem cinco controles: identificador não
+> enumerável, vínculo profissional-paciente verificado no servidor, isolamento entre os
+> módulos, dado retornado no mínimo necessário e alerta de padrão de consulta atípico. Na
+> Etapa 3, isso puxou uma decisão de arquitetura própria, a DA02: um Serviço de
+> Autorização único, que passa a decidir no servidor não só o `nivelAcesso` da RS03, mas
+> também esse vínculo - a mesma checagem que o R06 já usa para revalidar autorização,
+> agora reaproveitada para leitura de prontuário.
+
+**Sequência visual e evidência:**
+
+| Tempo | Mostrar na tela | Mensagem principal |
+| --- | --- | --- |
+| 0-15 s | T04 e CA04 na [Etapa 1](E1_Casos_de_abuso_e_Stride.md), com `buscarPacientePorIdentificador(idPaciente)` no diagrama de classes | O identificador sequencial e a ausência de vínculo são a porta de entrada |
+| 15-30 s | Registro e justificativa de R04 na [Etapa 2](E2_Riscos_e_NIST_CSF.md) | 4 × 4 = 16, Crítico, empatado com o risco de maior pontuação do trabalho |
+| 30-45 s | Controles R04-C1 a R04-C5 em 14.4 e a DA02 na [Etapa 3](E3_Arquitetura_segura.md) | O Serviço de Autorização único decide vínculo e `nivelAcesso` no mesmo lugar |
+| 45-65 s | Achados relacionados a controle de acesso na [Etapa 5](E5_Verificacao_de_vulnerabilidades.md), quando disponíveis | Onde a varredura dinâmica confirma, na prática, o mesmo tipo de lacuna |
+
+Durante a gravação, destacar os identificadores `T04`, `R04`, `DA02` e o número **16** ao
+lado do de R01, para reforçar visualmente o empate. Se a Etapa 5 já tiver achados de
+controle de acesso quebrado (IDOR ou equivalente) no momento da gravação, inserir uma
+frase final relacionando o achado ao R04; se não estiver pronta, manter o bloco como está
+- o argumento de R04 e DA02 já fecha a trilha com evidência própria.
+
+> **Pendente:** completar o trecho de achados do ZAP assim que a Etapa 5 (@PPrauchner
+> conduz a sessão, @mariasanchez0 analisa) estiver concluída.
+
+### Encerramento e conclusões - roteiro de @mariasanchez0 (organiza)
+
+- **Duração-alvo:** 25 a 35 segundos.
+- **Objetivo:** fechar o vídeo amarrando as cinco trilhas em uma conclusão só, sem repetir
+  o que cada bloco já mostrou.
+
+**Narração sugerida:**
+
+> As cinco trilhas partiram do mesmo método - ameaça, risco, requisito, código e detecção
+> - e chegaram a uma conclusão em comum: quase todo o risco do SIGH nasce da mesma
+> lacuna, a ausência de uma segunda verificação depois do login, seja para autenticar
+> quem está entrando, para autorizar o que essa sessão pode fazer, ou para provar depois
+> o que foi feito. Spoofing e Elevation of Privilege habilitam os demais; Tampering e
+> Repudiation mostram o dano quando não há verificação nem prova; e Information
+> Disclosure mostra que a mesma ausência que permite agir também permite ler o que não
+> deveria. O tratamento proposto converge para três decisões de arquitetura -
+> autenticação, autorização e auditoria centralizadas - que sozinhas não eliminam o
+> risco, mas mudam sua natureza: de ausência de barreira para barreira com dono, testável
+> e observável. O que fica declarado, e não escondido, é que o SIGH segue sem
+> implementação: o que este trabalho entrega é a especificação, os testes definidos antes
+> do código e o critério de verificação - o próximo passo é construir sobre isso.
+
+**Sequência visual e evidência:**
+
+| Tempo | Mostrar na tela | Mensagem principal |
+| --- | --- | --- |
+| 0-10 s | Tabela de trilhas do [README](../README.md) | As cinco categorias convergem para a mesma causa-raiz |
+| 10-22 s | DA01, DA02 e DA03 lado a lado na [Etapa 3](E3_Arquitetura_segura.md) | Autenticação, autorização e auditoria centralizadas fecham o ciclo |
+| 22-32 s | Pipeline da [Etapa 7](E7_DevSecOps_e_video.md) | O que falta é implementar e verificar - o método já está pronto |
+
+Durante a gravação, não apresentar nenhuma parte do SIGH como implementada; o vídeo
+inteiro descreve especificação e testes definidos antes do código, exceto a prática de
+armazenamento de senhas da Etapa 4, que é a única evidência executada de todo o
+trabalho.
 
 ## 3. Vídeo final
 
