@@ -321,3 +321,49 @@ Gatilhos B e E não têm com o que comparar. Segue o
 [OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html)
 e o capítulo V4 (Access Control) do
 [OWASP ASVS](https://owasp.org/www-project-application-security-verification-standard/).
+
+---
+
+## Correlação entre as três regras
+
+As regras não operam isoladas. Três pontos de correlação explícita:
+
+1. **Regra 1 → Regras 2 e 3.** Uma conta comprometida (Crítico da Regra 1) exige revisar
+   o que a sessão executou; se tocou prescrição ou registro de óbito, os donos de R02/R03
+   entram na apuração.
+2. **Regra 3 → Regra 1.** Uma elevação que alcançou o cadastro completo (Gatilho E) expõe
+   `nomeLogin`/`senhaLogin` de todos os perfis em texto simples - o dono de R01 precisa
+   ser acionado para avaliar troca de credenciais em massa.
+3. **Regra 3 → risco de disponibilidade (R05).** O mesmo Gatilho E, quando coincide com o
+   alerta de saturação do pool de conexões (R05-C5), deve abrir um incidente único: na
+   reconstrução do CA05, degradação e elevação foram tratadas como fatos independentes, e
+   foi exatamente isso que impediu de ligá-los a tempo.
+
+## Limites reconhecidos
+
+- **Conduta de quem tem alçada legítima.** As três regras detectam elevação, uso indevido
+  e adulteração técnica - nenhuma detecta má-fé de quem já possui a permissão dentro do
+  fluxo correto. Na Regra 3, o reconhecimento humano do Diretor no Gatilho A é o único
+  mecanismo que se aproxima disso, e depende de conduta, não de controle técnico.
+- **Detectar não é reduzir impacto.** O residual de R06 permanece Médio mesmo com a Regra
+  3 ativa, porque detectar mais cedo encurta a janela de exploração, mas não reduz o dano
+  de uma leitura que já ocorreu - a redução de impacto depende do tratamento de R01
+  (credenciais em texto simples).
+- **Sem sistema, sem evidência executada.** Todos os casos de verificação acima são
+  planejados. Nenhum foi rodado contra um SIGH real, porque o SIGH não está implementado.
+
+## Referências
+
+[OWASP Logging Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html) ·
+[OWASP Authentication Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html) ·
+[OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html) ·
+[OWASP ASVS - V4 Access Control](https://owasp.org/www-project-application-security-verification-standard/) ·
+[NIST SP 800-61r3](https://csrc.nist.gov/pubs/sp/800/61/r3/final)
+
+## Rastreabilidade
+
+| Regra | Ameaça (E1) | Risco (E2) | Requisito (E3) | Decisões de apoio (E3) | Especificação completa |
+| --- | --- | --- | --- | --- | --- |
+| 1 | T01 - Spoofing | R01 | RS01 | DA03 | [Regra 1, docs/E6](../docs/E6_Monitoramento_e_deteccao.md#regra-1---uso-indevido-de-credencial-de-profissional-lilydias24) |
+| 2 | T02 - Tampering | R02 | RS02 | - | [Regra 2, docs/E6](../docs/E6_Monitoramento_e_deteccao.md#regra-2---tentativa-de-adulteração-de-prescrição-ativa-arthur9011) |
+| 3 | T06 - Elevation of Privilege | R06 | RS03 | DA01, DA02 | [Regra 3, docs/E6](../docs/E6_Monitoramento_e_deteccao.md#regra-3---elevação-de-nivelacesso-no-serviço-de-funcionários-pprauchner) |
