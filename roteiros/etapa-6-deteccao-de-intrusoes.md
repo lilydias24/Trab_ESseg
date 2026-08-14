@@ -135,3 +135,79 @@ espalhados pelos sete microsserviços e a correlação por conta deixa de ser co
 Segue o [OWASP Logging Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html)
 e o [OWASP Authentication Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html).
 
+---
+
+## Regra 2 - Tentativa de adulteração de prescrição ativa
+
+**Responsável:** @ARTHUR9011 · **Risco observado:** R02 (Tampering)
+
+Alteração indevida de `dosagemMedicamento` ou `intervaloConsumo` de uma prescrição ativa.
+A regra observa o fluxo de alteração e a trilha de auditoria imutável de
+`PrescricaoMedicamento`.
+
+### Contrato de eventos
+
+| Campo | Uso na detecção |
+| --- | --- |
+| `eventTime`, `eventType`, `correlationId` | Ordenação, janela e deduplicação |
+| `prescriptionId`, `patientId`, `baseVersion`, `newVersion` | Correlação e detecção de sobrescrita |
+| `medicationId`, `therapeuticCatalogVersion`, `withinTherapeuticRange` | Prova de validação contra referência conhecida |
+| `authorId`, `authorRole`, `authorLinkedToPatient`, `reauthenticationValid` | Autoria e autorização (R02-C1/C2) |
+| `confirmerId`, `confirmerAuthorized`, `confirmedProposalVersion` | Independência e vínculo da segunda confirmação |
+| `outcome`, `denyReason`, `sourceService`, `deviceId`, `networkZone` | Resultado e contexto para triagem |
+
+Nome do paciente, justificativa em texto livre e demais dados clínicos desnecessários não
+são copiados para o evento; permanecem na trilha restrita.
+
+### Gatilhos
+
+- **A - Crítico e imediato.** Uma publicação dispara alerta se: `withinTherapeuticRange`
+  for falso; **ou** o autor não for médico vinculado ao paciente, ou a reautenticação for
+  inválida; **ou** o segundo confirmador estiver ausente, não autorizado, igual ao autor,
+  ou tiver confirmado outra versão; **ou** a `baseVersion` não era a vigente, faltar
+  auditoria correspondente, ou houver evidência de alteração da trilha.
+- **B - Alto por repetição.** Recusas por faixa fora do padrão, papel não autorizado,
+  médico não vinculado, reautenticação falha ou confirmação ausente/inválida: a 3ª
+  ocorrência em 10 min, pelo mesmo autor **ou** pela mesma prescrição, abre alerta.
+  `STALE_BASE_VERSION` isolado não conta (pode ser concorrência legítima).
+
+### Ação da equipe
+
+**Crítico:** (1) incidente único, notificar Segurança, médico responsável e Farmácia
+Clínica; (2) sinalizar a versão como aguardando verificação clínica antes da próxima
+administração, mantendo o último histórico íntegro disponível; (3) preservar evidências;
+(4) verificar com a equipe clínica qual versão deve permanecer vigente - **sem reversão
+automática** de decisão terapêutica; (5) revogar/restringir a conta apenas se a triagem
+indicar credencial comprometida ou ação sem autorização, com fluxo de exceção formal para
+atendimento emergencial.
+
+**Alto:** correlacionar com autenticação, dispositivo e vínculo assistencial; bloquear
+novas tentativas da sessão se houver indício de abuso, ou corrigir e documentar se for
+erro operacional ou catálogo desatualizado.
+
+O alerta nunca apaga versão, altera prescrição ou interrompe tratamento sozinho.
+
+### Falsos positivos a não confundir com ataque
+
+Dose excepcional clinicamente justificada mas ainda fora do catálogo; erro de digitação
+ou reenvio por instabilidade de rede; fluxo *break-glass* (continua exigindo revisão, não
+sai da detecção); alterações concorrentes legítimas (`STALE_BASE_VERSION` isolado).
+
+### Verificação planejada
+
+| ID | Entrada simulada | Resultado esperado |
+| --- | --- | --- |
+| R2-TV01 | Publicação válida, dentro da faixa, duas identidades | Nenhum alerta |
+| R2-TV02 | 3 recusas suspeitas do mesmo autor em 10 min | Um alerta Alto |
+| R2-TV03 | 3 recusas contra a mesma prescrição, autores diferentes | Um alerta Alto |
+| R2-TV04 | Reenvio do mesmo evento 3x com igual `correlationId` | 1 ocorrência contada; sem alerta |
+| R2-TV05 | Publicação fora da faixa ou sem confirmação | Alerta Crítico imediato |
+| R2-TV06 | Conflito concorrente só com `STALE_BASE_VERSION` | Registrado; sem alerta Alto |
+| R2-TV07 | Evento com nome do paciente ou token | Quarentena; falha de esquema |
+| R2-TV08 | Perda de 2 heartbeats consecutivos | Alerta operacional; regra sem cobertura |
+
+### Dependências
+
+Requer relógio sincronizado e canal autenticado para o armazenamento central. Segue o
+[OWASP Logging Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html)
+e o [NIST SP 800-61r3](https://csrc.nist.gov/pubs/sp/800/61/r3/final).
