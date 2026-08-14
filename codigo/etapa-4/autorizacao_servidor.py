@@ -21,7 +21,9 @@ O que este módulo demonstra
 4. A recusa é HTTP 403 e precede a persistência, sem efeito parcial (cláusula 4).
 5. Alterações efetivadas **e** recusadas vão para a trilha de auditoria, com
    autor, valor anterior, valor novo, terminal e data/hora carimbados pelo
-   servidor (cláusula 5), alimentando o alerta da Regra 3 (cláusula 7).
+   servidor (cláusula 5). O alerta da cláusula 7 é só das elevações
+   **efetivadas**; as tentativas alimentam a Regra 3 da Etapa 6 por outros
+   gatilhos - daí as duas consultas distintas na trilha.
 
 O que este módulo não é: um framework de autorização. É o menor modelo capaz de
 tornar essas decisões visíveis - uma sessão, um cadastro em memória, um decisor
@@ -40,6 +42,18 @@ CAMPOS_DE_SESSAO = ("idFuncionario", "perfil", "nivelAcesso")
 # Campos de autenticação nunca retornam em resposta administrativa: eles residem
 # no serviço de autenticação instituído pela DA03 (cláusula 8).
 CAMPOS_DE_AUTENTICACAO = ("nomeLogin", "senhaLogin")
+
+# A via de salvamento do cadastro grava dados funcionais e nada mais. É uma
+# allowlist, e não uma lista de proibidos: campo novo no cadastro nasce não
+# gravável por esta via, do mesmo modo que operação nova nasce recusada. Sem
+# isso, `registro.update(corpo)` deixaria o corpo da requisição reescrever
+# `senhaLogin` - a elevação de R06 pela porta ao lado, sobre o que RS01 protege.
+CAMPOS_FUNCIONAIS_GRAVAVEIS = ("nome", "setor")
+
+# Alçadas que podem salvar o cadastro de um terceiro. Perfil `Administrador`
+# sozinho não basta: sem vínculo com o alvo, qualquer Supervisor gravaria sobre
+# o registro do Diretor (cláusula 3 - quem solicita não é quem aprova).
+ALCADAS_SOBRE_TERCEIROS = ("GerenteGeral", "Diretor")
 
 LIMITE_DE_LISTAGEM = 50
 CODIGO_NAO_AUTORIZADO = 403
@@ -122,12 +136,33 @@ class TrilhaDeAuditoria:
         return tuple(self._entradas)
 
     def alertas_de_elevacao(self) -> tuple[dict, ...]:
-        """Eventos que alimentam a Regra 3 da Etapa 6.
+        """Alerta da cláusula 7 de RS03: só elevações **efetivadas**.
 
-        Inclui as tentativas recusadas: em R06 o que interessa detectar é a
-        tentativa, e não apenas a elevação que deu certo.
+        A cláusula manda alertar Diretor e Segurança da Informação no momento da
+        elevação. Uma tentativa recusada não é elevação, e prometer alerta nela
+        seria prometer um limiar que a Regra 3 não tem: recusa entra na regra
+        pelos gatilhos de repetição, não por notificação imediata.
         """
-        return tuple(e for e in self._entradas if e["operacao"] == "alterarPerfil")
+        return tuple(
+            e
+            for e in self._entradas
+            if e["operacao"] == "alterarPerfil" and e["resultado"] == "EFETIVADA"
+        )
+
+    def eventos_para_regra_3(self) -> tuple[dict, ...]:
+        """Tudo que a Regra 3 da Etapa 6 consome, em qualquer dos dois caminhos.
+
+        As duas faces do ataque de RS03-CA02 alimentam a regra, como diz o
+        critério: a operação própria de alteração de perfil (efetivada ou
+        recusada) e a tentativa de gravar `nivelAcesso` pela via de salvamento,
+        que não gera 403 e ficaria invisível se a regra olhasse só a operação.
+        """
+        return tuple(
+            e
+            for e in self._entradas
+            if e["operacao"] == "alterarPerfil"
+            or "nivelAcesso" in e["campos_descartados"]
+        )
 
 
 class ServicoDeAutorizacao:
@@ -148,6 +183,11 @@ class ServicoDeAutorizacao:
         if operacao == "salvarCadastro":
             if sessao.perfil != "Administrador":
                 return Decisao(False, "operacao administrativa exige perfil Administrador")
+            # O perfil diz que a operação existe para esta sessão; o alvo diz
+            # sobre quem ela vale. Sem o segundo teste, a autorização seria de
+            # menu, não de recurso.
+            if id_alvo != sessao.id_funcionario and sessao.nivel_acesso not in ALCADAS_SOBRE_TERCEIROS:
+                return Decisao(False, "salvar cadastro de terceiro exige alcada de GerenteGeral")
             return Decisao(True, "dados funcionais dentro da alcada administrativa")
 
         if operacao == "listarCadastro":
@@ -198,10 +238,20 @@ class ServicoDeFuncionarios:
             return self._alterar_perfil(sessao, id_alvo, corpo, decisao)
         if operacao == "salvarCadastro":
             return self._salvar_cadastro(sessao, id_alvo, corpo, descartados)
-        return self._listar_cadastro(sessao)
+        if operacao == "listarCadastro":
+            return self._listar_cadastro(sessao)
+        # Despacho também nega por omissão. Se este `return` fosse a listagem,
+        # bastaria declarar uma regra nova em `decidir` e esquecer o ramo aqui
+        # para a chamada cair numa leitura em massa do cadastro - exatamente o
+        # que a cláusula 8 trata como caminho de dano.
+        raise ErroAutorizacao("operacao nao autorizada")
 
     def nivel_acesso_de(self, id_funcionario: str) -> str:
         return self._cadastro[id_funcionario]["nivelAcesso"]
+
+    def credencial_de(self, id_funcionario: str) -> str:
+        """Só para o teste conferir que a via de salvamento não a alcançou."""
+        return self._cadastro[id_funcionario]["senhaLogin"]
 
     def _alterar_perfil(
         self, sessao: Sessao, id_alvo: str, corpo: dict, decisao: Decisao
@@ -225,10 +275,20 @@ class ServicoDeFuncionarios:
         self, sessao: Sessao, id_alvo: str, corpo: dict, descartados: tuple[str, ...]
     ) -> dict:
         registro = self._cadastro[id_alvo]
-        registro.update(corpo)
+        # `registro.update(corpo)` gravaria qualquer chave que o cliente
+        # inventasse, inclusive `senhaLogin`. A gravação é restrita à allowlist
+        # de dados funcionais; o resto é ignorado e fica registrado, pela mesma
+        # razão que os campos de sessão: erro silencioso não vira evidência.
+        gravaveis = {
+            chave: valor
+            for chave, valor in corpo.items()
+            if chave in CAMPOS_FUNCIONAIS_GRAVAVEIS
+        }
+        ignorados = tuple(chave for chave in corpo if chave not in CAMPOS_FUNCIONAIS_GRAVAVEIS)
+        registro.update(gravaveis)
         self._trilha.registrar(
             sessao, "salvarCadastro", id_alvo, "EFETIVADA",
-            "dados funcionais gravados", campos_descartados=descartados,
+            "dados funcionais gravados", campos_descartados=descartados + ignorados,
         )
         return self._sem_campos_de_autenticacao(registro)
 

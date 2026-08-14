@@ -82,7 +82,7 @@ def teste_1_caso_valido() -> None:
     print(f"     trilha - autor................................... {entrada['autor']}")
     print(f"     trilha - valor anterior / valor novo............. {entrada['valor_anterior']} -> {entrada['valor_novo']}")
     print(f"     trilha - data/hora carimbada pelo servidor....... {entrada['momento_servidor']}")
-    print("     alerta de elevacao (Regra 3, Etapa 6)............ emitido")
+    print("     alerta da clausula 7 (elevacao efetivada)........ emitido")
 
 
 def teste_2_caso_nao_autorizado() -> None:
@@ -124,8 +124,20 @@ def teste_2_caso_nao_autorizado() -> None:
     recusa = trilha.entradas()[-1]
     assert recusa["resultado"] == "RECUSADA"
     assert recusa["autor"] == SESSAO_SUPERVISOR.id_funcionario
-    assert trilha.alertas_de_elevacao(), (
-        "tentativa recusada de elevacao tambem dispara o alerta da Regra 3"
+
+    # As duas faces alimentam a Regra 3, como manda RS03-CA02: a do salvamento
+    # pelo campo descartado, a da operacao propria pela recusa. Uma asserção só
+    # sobre a segunda passaria mesmo se a primeira ficasse invisível.
+    eventos = trilha.eventos_para_regra_3()
+    assert any(e["operacao"] == "salvarCadastro" for e in eventos), (
+        "a tentativa pela via de salvamento tem de alimentar a Regra 3"
+    )
+    assert any(e["operacao"] == "alterarPerfil" for e in eventos), (
+        "a tentativa pela operacao propria tem de alimentar a Regra 3"
+    )
+    # Cláusula 7: o alerta é das elevações efetivadas. Nenhuma houve aqui.
+    assert not trilha.alertas_de_elevacao(), (
+        "recusa nao e elevacao efetivada: nao dispara o alerta da clausula 7"
     )
 
     print("[OK] Teste 2 - caso nao autorizado (RS03-CA02 e RS03-CA03)")
@@ -135,7 +147,8 @@ def teste_2_caso_nao_autorizado() -> None:
     print("     requisicao enviada direto ao endpoint............ mesmo resultado")
     print("     efeito parcial no cadastro....................... nenhum")
     print("     trilha - tentativa recusada registrada........... sim")
-    print("     alerta de elevacao (Regra 3, Etapa 6)............ emitido")
+    print(f"     eventos que alimentam a Regra 3.................. {len(eventos)} (as duas faces)")
+    print("     alerta da clausula 7 (elevacao efetivada)........ nenhum, como esperado")
 
 
 def teste_3_verificacoes_auxiliares() -> None:
@@ -178,6 +191,34 @@ def teste_3_verificacoes_auxiliares() -> None:
     except ErroAutorizacao as erro:
         assert erro.codigo_http == 403
 
+    # Cláusula 3 - a via de salvamento não alcança o registro de terceiro sem
+    # alçada, nem grava campo fora dos dados funcionais. Sem os dois limites, o
+    # Supervisor reescreveria a `senhaLogin` do Diretor e entraria como ele:
+    # R06 pela porta ao lado, sobre exatamente o que RS01 protege.
+    try:
+        servico.executar(
+            SESSAO_SUPERVISOR,
+            "salvarCadastro",
+            id_alvo="F001",
+            corpo={"senhaLogin": "senha-do-atacante"},
+        )
+        raise AssertionError("salvar cadastro de terceiro sem alcada tem de ser recusado")
+    except ErroAutorizacao as erro:
+        assert erro.codigo_http == 403
+
+    servico.executar(
+        SESSAO_DIRETOR,
+        "salvarCadastro",
+        id_alvo="F003",
+        corpo={"setor": "Almoxarifado", "senhaLogin": "senha-do-atacante"},
+    )
+    assert servico.credencial_de("F003") != "senha-do-atacante", (
+        "a via de salvamento nunca grava campo de autenticacao, nem com alcada"
+    )
+    assert "senhaLogin" in trilha.entradas()[-1]["campos_descartados"], (
+        "o campo fora da allowlist tem de ficar registrado, sem erro silencioso"
+    )
+
     # RS03-CA08 - leitura em massa: limite de volume e nenhum campo de autenticação.
     pagina = servico.executar(SESSAO_DIRETOR, "listarCadastro", id_alvo=None, corpo={})
     assert len(pagina) <= servico.limite_de_listagem
@@ -191,6 +232,8 @@ def teste_3_verificacoes_auxiliares() -> None:
     print("     dados funcionais gravados, nivelAcesso ignorado.. CA04")
     print("     Diretor elevando a si mesmo...................... CA05, recusado (403)")
     print("     endpoint sem regra declarada..................... CA06, negado por padrao")
+    print("     salvar cadastro de terceiro sem alcada........... recusado (403)")
+    print("     senhaLogin pela via de salvamento................ fora da allowlist")
     print(f"     listagem em massa limitada a {servico.limite_de_listagem} registros........ CA08")
     print("     campos de autenticacao na listagem............... nenhum")
 
