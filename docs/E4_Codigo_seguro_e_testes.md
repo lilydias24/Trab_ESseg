@@ -7,7 +7,7 @@
 | Prática | Risco/requisito relacionado | Responsável | Situação |
 | --- | --- | --- | --- |
 | Armazenamento seguro de senhas (hash + salt em `senhaLogin`) | R01 / RS01 | @lilydias24 | Concluída (testes executados) |
-| Controle de autorização no servidor (checagem de `nivelAcesso`) | R06 / RS03 | @PPrauchner | Pendente |
+| Controle de autorização no servidor (checagem de `nivelAcesso`) | R06 / RS03 | @PPrauchner | Concluída (testes executados) |
 
 Cada responsável entrega: risco e requisito atendidos, **2 testes escritos antes da implementação** (1 caso válido + 1 caso malicioso/não autorizado), pseudocódigo ou implementação simples, resultado esperado e referência ao OWASP Cheat Sheet Series. O @mariasanchez0’s organiza a pasta e revisa os dois PRs.
 
@@ -101,20 +101,141 @@ tempo real, que é o caminho remanescente, não passa pelo banco de dados.
 
 ## Prática 2 - Controle de autorização no servidor (@PPrauchner)
 
-- **Risco e requisito atendidos:** R06 (Elevation of Privilege) / RS03
-- **Referência OWASP:** *(Authorization Cheat Sheet - a confirmar)*
+- **Risco e requisito atendidos:** R06 (Elevation of Privilege) / RS03, cláusulas 1 a 5,
+  7 e 8; realiza os controles R06-C1, R06-C2 e R06-C3 do plano de tratamento da
+  [Etapa 2](E2_Riscos_e_NIST_CSF.md)
+- **Referência OWASP:** [Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html);
+  OWASP A01:2025 e as CWE mapeadas para RS03 na [Etapa 3](E3_Arquitetura_segura.md) -
+  CWE-862, CWE-915, CWE-269 e CWE-639
+- **Arquivos:** [`autorizacao_servidor.py`](../codigo/etapa-4/autorizacao_servidor.py) e
+  [`teste_autorizacao_servidor.py`](../codigo/etapa-4/teste_autorizacao_servidor.py)
+
+**O que esta prática ataca.** O passo 3 de CA05 é uma única linha: o Supervisor reenvia o
+salvamento do próprio cadastro com `nivelAcesso: Diretor` no corpo, e o servidor persiste
+o valor porque nada ali verifica se quem pediu tem alçada sobre aquele campo. A ameaça
+T06 é o que dá gravidade a isso - `nivelAcesso` é o **único** atributo de autorização do
+modelo inteiro do SIGH, de modo que elevá-lo não contorna uma barreira entre várias,
+contorna *a* barreira. A prática fecha exatamente esse passo: o campo deixa de ser
+gravável pela via do cadastro, e a operação que de fato altera perfil passa por uma
+decisão tomada no servidor, fora do componente que executa.
 
 ### Testes escritos antes da implementação
 
+Os dois testes foram escritos e executados **antes** de existir uma linha de
+`autorizacao_servidor.py` - a primeira execução falhou com `ModuleNotFoundError`, e é essa
+falha que define o que a implementação precisava fazer. Eles não foram escolhidos aqui:
+são os dois primeiros critérios de verificação de RS03, que a [Etapa 3](E3_Arquitetura_segura.md)
+já registrava como "exatamente os testes escritos na Etapa 4".
+
 | # | Cenário | Entrada | Resultado esperado |
 | --- | --- | --- | --- |
-| 1 | Caso válido | | |
-| 2 | Caso não autorizado | | |
+| 1 | **Caso válido** (RS03-CA01) - Diretor promove outro funcionário a GerenteSetor | Sessão `nivelAcesso = Diretor` (F001), alvo F003, operação `alterarPerfil` com `novoNivelAcesso: "GerenteSetor"` | Alteração aceita; a trilha registra autor, valor anterior, valor novo, terminal e data/hora carimbada pelo servidor |
+| 2 | **Caso não autorizado** (RS03-CA02) - Supervisor tenta elevar o próprio `nivelAcesso`, como no passo 3 de CA05 | Sessão `nivelAcesso = Supervisor` (F003) enviando o próprio cadastro com `nivelAcesso: "Diretor"` no corpo, e depois chamando a operação de alteração de perfil sobre o próprio registro | HTTP 403; o campo permanece `Supervisor`; a tentativa é registrada e o alerta da Regra 3 dispara |
+
+As verificações auxiliares cobrem os demais critérios já especificados no E3, e com eles
+as cláusulas que os dois testes principais não alcançam: **RS03-CA04** (dados funcionais
+gravados e `nivelAcesso` ignorado, sem erro silencioso - cláusula 3), **RS03-CA05**
+(Diretor tentando elevar a si mesmo - cláusula 3), **RS03-CA06** (endpoint novo sem regra
+declarada, recusado por omissão - cláusula 2) e **RS03-CA08** (leitura em massa com limite
+de volume e sem campos de autenticação na resposta - cláusula 8). O **RS03-CA03**
+(requisição enviada direto ao endpoint) está dentro do teste 2: o modelo não tem camada de
+interface, todas as chamadas partem do serviço, e é justamente isso que ele precisa
+demonstrar.
 
 ### Implementação
 
-*(Pseudocódigo ou implementação simples - versionar em `codigo/etapa-4/`.)*
+Implementação executável em Python, apenas com a biblioteca padrão, no mesmo formato da
+Prática 1. O modelo é o menor possível: uma `Sessao` imutável, um cadastro em memória, um
+`ServicoDeAutorizacao`, um `ServicoDeFuncionarios` e uma `TrilhaDeAuditoria` somente de
+acréscimo. Quatro decisões merecem registro:
+
+- **Descartar, não validar.** `descartar_campos_de_sessao` remove `idFuncionario`,
+  `perfil` e `nivelAcesso` do corpo **antes** da decisão de autorização, e devolve à parte
+  a lista do que removeu. A ordem importa: validar um valor controlado pelo cliente ainda
+  é confiar nele. A lista de descartados não é decorativa - é ela que permite registrar a
+  tentativa em vez de ignorá-la em silêncio, que é o resultado exigido por RS03-CA04.
+- **A decisão mora fora de quem executa.** `ServicoDeAutorizacao.decidir` é consultado por
+  `ServicoDeFuncionarios.executar` antes de qualquer despacho, no papel do Serviço de
+  Autorização instituído pela DA02. Se a decisão vivesse dentro do serviço, seria
+  alcançável pelo mesmo caminho que se quer barrar.
+- **Negação por padrão como último `return`.** A função de decisão termina recusando
+  qualquer operação que não case com uma regra declarada. É o que faz um endpoint
+  administrativo novo nascer fechado - e o teste `exportarFolhaDePagamento`, que não
+  existe em lugar nenhum do serviço, comprova que a recusa vem da omissão da regra, e não
+  da ausência do código.
+- **Dois campos de nome parecido, com autoridade oposta.** O `nivelAcesso` recebido no
+  corpo é o cliente afirmando a própria alçada, e é sempre descartado. O
+  `novoNivelAcesso` é parâmetro da operação própria de alteração de perfil - o que uma
+  chamada já autorizada concede a **outro** funcionário. Separá-los foi necessário porque
+  a cláusula 3 exige que o perfil mude por operação própria, e não pela via de salvamento
+  do cadastro.
+
+A recusa levanta `ErroAutorizacao`, com `codigo_http = 403`, antes de qualquer escrita:
+não há efeito parcial a reverter porque nada chegou a ser gravado. A mensagem devolvida é
+genérica - "operacao nao autorizada" -, para que a resposta de recusa não vire fonte de
+enumeração de campos ou de perfis.
 
 ### Resultado obtido
 
-*(Pendente.)*
+Execução real, em Python 3.11.9:
+
+```
+$ python teste_autorizacao_servidor.py
+
+[OK] Teste 1 - caso valido (RS03-CA01)
+     promocao de outro funcionario por sessao Diretor.. aceita
+     nivelAcesso do alvo apos a operacao.............. GerenteSetor
+     trilha - autor................................... F001
+     trilha - valor anterior / valor novo............. Supervisor -> GerenteSetor
+     trilha - data/hora carimbada pelo servidor....... 2026-08-14T00:49:31+00:00
+     alerta de elevacao (Regra 3, Etapa 6)............ emitido
+
+[OK] Teste 2 - caso nao autorizado (RS03-CA02 e RS03-CA03)
+     nivelAcesso enviado no salvamento do cadastro.... descartado
+     nivelAcesso persistido apos a tentativa.......... Supervisor
+     alteracao de perfil sem alcada de Diretor........ recusada com HTTP 403
+     requisicao enviada direto ao endpoint............ mesmo resultado
+     efeito parcial no cadastro....................... nenhum
+     trilha - tentativa recusada registrada........... sim
+     alerta de elevacao (Regra 3, Etapa 6)............ emitido
+
+[OK] Verificacoes auxiliares - RS03-CA04 a RS03-CA08
+     dados funcionais gravados, nivelAcesso ignorado.. CA04
+     Diretor elevando a si mesmo...................... CA05, recusado (403)
+     endpoint sem regra declarada..................... CA06, negado por padrao
+     listagem em massa limitada a 50 registros........ CA08
+     campos de autenticacao na listagem............... nenhum
+
+Todos os testes passaram.
+```
+
+Uma observação de escrita que vale registrar, porque mudou o desenho. O critério
+RS03-CA02 espera **HTTP 403** para o corpo que traz `nivelAcesso` alterado, e o RS03-CA04
+espera, para uma entrada da mesma forma, que os dados funcionais sejam **gravados** e o
+campo apenas ignorado. Os dois não podem valer para a mesma chamada. A leitura adotada é
+que o ataque de CA02 se define pela intenção, não pelo formato do corpo: a via de
+salvamento nunca grava o campo, e a operação que de fato altera perfil recusa com 403. O
+teste 2 exercita as duas faces, e por isso comprova o "campo permanece `Supervisor`" e o
+"HTTP 403" que o critério pede. O ponto foi anotado para revisão cruzada do E3.
+
+**O que isto comprova e o que não comprova.** Comprova os controles **R06-C1** (perfil
+vindo da sessão, `nivelAcesso` do corpo descartado, 403 para quem não é Diretor),
+**R06-C2** (campo imutável pelo titular, mudança só por operação própria) e a parte de
+**R06-C3** que depende do serviço: efetivadas e recusadas entram na trilha com autor,
+valor anterior, valor novo, terminal e carimbo do servidor. **Não** comprova a
+imutabilidade da trilha - aqui ela é uma lista em memória, e a garantia real depende do
+Serviço de Auditoria da DA01, com permissão de escrita segregada da permissão de operar o
+SIGH. Também não comprova a cláusula 6 (reemissão da identidade de sessão quando o perfil
+muda, RS03-CA07), que é responsabilidade do serviço de autenticação da DA03, nem o
+**R06-C4**, cujo destinatário e canal de alerta são matéria da
+[Etapa 6](E6_Monitoramento_e_deteccao.md): o que existe aqui é a fonte do evento, não a
+notificação.
+
+E há um limite que a prática não move, já reconhecido em RS03: ela fecha o caminho de
+CA05, mas **não reduz o impacto de R06**. Uma conta de Diretor comprometida, ou o conluio
+entre quem solicita e quem aprova, continua produzindo uma elevação válida - agora datada,
+atribuída e alertada, o que muda a detecção, não a possibilidade. E enquanto `senhaLogin`
+estiver em texto simples, o alcance de uma elevação bem-sucedida permanece o mesmo, porque
+o dano de R06 se realiza sobre as credenciais que RS01 protege. É por isso que o residual
+de R06 na [Etapa 2](E2_Riscos_e_NIST_CSF.md) mantém impacto 4: esta prática derruba a
+probabilidade, e a Prática 1 é que derruba o impacto. As duas só funcionam juntas.
