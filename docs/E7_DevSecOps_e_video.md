@@ -330,11 +330,6 @@ documento, não precisam ser narrados.
 | 45-65 s | Achado V03 (Cross-Domain Misconfiguration) na [Etapa 5](E5_Verificacao_de_vulnerabilidades.md) | O mesmo problema de fronteira ausente, agora observado em código real |
 
 Durante a gravação, destacar os identificadores `T04`, `R04`, `DA02` e o número **16** ao
-lado do de R01, para reforçar visualmente o empate. Se a Etapa 5 já tiver achados de
-controle de acesso quebrado (IDOR ou equivalente) no momento da gravação, inserir uma
-frase final relacionando o achado ao R04. Se não estiver pronta, manter o bloco como está;
-o argumento de R04 e DA02 já fecha a trilha com evidência própria.
-Durante a gravação, destacar os identificadores `T04`, `R04`, `DA02` e o número **16** ao
 lado do de R01, para reforçar visualmente o empate. O achado V03 da Etapa 5 é o que fecha
 esta trilha com evidência de outro sistema - não é IDOR, mas é a mesma ausência de
 fronteira de confiança. Se for necessário cortar tempo, a frase sobre o V03 é a primeira
