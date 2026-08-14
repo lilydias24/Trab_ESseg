@@ -79,12 +79,14 @@ Trab_ESseg/
 │   └── sequencia/                             # DS01 a DS10, DS1.1 e DS1.2
 ├── codigo/etapa-4/                            # Práticas de código seguro e testes (Etapa 4)
 ├── evidencias/etapa-5/                        # Relatório do ZAP, plano de automação e capturas (Etapa 5)
+├── roteiros/                                  # Roteiros finais compilados, exigidos pelos §27 e §31
+│   └── etapa-6-deteccao-de-intrusoes.md       # Roteiro de detecção compilado (Etapa 6)
 └── images/                                    # Outras imagens de apoio
 ```
 
-Pasta a ser criada conforme as etapas avançarem: `roteiros/`, com
-`etapa-6-deteccao-de-intrusoes.md` (Etapa 6) e `etapa-7-devsecops-e-video-final.md`
-(Etapa 7) - os dois caminhos exigidos pelos §27 e §31 do enunciado.
+**Falta ainda** `roteiros/etapa-7-devsecops-e-video-final.md`, exigido pelo §31 do
+enunciado. O material da Etapa 7 está hoje reunido em `docs/E7_DevSecOps_e_video.md`,
+mas não como arquivo próprio em `roteiros/` - ver a pendência na Etapa 7 abaixo.
 
 > Os diagramas são exportações dos documentos do grupo no Lucid, versionadas de fato no repositório - o enunciado não aceita apenas o link para a ferramenta externa. Os links dos documentos-fonte estão em [`diagrams/README.md`](diagrams/README.md).
 
@@ -122,8 +124,8 @@ Pasta a ser criada conforme as etapas avançarem: `roteiros/`, com
 - [ ] Etapa 3 - RS01, RS02 e RS03 concluídos (aguardam revisão cruzada). Diagrama da arquitetura segura concluído e versionado (@lorenzoficher) - **falta versionar o arquivo-fonte editável**, exigido pelo §18.3 do enunciado. DA01 (@lorenzoficher), DA02 (@mariasanchez0) e DA03 (@lilydias24) concluídas, com o quadro dos cinco campos do §18.4 na abertura da seção 4. Os critérios RS03-CA02 e RS03-CA04, que se contradiziam, foram conciliados depois que a implementação da Etapa 4 expôs a contradição
 - [x] Etapa 4 - as duas práticas concluídas com testes executados: armazenamento seguro de senhas (@lilydias24) e controle de autorização no servidor (@PPrauchner). Revisão dos dois PRs pela @mariasanchez0’s pendente
 - [ ] Etapa 5 - sessão conduzida em 13/08/2026 sobre o OWASP Juice Shop 20.2.0 com o ZAP 2.17.0 (@PPrauchner); relatório, plano de automação e capturas versionados em `evidencias/etapa-5/`; três achados identificados. **Falta** a análise de impacto e correção (@mariasanchez0’s) e a revisão cruzada (@lilydias24 e @lorenzoficher)
-- [ ] Etapa 6 - as três regras concluídas: 1 (@lilydias24), 2 (@ARTHUR9011) e 3 (@PPrauchner). **Falta** a compilação do roteiro em `roteiros/etapa-6-deteccao-de-intrusoes.md` (@lilydias24)
-- [ ] Etapa 7 - pipeline concluído com as observações da revisão incorporadas; os seis blocos do roteiro escritos, incluindo Information Disclosure (@mariasanchez0) e DoS/EoP (@PPrauchner). **Falta** a organização em documento único, a gravação (5-8 min) e a publicação do link
+- [x] Etapa 6 - as três regras concluídas (1 @lilydias24, 2 @ARTHUR9011, 3 @PPrauchner) e o roteiro compilado em [`roteiros/etapa-6-deteccao-de-intrusoes.md`](roteiros/etapa-6-deteccao-de-intrusoes.md), com convenções comuns, correlação entre regras e tabela de rastreabilidade até a Etapa 1
+- [ ] Etapa 7 - pipeline concluído com as observações da revisão incorporadas. Dos 7 blocos do roteiro, 6 estão concluídos (Abertura, Spoofing, Tampering, Repudiation, DoS/EoP e o rascunho de Encerramento); o bloco Information Disclosure (@mariasanchez0) é rascunho e aguarda a análise dos achados da Etapa 5. Os blocos já estão reunidos em `docs/E7_DevSecOps_e_video.md`, mas falta o arquivo próprio em `roteiros/` exigido pelo §31 (ver nota acima). **Falta** a gravação (5-8 min) e a publicação do link - a soma das durações-alvo hoje fecha entre 7min e 8min10s, acima do teto de 8 min em cenário de pior caso
 
 ## Como contribuir (para o grupo)
 
