@@ -8,13 +8,15 @@ na Etapa 3:
 - Teste 2 (não autorizado) = RS03-CA02 e RS03-CA03: sessão de Supervisor tenta
   elevar o próprio `nivelAcesso`, inclusive chamando o endpoint diretamente.
 
-As verificações auxiliares cobrem RS03-CA04, RS03-CA05, RS03-CA06 e RS03-CA08.
+As verificações auxiliares cobrem RS03-CA04, RS03-CA05, RS03-CA06 e RS03-CA08, e
+a validação de entrada da operação de alteração de perfil (HTTP 400).
 
 Execução:  python teste_autorizacao_servidor.py
 """
 
 from autorizacao_servidor import (
     ErroAutorizacao,
+    ErroDeEntrada,
     ServicoDeAutorizacao,
     ServicoDeFuncionarios,
     Sessao,
@@ -169,6 +171,15 @@ def teste_3_verificacoes_auxiliares() -> None:
     assert trilha.entradas()[-1]["campos_descartados"] == ("nivelAcesso",), (
         "a tentativa de gravar o campo precisa ficar registrada, sem erro silencioso"
     )
+    # A trilha guarda o par que a Regra 3 da Etapa 6 compara: o nível vigente,
+    # do servidor, e o que o corpo afirmava. Valores diferentes são tentativa de
+    # gravação e contam no Gatilho C; iguais seriam reenvio de rotina.
+    assert trilha.entradas()[-1]["nivel_afirmado"] == "Diretor", (
+        "o valor afirmado pelo cliente e evidencia (clausula 5), nao so o nome do campo"
+    )
+    assert trilha.entradas()[-1]["valor_anterior"] == "GerenteGeral", (
+        "sem o nivel vigente na entrada, a Regra 3 nao separa reenvio de tentativa"
+    )
 
     # RS03-CA05 - o Diretor não tem alçada sobre o próprio registro.
     try:
@@ -238,11 +249,125 @@ def teste_3_verificacoes_auxiliares() -> None:
     print("     campos de autenticacao na listagem............... nenhum")
 
 
+def teste_4_entrada_invalida() -> None:
+    """Validação de entrada da alteração de perfil - HTTP 400, e nada gravado.
+
+    Não é critério de RS03: a cláusula 3 fala de *quem* pode alterar, não de
+    *para qual valor*. É o complemento necessário para que a decisão do servidor
+    nunca opere sobre um nível fora do conjunto de domínio, e para que entrada
+    malformada de cliente não vire erro de servidor.
+    """
+    servico, trilha = montar_servico()
+
+    # Nível inexistente, com sessão plenamente autorizada: a alçada não autoriza
+    # inventar perfil.
+    try:
+        servico.executar(
+            SESSAO_DIRETOR,
+            "alterarPerfil",
+            id_alvo="F003",
+            corpo={"novoNivelAcesso": "SuperDiretor"},
+        )
+        raise AssertionError("nivel fora do conjunto conhecido tem de ser recusado")
+    except ErroDeEntrada as erro:
+        assert erro.codigo_http == 400, "entrada invalida e 400, nao 403"
+
+    assert servico.nivel_acesso_de("F003") == "Supervisor", (
+        "recusa por nivel invalido nao pode deixar gravacao"
+    )
+
+    # Parâmetro ausente: 400, e não KeyError virando 500.
+    try:
+        servico.executar(
+            SESSAO_DIRETOR, "alterarPerfil", id_alvo="F003", corpo={}
+        )
+        raise AssertionError("parametro ausente tem de ser recusado")
+    except KeyError:
+        raise AssertionError("parametro ausente nao pode virar KeyError (HTTP 500)")
+    except ErroDeEntrada as erro:
+        assert erro.codigo_http == 400
+
+    assert servico.nivel_acesso_de("F003") == "Supervisor", (
+        "recusa por parametro ausente nao pode deixar gravacao"
+    )
+    # Alvo inexistente: mesma classe de pedido malformado. Sem o guarda, a busca
+    # no cadastro levantaria KeyError - erro de servidor para entrada de cliente.
+    try:
+        servico.executar(
+            SESSAO_DIRETOR,
+            "alterarPerfil",
+            id_alvo="F999",
+            corpo={"novoNivelAcesso": "Diretor"},
+        )
+        raise AssertionError("alvo inexistente tem de ser recusado")
+    except KeyError:
+        raise AssertionError("alvo inexistente nao pode virar KeyError (HTTP 500)")
+    except ErroDeEntrada as erro:
+        assert erro.codigo_http == 400, "alvo inexistente e 400, nao 403"
+
+    assert not trilha.alertas_de_elevacao(), (
+        "nenhuma elevacao foi efetivada: nada a alertar"
+    )
+
+    print("[OK] Validacao de entrada da alteracao de perfil")
+    print("     promocao para nivel inexistente.................. recusada (400)")
+    print("     parametro novoNivelAcesso ausente................ recusado (400), sem KeyError")
+    print("     alvo inexistente no cadastro..................... recusado (400), sem KeyError")
+    print(f"     nivelAcesso persistido apos as tres tentativas... {servico.nivel_acesso_de('F003')}")
+
+
+def teste_5_rebaixamento_nao_alerta() -> None:
+    """O alerta da cláusula 7 é de **elevação**, não de toda alteração de perfil.
+
+    Um rebaixamento fica registrado na trilha, mas não notifica Diretor e
+    Segurança da Informação: é o Gatilho A da Regra 3 da Etapa 6, que trata
+    rebaixamento como registro e não como notificação. Sem esta verificação, a
+    Prática 2 reivindicaria ser a fonte de evento da cláusula 7 emitindo evento
+    onde a cláusula não pede.
+    """
+    servico, trilha = montar_servico()
+
+    servico.executar(
+        SESSAO_DIRETOR,
+        "alterarPerfil",
+        id_alvo="F002",
+        corpo={"novoNivelAcesso": "Supervisor"},
+    )
+
+    entradas = [e for e in trilha.entradas() if e["operacao"] == "alterarPerfil"]
+    assert len(entradas) == 1, "o rebaixamento tem de ficar na trilha"
+    assert entradas[0]["resultado"] == "EFETIVADA"
+    assert not trilha.alertas_de_elevacao(), (
+        "rebaixamento nao e elevacao: nao alerta pela clausula 7"
+    )
+
+    # A elevação seguinte, sobre o mesmo alvo, volta a alertar - o filtro
+    # distingue a direção da mudança, não a operação.
+    servico.executar(
+        SESSAO_DIRETOR,
+        "alterarPerfil",
+        id_alvo="F002",
+        corpo={"novoNivelAcesso": "GerenteGeral"},
+    )
+    assert len(trilha.alertas_de_elevacao()) == 1, (
+        "a elevacao seguinte tem de alertar"
+    )
+
+    print("[OK] Direcao da alteracao de perfil (clausula 7)")
+    print("     rebaixamento GerenteGeral -> Supervisor.......... registrado, sem alerta")
+    print("     elevacao Supervisor -> GerenteGeral.............. alerta emitido")
+    print(f"     alertas da clausula 7 apos as duas operacoes..... {len(trilha.alertas_de_elevacao())}")
+
+
 if __name__ == "__main__":
     teste_1_caso_valido()
     print()
     teste_2_caso_nao_autorizado()
     print()
     teste_3_verificacoes_auxiliares()
+    print()
+    teste_4_entrada_invalida()
+    print()
+    teste_5_rebaixamento_nao_alerta()
     print()
     print("Todos os testes passaram.")

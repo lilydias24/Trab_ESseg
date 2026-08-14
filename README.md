@@ -36,10 +36,11 @@ O SIGH foi escolhido porque combina, em um único sistema, os elementos que a di
 
 ## Material de apoio
 
-A análise não parte do zero: a modelagem completa do SIGH já foi produzida em trabalho anterior da graduação. Esse material estará versionado aqui para que cada ameaça possa ser justificada com campos, operações e componentes reais - e não com suposições genéricas.
+A análise não parte do zero: a modelagem completa do SIGH já foi produzida em trabalho anterior da graduação. Esse material está versionado em [`contexto/`](contexto/README.md) para que cada ameaça possa ser justificada com campos, operações e componentes reais - e não com suposições genéricas.
 
 | Onde | O que tem |
 | --- | --- |
+| [`contexto/README.md`](contexto/README.md) | De onde veio cada arquivo de contexto (o material de apoio do grupo, não versionado) e a divergência de formatação já registrada |
 | [`contexto/SIGH - Recorte ESSEG.md`](contexto/SIGH%20-%20Recorte%20ESSEG.md) | Escopo dos 5 módulos, requisitos funcionais e não funcionais mantidos, atores, casos de uso e a tabela de campos sensíveis por classe |
 | [`contexto/SIGH - Contexto dos diagramas.md`](contexto/SIGH%20-%20Contexto%20dos%20diagramas.md) | Leitura de cada diagrama sob a ótica de segurança e as lacunas identificadas no documento original |
 | [`diagrams/`](diagrams/README.md) | Os 25 diagramas exportados do Lucid, com um índice indicando qual serve a qual seção |
@@ -70,6 +71,7 @@ Trab_ESseg/
 │   ├── E6_Monitoramento_e_deteccao.md
 │   └── E7_DevSecOps_e_video.md
 ├── contexto/                                  # Material de apoio (não é entregável)
+│   ├── README.md                              # Origem dos arquivos e divergências em relação à fonte
 │   ├── SIGH - Recorte ESSEG.md                # Escopo, requisitos, atores e ativos do recorte
 │   └── SIGH - Contexto dos diagramas.md       # Leitura dos diagramas para uso no STRIDE
 ├── diagrams/                                  # Diagramas do SIGH exportados do Lucid

@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | RS01 - requisito e vulnerabilidade | @lilydias24 | Concluído (revisão cruzada por @mariasanchez0: numeração OWASP a corrigir) |
 | RS02 - requisito e vulnerabilidade | @ARTHUR9011 | Concluído (revisão cruzada por @mariasanchez0: sem achados) |
-| RS03 - requisito e vulnerabilidade | @PPrauchner | Concluído (revisão cruzada por @mariasanchez0: cláusula 6 pode ganhar frase de esclarecimento); apoia-se na DA02 |
+| RS03 - requisito e vulnerabilidade | @PPrauchner | Concluído; revisão cruzada com as Etapas 4 e 6 feita (critérios de CA02, CA03 e CA04 conciliados) e por @mariasanchez0 (cláusula 6 pode ganhar frase de esclarecimento); apoia-se na DA02 |
 | Diagrama da arquitetura segura | @lorenzoficher | Concluído (seções 3.1 a 3.3 e PNG versionado) |
 | Decisão de arquitetura 1 (ligada ao diagrama) | @lorenzoficher | Concluída (DA01) |
 | Decisão de arquitetura 2 (ligada a RS03) | @mariasanchez0 | Concluída (DA02) |
@@ -236,7 +236,7 @@ primeiros são exatamente os testes escritos na [Etapa 4](E4_Codigo_seguro_e_tes
 | --- | --- | --- |
 | RS03-CA01 | Sessão com `nivelAcesso = Diretor` promove outro funcionário a GerenteSetor | Alteração aceita; a trilha registra autor, valor anterior, valor novo e data/hora do servidor |
 | RS03-CA02 | Sessão com `nivelAcesso = Supervisor` tenta se promover a Diretor pelos dois caminhos: primeiro enviando o próprio cadastro com `nivelAcesso: "Diretor"` no corpo (passo 3 do CA05), depois chamando a operação própria de alteração de perfil | Pela via de salvamento, o campo é **descartado antes de qualquer validação**: os demais dados seguem o fluxo normal, `nivelAcesso` permanece `Supervisor` e a tentativa de gravá-lo é registrada. Pela operação própria, a requisição é recusada com **HTTP 403**, sem efeito parcial. Em nenhum dos dois há promoção, e ambos alimentam a Regra 3 |
-| RS03-CA03 | A mesma requisição de CA02 é enviada **direto ao endpoint**, sem passar pela interface | Resultado idêntico ao de RS03-CA02 - o desfecho não depende da tela ter ou não montado a opção |
+| RS03-CA03 | **Cada uma das duas requisições** de CA02 é enviada **direto ao endpoint**, sem passar pela interface | **Cada uma** produz o desfecho que produziria pela interface: descarte do campo com registro na via de salvamento, **HTTP 403** na operação própria de alteração de perfil - o desfecho não depende da tela ter ou não montado a opção |
 | RS03-CA04 | Requisição legítima de alteração de dados funcionais traz `nivelAcesso` alterado junto no corpo, sem intenção de promoção | Mesmo desfecho da via de salvamento em CA02, o que é o ponto: os dados funcionais são gravados, o `nivelAcesso` permanece inalterado e a tentativa de gravá-lo é registrada. O servidor não distingue intenção - trata o campo pela origem da requisição, não pelo propósito de quem a enviou |
 | RS03-CA05 | Diretor tenta elevar o **próprio** `nivelAcesso` | HTTP 403 - a alçada não alcança o próprio registro, e a promoção exige aprovador distinto do solicitante |
 | RS03-CA06 | Novo endpoint administrativo entra no serviço sem regra de autorização declarada | Toda chamada é recusada por omissão de regra, e não permitida - a negação por padrão é verificada, não presumida |
@@ -257,6 +257,11 @@ primeiros são exatamente os testes escritos na [Etapa 4](E4_Codigo_seguro_e_tes
 > os dois. CA04 deixa de ser um caso concorrente e passa a ser o que sempre deveria ter
 > sido: a demonstração de que o desfecho da via de salvamento **não depende da
 > intenção** de quem enviou a requisição.
+>
+> CA03 foi ajustado na mesma linha. Como CA02 passou a ter duas requisições, "a mesma
+> requisição" e "resultado idêntico" ficaram sem antecedente único; o critério agora diz
+> que **cada uma das duas** é enviada direto ao endpoint e **cada uma** mantém o desfecho
+> que teria pela interface. É o que CA03 sempre afirmou: o controle não depende da tela.
 >
 > A menção ao disparo do alerta também foi ajustada. A cláusula 7 alerta nas elevações
 > **efetivadas**; tentativas recusadas entram na [Regra 3](E6_Monitoramento_e_deteccao.md)
