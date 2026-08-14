@@ -10,7 +10,7 @@
 | Análise dos 3 achados e correção proposta (com CWE/OWASP) | @mariasanchez0 | Concluída |
 | Complemento da tabela final (coluna OWASP Top 10:2025) | @lorenzoficher | Concluído (seção 5) |
 | Revisão cruzada - @lorenzoficher | @lorenzoficher | Concluída (seção 5) - 4 achados: RV01 e RV02 altos, pendentes de correção pela @mariasanchez0 |
-| Revisão cruzada - @lilydias24 | @lilydias24 | Pendente |
+| Revisão cruzada - @lilydias24 | @lilydias24 | Concluída (seção 6) - reprodutibilidade de seções 1-2 conferida contra os artefatos versionados, sem erro encontrado; RV02/RV03 confirmados de forma independente; RL01 registrado (2 números da seção 1 sem evidência versionada) |
 
 ---
 
@@ -289,7 +289,7 @@ neste outro sistema, exatamente pela razão que o modelo sugeriu".
 Revisão por quem não conduziu a sessão nem escreveu a análise. Confere três coisas: se a
 evidência versionada sustenta o que o texto afirma, se as classificações CWE/OWASP estão
 corretas, e se as pontes traçadas para as Etapas 1 a 3 se sustentam. A metade da
-@lilydias24 segue pendente.
+@lilydias24, focada nas seções 1 e 2, está na seção 6.
 
 **O complemento da tabela final está feito:** a coluna *OWASP Top 10:2025* foi
 acrescentada à tabela da seção 2, que até aqui só registrava a classificação da
@@ -439,6 +439,108 @@ para o vídeo.
 - As correções propostas em RV01 e RV02 são de **redação e de leitura do achado**; nenhuma
   delas altera quais vulnerabilidades foram encontradas, nem a severidade atribuída pela
   ferramenta.
-- A revisão da @lilydias24 segue pendente e pode alcançar pontos que este recorte não
-  cobriu - em especial as seções 1 e 2, que examinei quanto à consistência interna, mas não
-  quanto à reprodutibilidade do plano de automação.
+- A revisão da @lilydias24, na seção 6, cobre exatamente o que este recorte não alcançou
+  - a reprodutibilidade do plano de automação e as seções 1 e 2, que examinei quanto à
+  consistência interna, mas não quanto aos artefatos versionados.
+
+## 6. Revisão cruzada de reprodutibilidade - @lilydias24
+
+Escopo complementar ao da seção 5: em vez de reexaminar o texto das seções 3 e 4, que o
+@lorenzoficher já conferiu linha a linha, esta revisão parte dos artefatos versionados em
+`evidencias/etapa-5/` - o plano de automação, os dois relatórios do ZAP e as três capturas
+- e confere se cada afirmação numérica ou factual das seções 1 e 2 se sustenta contra
+eles. É a metade que a seção 5.3 deixou marcada como não coberta.
+
+### 6.1 O que foi conferido e está correto
+
+Toda checagem abaixo foi feita lendo os artefatos diretamente, não o texto que os descreve
+- é reprodutibilidade, não releitura:
+
+- **O plano de automação bate com o que a seção 1 descreve.** O `reportDir` em
+  [`plano-automacao-zap.yaml`](../evidencias/etapa-5/plano-automacao-zap.yaml) é
+  `./zap-out`, e o comentário do próprio arquivo confirma que a sessão real rodou com
+  `C:/tmp/zap-out` antes do ajuste - a mesma história que a seção 1 conta. Os `jobs` do
+  plano têm exatamente dois relatórios (`traditional-html` e `traditional-json`); não há
+  um terceiro job de `risk-confidence-html`, confirmando que ele foi de fato removido, e
+  não apenas declarado como removido. `excludePaths` cobre `socket.io` e as extensões de
+  imagem/fonte/vídeo citadas na seção 1, e `maxRuleDurationInMins: 2` bate com o "teto de
+  2 minutos por regra" da varredura ativa. Não há bloco de autenticação no plano,
+  consistente com a seção 1 afirmar que a varredura foi sem login.
+- **Os números do relatório JSON conferem, um a um, com o que o documento afirma.** Abri
+  [`relatorio-zap-juiceshop.json`](../evidencias/etapa-5/relatorio-zap-juiceshop.json)
+  e verifiquei: `@generated` é `Thu, 13 Aug 2026 21:52:12` (a seção 1 diz "21:52"); há 4
+  `site`, e só `localhost` tem alertas - os outros três são os domínios
+  `*.microsoft.com` que a seção 1 descarta como ruído do Edge headless; a distribuição de
+  risco é exatamente 1 Alto + 2 Médios + 2 Baixos + 3 Informativos, com **zero**
+  alertas marcados como falso positivo pela própria ferramenta.
+- **Cada achado da tabela da seção 2 bate campo a campo com a instância correspondente no
+  JSON.** V01 (`pluginid` 40018): CWE-89, WASC-19, URL
+  `/rest/products/search?q=%27%28`, parâmetro `q`, carga `'(`, evidência
+  `HTTP/1.1 500 Internal Server Error` - idêntico ao que a tabela e a seção 1
+  transcrevem. V02 (`pluginid` 10038): exatamente as 5 URLs citadas (`/`,
+  `/ftp/eastere.gg`, `/ftp/encrypt.pyc`, `/ftp/package-lock.json.bak`,
+  `/sitemap.xml`), todas com evidência vazia - condizente com o achado ser a
+  **ausência** do cabeçalho. V03 (`pluginid` 10098): exatamente as 3 URLs citadas (`/`,
+  `/scripts.js`, `/styles.css`), todas com `evidence: Access-Control-Allow-Origin: *`.
+- **A verificação dos três valores de Timestamp Disclosure é exata.** Os três valores que
+  a tabela de descarte cita - `1666666667`, `1839622642` e `1528301887` - são,
+  literalmente, os três valores distintos nas 5 instâncias do alerta 10096 no JSON, com
+  os dois primeiros repetidos entre `/` e `/sitemap.xml` como a seção 2 descreve.
+  Convertido, `1839622642` corresponde a **2028-04-17**, confirmando a data futura que o
+  documento usa como argumento contra ser um carimbo de tempo real.
+- **As duas capturas de tela mostram exatamente o que a legenda promete.** A captura 01
+  traz os dois banners verdes "Confidential Document" e "Error Handling" e "0 of 0" em
+  "All Products", como descrito. A captura 03 mostra só o título "OWASP Juice Shop
+  (Express ^4.22.1)" e a linha "500 Error: SQLITE_ERROR...", sem barra de endereço - a
+  seção 1 já registra essa ausência como limitação da captura, e a captura confirma que
+  a ressalva é necessária.
+- **RV02 e RV03, da revisão do @lorenzoficher, se confirmam de forma independente.**
+  Busquei `CWE-89`, `SQL Injection` e `prepared statement`/`consulta parametrizada` no
+  texto inteiro de [`E3_Arquitetura_segura.md`](E3_Arquitetura_segura.md): zero
+  ocorrências, o que sustenta o RV02 - a Etapa 3 de fato não cobre injeção em nenhum dos
+  três requisitos. E a linha de RS02 na tabela de vulnerabilidades da Etapa 3 cataloga
+  exatamente `CWE-862, CWE-602, CWE-20 e CWE-778` - confirma o RV03: CWE-89 não está
+  nessa lista, só CWE-20 é comum aos dois documentos.
+- **A observação de RV01 sobre CORS e credenciais está correta.** É comportamento do
+  próprio *Fetch Standard*: uma resposta com `Access-Control-Allow-Origin: *` não pode
+  ser lida por uma requisição com credenciais, e o navegador rejeita a combinação de `*`
+  com `Access-Control-Allow-Credentials: true` antes mesmo de considerar a resposta. O
+  achado de RV01 não depende de rodar nada para ser verificado - é a regra que qualquer
+  implementação de CORS no navegador segue.
+
+### 6.2 Achados desta revisão
+
+Nenhum erro factual nas seções 1 e 2 contra os artefatos versionados. O que encontrei não
+são erros, e sim uma lacuna de reprodutibilidade que vale registrar:
+
+**RL01 - Dois números da seção 1 não são verificáveis a partir do que está
+versionado.** A seção 1 afirma "39 endpoints" mapeados e "142 URLs" alcançadas pelo AJAX
+spider. Nenhum dos dois relatórios (`traditional-html`, `traditional-json`) lista o
+conjunto de endpoints varridos - eles só listam os alertas encontrados, e os alertas não
+cobrem os 39 endpoints (o relatório menciona no máximo uma dezena de URLs distintas, entre
+os oito alertas). Os dois números provavelmente vêm da saída de console da sessão
+(`progressToStdout: true` no plano gera exatamente esse tipo de contagem), que não foi
+capturada nem versionada. Isso não torna a afirmação falsa - só significa que, diferente
+de todo o resto da seção 1 e 2, esses dois números não podem ser conferidos por quem lê
+só o que está no repositório; hoje dependem de confiar em quem rodou a sessão.
+
+> **Encaminhamento sugerido, sem bloquear a etapa:** se o @PPrauchner ainda tiver a saída
+> de console da sessão de 13/08/2026, versionar um trecho dela (ou uma nova captura de
+> tela) resolveria o RL01 sem precisar rodar o ZAP de novo. Não é um erro a corrigir, é
+> uma evidência a completar - por isso não numerei como RV, para não confundir com os
+> quatro achados de conteúdo que o @lorenzoficher já levantou.
+
+### 6.3 Limites desta revisão
+
+- Não reexaminei o texto das seções 3, 4 e 5 além do necessário para conferir RV01 a
+  RV03 de forma independente - essa é a parte que o @lorenzoficher já cobriu, e refazer
+  o mesmo trabalho não agregaria uma segunda opinião, só duplicaria uma primeira.
+  RV04 não foi reconferido porque não depende de dado externo ao próprio documento: é
+  leitura de contagem, e a leitura do @lorenzoficher já é auditável por qualquer pessoa
+  a partir da tabela da seção 2.
+- Não tentei reproduzir a sessão do ZAP nem reinstalar o Juice Shop - a verificação foi
+  contra os artefatos já versionados, na mesma limitação que a seção 5.3 já registra
+  para a revisão do @lorenzoficher.
+- Não verifiquei o hash MD5 da distribuição do Juice Shop contra o release oficial -
+  está no formato correto (32 caracteres hexadecimais), mas conferir o valor exigiria
+  baixar a distribuição, fora do escopo de uma revisão de conteúdo já versionado.
