@@ -312,6 +312,13 @@ documento, não precisam ser narrados.
 > Autorização único, que passa a decidir no servidor não só o `nivelAcesso` da RS03, mas
 > também esse vínculo - a mesma checagem que o R06 já usa para revalidar autorização,
 > agora reaproveitada para leitura de prontuário.
+> Na Etapa 5, a sessão do ZAP sobre o Juice Shop achou o mesmo problema em outro sistema:
+> um cabeçalho `Access-Control-Allow-Origin: *` liberando qualquer origem a ler resposta
+> da aplicação - não é o SIGH, mas é a mesma ausência de fronteira, agora observável em
+> código real, não só argumentável sobre um modelo.
+
+
+
 
 **Sequência visual e evidência:**
 
