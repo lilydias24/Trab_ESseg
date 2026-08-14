@@ -9,7 +9,7 @@
 | RS01 - requisito e vulnerabilidade | @lilydias24 | Concluído (revisão cruzada por @mariasanchez0: numeração OWASP a corrigir) |
 | RS02 - requisito e vulnerabilidade | @ARTHUR9011 | Concluído (revisão cruzada por @mariasanchez0: sem achados) |
 | RS03 - requisito e vulnerabilidade | @PPrauchner | Concluído; revisão cruzada com as Etapas 4 e 6 feita (critérios de CA02, CA03 e CA04 conciliados) e por @mariasanchez0 (cláusula 6 pode ganhar frase de esclarecimento); apoia-se na DA02 |
-| Diagrama da arquitetura segura | @lorenzoficher | Concluído (seções 3.1 a 3.3 e PNG versionado) |
+| Diagrama da arquitetura segura | @lorenzoficher | Concluído (seções 3.1 a 3.3, PNG e fonte editável `.mmd` versionados) |
 | Decisão de arquitetura 1 (ligada ao diagrama) | @lorenzoficher | Concluída (DA01) |
 | Decisão de arquitetura 2 (ligada a RS03) | @mariasanchez0 | Concluída (DA02) |
 | Decisão de arquitetura 3 (reforço de autenticação) | @lilydias24 | Concluída (DA03; ponto de contato com a DA01 sinalizado) |
@@ -548,6 +548,11 @@ auditoria) e uma quinta - a própria autorização - que ainda não tem.
 ## 3. Diagrama da arquitetura segura
 
 > Responsável: **@lorenzoficher** - parte de `diagrams/estrutura/Diagramas_SIGH - Componentes.png` (já versionado) e acrescenta o serviço de autenticação instituído pela DA03, o serviço de autorização, o serviço de auditoria instituído pela DA01 e o catálogo clínico. Versionado como `diagrams/estrutura/Diagramas_SIGH - Arquitetura segura.png`.
+>
+> O **arquivo-fonte editável** está em
+> `diagrams/estrutura/Diagramas_SIGH - Arquitetura segura.mmd` (Mermaid, texto puro).
+> Para alterar o desenho, edite o `.mmd` e reexporte o PNG com o mesmo nome - o comando
+> está em [`diagrams/README.md`](../diagrams/README.md).
 
 ![Arquitetura segura do SIGH](../diagrams/estrutura/Diagramas_SIGH%20-%20Arquitetura%20segura.png)
 
