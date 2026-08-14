@@ -10,7 +10,7 @@
 | --- | --- | --- | --- |
 | 1 | R01 - Spoofing | @lilydias24 | Concluída (especificação; aguarda implementação do SIGH) |
 | 2 | R02 - Tampering | @ARTHUR9011 | Concluída (especificação; aguarda implementação do SIGH) |
-| 3 | R06 - Elevation of Privilege | @PPrauchner | Pendente |
+| 3 | R06 - Elevation of Privilege | @PPrauchner | Concluída (especificação; aguarda implementação do SIGH) |
 | Compilação | Roteiro final | @lilydias24 | Pendente |
 
 ---
@@ -21,7 +21,7 @@
 | --- | --- | --- | --- | --- | --- |
 | 1 | R01 - Spoofing | Eventos de segurança do serviço de autenticação (RS01, cláusula 7), correlacionados com os de operação sensível | Crítico: sucesso após rajada de falhas, sessões simultâneas em zonas distintas, ou operação sensível de dispositivo desconhecido. Alto: 5 falhas em 15 min na mesma conta, ou mesma origem falhando contra 10 contas | Confirmar a sessão com o titular fora do sistema antes de revogar; havendo comprometimento, revisar o que foi executado durante a sessão | @lilydias24 |
 | 2 | R02 - Tampering | Eventos de segurança e trilha de auditoria das prescrições | Publicação que viola uma invariante de RS02 ou 3 recusas suspeitas pelo mesmo autor/prescrição em 10 minutos | Acionar resposta clínica e de segurança conforme a severidade, preservando as evidências | @ARTHUR9011 |
-| 3 | R06 - Elevation of Privilege | Logs de autorização | Tentativa de acesso a função administrativa por usuário sem `nivelAcesso` compatível | | @PPrauchner |
+| 3 | R06 - Elevation of Privilege | Decisões do Serviço de Autorização (DA02) e trilha imutável de alteração de perfil (DA01), conforme as cláusulas 5 e 7 de RS03 | Crítico: elevação efetivada com solicitante igual ao titular, aprovador igual ao solicitante, decisão fora do servidor ou campo gravado pela via do cadastro; e leitura administrativa em massa até 60 min após uma elevação. Alto: 3 recusas de privilégio do mesmo autor ou sobre o mesmo titular em 10 min, requisição enviada direto ao endpoint, ou 3 usos de alçada nova em sessão anterior à promoção | Notificar Diretor e Segurança da Informação no momento da elevação; havendo anomalia, reverter o `nivelAcesso` pelo fluxo de aprovação, reemitir a identidade de sessão e apurar o que a alçada leu, acionando o dono de R01 se o cadastro tiver sido percorrido | @PPrauchner |
 
 ## Regra 1 - Uso indevido de credencial de profissional (@lilydias24)
 
@@ -296,11 +296,235 @@ contenção, preservação e aprendizado é alinhado ao
 [NIST SP 800-61r3](https://csrc.nist.gov/pubs/sp/800/61/r3/final), que integra resposta a
 incidentes ao gerenciamento de riscos do NIST CSF 2.0.
 
-## Regra 3 - *(a definir)* (@PPrauchner)
+## Regra 3 - Elevação de `nivelAcesso` no Serviço de Funcionários (@PPrauchner)
 
-- **Risco observado:** R06
-- **Fonte de dados:**
-- **Condição de alerta:**
-- **O que o alerta indica:**
-- **Ação esperada da equipe:**
-- **Falsos positivos previstos:**
+- **Risco observado:** R06 - um `Administrador` de nível Supervisor passa a operar com
+  alçada de Diretor sobre o Serviço de Funcionários, alcançando o cadastro completo de
+  profissionais e os campos `nomeLogin` e `senhaLogin` de todos os perfis (T06/CA05).
+- **Fonte de dados:** decisões emitidas pelo Serviço de Autorização (DA02) para toda
+  operação administrativa e trilha de auditoria imutável de alteração de perfil (DA01),
+  conforme as cláusulas 5 e 7 de [RS03](E3_Arquitetura_segura.md), correlacionadas com os
+  eventos de leitura em massa do cadastro previstos na cláusula 8.
+- **Condição de alerta (limiar e janela):** **notificação obrigatória** a cada elevação
+  efetivada, sem limiar e no momento em que ocorre - é o controle R06-C4 da
+  [Etapa 2](E2_Riscos_e_NIST_CSF.md). Alerta **Crítico** diante de uma única elevação que
+  traga marca de anomalia (solicitante igual ao titular, aprovador igual ao solicitante,
+  decisão tomada fora do Serviço de Autorização ou campo gravado pela via de salvamento do
+  cadastro), e diante de leitura administrativa em massa nos 60 minutos seguintes a
+  qualquer elevação. Alerta **Alto** a partir de 3 recusas de privilégio do mesmo autor
+  **ou** sobre o mesmo titular em uma janela deslizante de 10 minutos, na recusa isolada
+  cuja requisição não passou pela interface, e a partir de 3 requisições de alçada nova em
+  sessão emitida antes da promoção, na mesma janela.
+- **O que o alerta indica:** que o `nivelAcesso` - único mecanismo de autorização do modelo
+  inteiro do SIGH - mudou, ou que alguém está tentando mudá-lo. No caso Alto, tentativa
+  repetida de gravar o campo por uma via que RS03 fechou; no caso Crítico, que a alçada foi
+  efetivamente concedida sem passar pelo fluxo de aprovação, e que o alcance obtido pode
+  já estar sendo usado para varrer o cadastro - que é o passo 5 do CA05.
+
+Esta regra observa **alçada**, não credencial, e é essa a diferença que a separa da Regra
+1. Em R06 a identidade não foi falsificada, foi promovida: o ator autentica com a própria
+senha e a sessão é legítima do início ao fim, de modo que nenhum sinal de autenticação
+anômala aparece. A [Etapa 1](E1_Casos_de_abuso_e_Stride.md) registra em T06 que, sem
+instrumentação, "não há anomalia a observar" - a Regra 3 existe justamente para criar a
+anomalia observável que o modelo original não produz, exigindo que a decisão de
+autorização emita evento mesmo quando **permite** a operação.
+
+### Contrato mínimo dos eventos
+
+O Serviço de Autorização (DA02), e não o Desktop Cliente nem o Serviço de Funcionários,
+preenche os campos usados pela regra: a cláusula 1 de RS03 manda descartar identidade,
+papel e `nivelAcesso` recebidos na requisição, e um evento que os copiasse reintroduziria
+no monitoramento o valor que o requisito acabou de descartar. Cada operação administrativa
+gera um evento terminal `PROFILE_CHANGE_APPLIED` ou `PROFILE_CHANGE_DENIED`; as leituras
+da cláusula 8 geram `ADMIN_BULK_READ`. **Nenhum evento pode conter `senhaLogin`, valor
+derivado dela, `nomeLogin` de terceiros ou código de segundo fator** - o dano de R06 se
+realiza exatamente sobre esses campos, e vazá-los para o índice de segurança seria entregar
+pela detecção o que a autorização passou a negar.
+
+| Campo | Uso na detecção |
+| --- | --- |
+| `eventTime`, `eventType`, `correlationId` | Ordenação, janela e deduplicação da operação |
+| `actorId`, `actorRole`, `actorLevel` | Quem solicitou, com o perfil vigente **obtido da sessão** (cláusula 1) |
+| `subjectId`, `previousLevel`, `newLevel` | Titular afetado e a transição de perfil; `newLevel` acima de `previousLevel` é o que define elevação |
+| `approverId`, `approverDistinctFromRequester`, `approverLevel` | Verificam a alçada de Diretor e a separação entre quem pede e quem aprova (cláusula 3) |
+| `decisionSource`, `ruleId`, `writePath` | Comprovam que a decisão veio do Serviço de Autorização, sob qual regra, e se o campo chegou pela operação própria de perfil ou pela via de salvamento do cadastro |
+| `bypassedUi` | Indicador derivado: a requisição chegou ao endpoint sem passar pela interface (RS03-CA03) |
+| `sessionId`, `sessionIssuedAt`, `sessionLevel` | Detectam alçada nova exercida em sessão anterior à promoção (cláusula 6) |
+| `outcome`, `denyReason`, `httpStatus` | Resultado da decisão e motivo da recusa, para a contagem do Gatilho C |
+| `recordsReturned`, `queryScope`, `unitScope` | Volume e abrangência da leitura administrativa, limitados pela cláusula 8 |
+| `deviceId`, `networkZone`, `sourceService` | Contexto técnico para triagem, na mesma convenção das Regras 1 e 2 |
+
+### Lógica de correlação
+
+**Gatilho A - Notificação obrigatória.** Todo `PROFILE_CHANGE_APPLIED` com `newLevel`
+superior a `previousLevel` notifica o Diretor e a Segurança da Informação **no momento**
+da efetivação, ainda que a promoção seja íntegra. Não é incidente e não abre chamado: é o
+que a cláusula 7 de RS03 e o controle R06-C4 exigem, e é o que torna a elevação um evento
+datado, com autor e valor anterior, em vez de silenciosa e permanente. A notificação exige
+confirmação de recebimento - o residual Médio de R06 pressupõe alerta "ativo e com
+destinatário definido", e alerta sem destinatário não é controle. Rebaixamento
+(`newLevel` inferior) é registrado, mas não notifica por este gatilho.
+
+**Gatilho B - Crítico e imediato.** O mesmo evento `PROFILE_CHANGE_APPLIED` dispara alerta
+Crítico quando qualquer condição abaixo for verdadeira:
+
+- `actorId` é igual a `subjectId` - promoção sobre o próprio registro, que a cláusula 3
+  proíbe sem exceção; **ou**
+- `approverDistinctFromRequester` é falso, `approverId` está ausente ou `approverLevel` não
+  é Diretor - quem solicita a promoção aprovou a própria promoção; **ou**
+- `writePath` indica a via de salvamento do cadastro, e não a operação própria de alteração
+  de perfil - é o mecanismo exato do passo 3 do CA05 (CWE-915); **ou**
+- `decisionSource` não é o Serviço de Autorização, ou `ruleId` está vazio - a decisão foi
+  tomada dentro do serviço que a executa, ou por omissão de regra, contrariando a cláusula
+  2 e a DA02.
+
+**Gatilho C - Alto por repetição.** Contam para o limiar os eventos
+`PROFILE_CHANGE_DENIED` cujo `denyReason` seja `SELF_PRIVILEGE_CHANGE`,
+`LEVEL_FIELD_NOT_WRITABLE`, `INSUFFICIENT_AUTHORITY`, `APPROVER_EQUALS_REQUESTER` ou
+`MISSING_AUTHORIZATION_RULE`. A terceira ocorrência em 10 minutos para o mesmo `actorId`
+ou o mesmo `subjectId` abre um único alerta, ao qual as seguintes da janela são anexadas.
+Uma recusa isolada com `bypassedUi` verdadeiro abre alerta Alto **sozinha**: uma tela que
+não oferece a opção não produz esse tráfego por acidente, e RS03-CA03 registra que a
+recusa não depende da interface. O limiar de 3 é mais baixo que o da Regra 1 porque aqui
+não existe equivalente da senha digitada errada - não há erro de digitação que produza uma
+tentativa de gravar `nivelAcesso`.
+
+**Gatilho D - Alto por sessão desatualizada.** Requisição de operação exclusiva de um
+perfil cujo `sessionLevel` diverge do perfil vigente do titular, com `sessionIssuedAt`
+anterior à última alteração registrada na trilha, é recusada pela cláusula 6 e contabilizada.
+A terceira ocorrência do mesmo `sessionId` em 10 minutos abre alerta Alto. A primeira e a
+segunda são informativas: um profissional promovido no meio do plantão esbarra
+legitimamente nisso até a identidade de sessão ser reemitida (RS03-CA07). A insistência é
+que interessa - ela indica que alguém já conhece a alçada que deveria ter e está tentando
+exercê-la fora do fluxo.
+
+**Gatilho E - Crítico por sequência de CA05.** Eventos `ADMIN_BULK_READ` do mesmo `actorId`
+nos **60 minutos** seguintes a um `PROFILE_CHANGE_APPLIED` que o tenha promovido abrem
+alerta Crítico quando `recordsReturned` acumulado ultrapassar o limite de volume da
+cláusula 8, ou quando `unitScope` abranger unidades além da lotação do solicitante. É a
+sequência do CA05 - promover, e em seguida percorrer o cadastro de todas as unidades - e
+o único gatilho desta regra que também protege R05: o mesmo volume, sobre o SGBD único,
+é o caminho de indisponibilidade descrito em T05. Quando o alerta de 80% do pool de
+conexões (controle R05-C5) disparar dentro dessa janela, os dois eventos devem ser
+correlacionados no mesmo incidente, porque na apuração de CA05 a degradação e a elevação
+sempre foram tratadas como fatos independentes - foi isso que impediu de ligá-las.
+
+### Ação esperada da equipe
+
+**Notificação do Gatilho A:** o Diretor confirma o recebimento e valida a promoção contra
+o pedido formal correspondente. Uma elevação notificada e não reconhecida por quem consta
+como aprovador vira, imediatamente, incidente Crítico - é o único caminho de detecção que
+resta para a promoção legítima indevida, limite que a própria RS03 reconhece: conta de
+Diretor comprometida ou conluio de quem aprova continua produzindo uma elevação válida.
+
+**Alerta Crítico:**
+
+1. abrir incidente único pelo `correlationId` e notificar Segurança da Informação e o
+   Diretor, com o par `previousLevel` → `newLevel` e o `actorId` explícitos;
+2. reverter o `nivelAcesso` ao valor anterior registrado na trilha, **pelo mesmo fluxo de
+   aprovação** da cláusula 3 e com aprovador distinto - diferente da Regra 1 e da Regra 2,
+   a reversão aqui não tem custo assistencial nem decide conduta clínica, mas continua
+   sendo uma operação administrativa e não pode ser feita por atalho;
+3. reemitir ou revogar a identidade de sessão do envolvido, porque a cláusula 6 exige que a
+   alçada acompanhe o perfil vigente e uma sessão elevada sobrevive à correção do campo;
+4. apurar, pela trilha da DA01 e pelos eventos `ADMIN_BULK_READ`, **o que a alçada alcançou
+   enquanto durou** - cadastro de profissionais, escalas, medicamentos. Se o cadastro tiver
+   sido percorrido, acionar o dono de R01: enquanto `senhaLogin` estiver em texto simples,
+   a leitura equivale à exposição das credenciais de todos os perfis e exige troca em massa,
+   e o dono de R04 quando a varredura tiver alcançado prontuário;
+5. quando o Gatilho E também tiver disparado, acionar o dono de R05 para verificar a
+   saturação do SGBD e aplicar a regra de degradação, preservando prontuário, prescrição e
+   mapa de leitos; e
+6. registrar o resultado, inclusive quando for falso positivo, para recalibrar limiar e
+   janela.
+
+**Alerta Alto:** Segurança correlaciona as tentativas com o cargo, a lotação e o pedido de
+promoção eventualmente em curso, e contata a chefia administrativa do envolvido. Havendo
+indício de tentativa deliberada - especialmente com `bypassedUi` verdadeiro -, restringe a
+sessão às operações do perfil vigente, escala o incidente e mantém a conta sob observação
+até a apuração terminar. Sendo erro operacional ou pedido legítimo mal encaminhado,
+registra, orienta o fluxo correto e mantém o histórico para ajuste do limiar.
+
+O alerta nunca deve, sozinho, alterar `nivelAcesso` de ninguém - nem para cima nem para
+baixo. Uma regra de detecção que reescrevesse o campo automaticamente se tornaria um
+segundo caminho de alteração de privilégio fora do fluxo de aprovação, isto é, exatamente
+a fraqueza que RS03 fechou.
+
+### Falsos positivos previstos
+
+- **Promoção em lote por reestruturação.** Posse de nova diretoria, fusão de setores ou
+  abertura de unidade produzem várias elevações legítimas em sequência. O Gatilho A as
+  notifica uma a uma, o que é o comportamento correto, mas a operação deve ser declarada
+  com antecedência à Segurança para que as notificações sejam agrupadas em um único aviso -
+  e nunca suprimidas.
+- **Sessão antiga após promoção legítima.** É o caso mais frequente previsto para o Gatilho
+  D e o motivo de o limiar ser 3, e não 1: o promovido tenta usar a alçada nova antes de a
+  identidade de sessão ser reemitida, e o próprio RS03-CA07 descreve isso como recusa
+  esperada, não como ataque.
+- **Inventário periódico de acessos.** A revisão de perfis exigida pela política
+  institucional percorre o cadastro e cairia no Gatilho E. Ela deve ter janela declarada,
+  executor identificado e escopo registrado; fora dessas condições, permanece suspeita.
+- **Correção de cadastro errado.** Um funcionário cadastrado com o nível errado é corrigido
+  por quem tem alçada - operação legítima, indistinguível de uma promoção nos dados. Só o
+  reconhecimento pelo Diretor no Gatilho A a separa de uma elevação indevida, o que é o
+  limite honesto desta regra.
+
+Eventos repetidos com o mesmo `correlationId` são duplicatas técnicas, não falsos
+positivos, e devem ser eliminados antes da contagem. Não são admitidas exceções permanentes
+por usuário: uma conta que gerasse alertas rotineiros do Gatilho B ou C indicaria fluxo de
+aprovação mal desenhado, e a resposta é corrigir o fluxo, não silenciar a regra.
+
+### Verificação da regra
+
+Como o SIGH não possui implementação, estes são casos de teste planejados, e não evidências
+já executadas. Os oito primeiros correspondem, na mesma ordem, aos critérios RS03-CA01 a
+RS03-CA08 da [Etapa 3](E3_Arquitetura_segura.md).
+
+| ID | Entrada simulada | Resultado esperado |
+| --- | --- | --- |
+| R3-TV01 | Sessão Diretor promove outro funcionário a GerenteSetor, com aprovador distinto | Nenhum alerta de incidente; notificação obrigatória do Gatilho A ao Diretor e à Segurança, com confirmação de recebimento |
+| R3-TV02 | Sessão Supervisor envia o próprio cadastro com `nivelAcesso: "Diretor"` no corpo | Recusa HTTP 403 registrada e contabilizada no Gatilho C; o campo permanece `Supervisor` |
+| R3-TV03 | A requisição de R3-TV02 enviada direto ao endpoint, sem passar pela interface | Alerta Alto imediato pelo `bypassedUi`, sem esperar a terceira ocorrência |
+| R3-TV04 | Alteração legítima de dados funcionais trazendo `nivelAcesso` alterado junto no corpo | Dados funcionais gravados, campo inalterado e tentativa registrada com `writePath` de cadastro; sem alerta se isolada, contando para o Gatilho C |
+| R3-TV05 | Diretor tenta elevar o próprio `nivelAcesso` | Recusa registrada; se a elevação tiver sido efetivada por falha do controle, alerta Crítico pelo primeiro caso do Gatilho B |
+| R3-TV06 | Operação administrativa nova sem regra de autorização declarada | Recusa por omissão de regra com `MISSING_AUTHORIZATION_RULE`, contabilizada no Gatilho C; efetivação com `ruleId` vazio gera Crítico |
+| R3-TV07 | Sessão aberta antes de uma promoção legítima chama, três vezes em 10 minutos, operação exclusiva do perfil novo | Duas recusas informativas e um alerta Alto na terceira, pelo Gatilho D |
+| R3-TV08 | Sessão administrativa percorre o cadastro completo de todas as unidades 20 minutos após ter sido promovida | Alerta Crítico pelo Gatilho E, com o limite de volume aplicado e nenhum campo de autenticação retornado |
+| R3-TV09 | Promoção íntegra, mas o aprovador declarado não reconhece o pedido na confirmação | Escalada da notificação do Gatilho A para incidente Crítico |
+| R3-TV10 | Evento contendo `senhaLogin`, valor derivado ou `nomeLogin` de terceiros | Evento em quarentena e falha de esquema; credencial não chega ao índice de segurança |
+| R3-TV11 | Ausência de dois *heartbeats* consecutivos, emitidos a cada minuto | Alerta operacional após 2 minutos; Regra 3 marcada como sem cobertura até a recuperação |
+
+### Dependências operacionais e referências
+
+A regra depende de duas decisões de arquitetura da [Etapa 3](E3_Arquitetura_segura.md), e
+sem elas não há o que observar. A **DA02** - Serviço de Autorização centralizado - é o que
+faz existir um evento de decisão: com a autorização resolvida na montagem da tela, permitir
+não produz registro algum, e a elevação continuaria sendo o evento invisível que T06
+descreve. A **DA01** - Serviço de Auditoria com trilha imutável - é o que sustenta o valor
+anterior, o autor vindo da sessão e a data/hora carimbada pelo servidor, sem os quais os
+Gatilhos B e E não têm com o que comparar. A **DA03** entra indiretamente, por ser a origem
+da identidade de sessão de que a cláusula 1 depende.
+
+Vale registrar o que a regra **não** cobre: ela detecta a elevação e a tentativa, não a
+promoção legítima decidida por má-fé de quem tem alçada. O reconhecimento pelo aprovador no
+Gatilho A é o único mecanismo que se aproxima disso, e ele depende de conduta humana, não
+de controle técnico. Vale também repetir o limite que a [Etapa 2](E2_Riscos_e_NIST_CSF.md)
+fixou no residual de R06: detectar mais cedo encurta a janela de exploração, mas **não
+reduz o impacto** enquanto `senhaLogin` permanecer em texto simples - a redução do impacto
+de R06 depende do tratamento de R01.
+
+Os produtores devem usar relógio sincronizado e canal autenticado para armazenamento
+central protegido contra alteração e exclusão. Um *heartbeat* por minuto distingue ausência
+de operações administrativas de falha de coleta; a perda de dois ciclos consecutivos gera
+alerta operacional separado.
+
+A especificação segue o
+[OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html),
+de onde vêm a negação por padrão e a reavaliação de autorização a cada requisição que os
+Gatilhos B e D verificam, e o capítulo **V4 - Access Control** do
+[OWASP ASVS](https://owasp.org/www-project-application-security-verification-standard/),
+que sustenta a exigência de decisão no servidor. O contrato de eventos segue o
+[OWASP Logging Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html),
+quanto a eventos correlacionáveis e tratamento de dado sensível, na mesma convenção das
+Regras 1 e 2, e o procedimento de triagem e resposta é alinhado ao
+[NIST SP 800-61r3](https://csrc.nist.gov/pubs/sp/800/61/r3/final).
