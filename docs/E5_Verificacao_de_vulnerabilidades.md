@@ -232,28 +232,33 @@ interpretar o resultado.
   configuração de proteção deixada no padrão mais permissivo, não uma falha de lógica de
   negócio.
 
-### V01 - SQL Injection em `/rest/products/search`
-
-- **O que foi encontrado:**
-- **Por que é um problema:**
-- **Correção proposta:**
-- **Relação com CWE/OWASP:**
-
-### V02 - Content Security Policy (CSP) Header Not Set
-
-- **O que foi encontrado:**
-- **Por que é um problema:**
-- **Correção proposta:**
-- **Relação com CWE/OWASP:**
-
-### V03 - Cross-Domain Misconfiguration (`Access-Control-Allow-Origin: *`)
-
-- **O que foi encontrado:**
-- **Por que é um problema:**
-- **Correção proposta:**
-- **Relação com CWE/OWASP:**
 
 ## 4. Considerações da etapa
 
-*(Pendente - o que a sessão mostrou, limitações da ferramenta e relação com os riscos
-já registrados na [Etapa 2](E2_Riscos_e_NIST_CSF.md). Depende da análise da seção 3.)*
+A sessão confirmou, num sistema real, um padrão que a Etapa 2 só podia argumentar sobre o
+modelo do SIGH: a ausência de uma segunda barreira depois do ponto óbvio de proteção é o
+que transforma uma falha pontual em exposição ampla. O achado de maior risco, V01, é
+validação de entrada ausente na camada mais crítica (a consulta ao banco) - a mesma classe
+de fraqueza que RS02 já previa fechar via faixa terapêutica e validação no servidor
+(R02-C3). Os achados V02 e V03 são configuração permissiva por padrão, não lógica de
+negócio quebrada - e V03 em particular reproduz, em nível de cabeçalho HTTP, o mesmo
+problema estrutural que sustenta o R04 deste grupo: a ausência de uma fronteira onde uma
+era esperada.
+
+Duas limitações merecem registro, para que os achados não sejam lidos além do que provam.
+Primeiro, a varredura foi **não autenticada** - cobriu só a superfície acessível a um
+usuário anônimo, o que significa que a maior parte das falhas de autorização pós-login (o
+tema central da trilha R06/RS03) ficou fora do alcance desta sessão; nenhuma conclusão
+sobre controle de acesso autenticado pode ser tirada daqui. Segundo, confiança **Baixa** do
+ZAP no V01 não é sinônimo de falso positivo - é sinônimo de "a ferramenta não tem certeza
+sozinha", e foi por isso que a verificação manual da seção 1 foi necessária antes de tratar
+o achado como real; o inverso também vale, e por isso os cinco alertas descartados na seção
+2 foram justificados individualmente, não descartados em bloco.
+
+O ponto mais importante para o trabalho como um todo é metodológico: **o Juice Shop não é
+o SIGH.** Esta sessão não prova nem refuta nada sobre a implementação do SIGH, porque o
+SIGH não tem implementação - prova que a **classe** de vulnerabilidade que a Etapa 1 e a
+Etapa 2 anteciparam a partir do modelo (validação de entrada ausente, fronteiras de
+confiança inexistentes) é real e testável em sistemas do mesmo tipo, quando o código
+existe. É a diferença entre "o modelo sugere que isso pode acontecer" e "isso acontece,
+neste outro sistema, exatamente pela razão que o modelo sugeriu".
