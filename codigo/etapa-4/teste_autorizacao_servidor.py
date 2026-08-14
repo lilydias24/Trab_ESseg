@@ -8,13 +8,15 @@ na Etapa 3:
 - Teste 2 (não autorizado) = RS03-CA02 e RS03-CA03: sessão de Supervisor tenta
   elevar o próprio `nivelAcesso`, inclusive chamando o endpoint diretamente.
 
-As verificações auxiliares cobrem RS03-CA04, RS03-CA05, RS03-CA06 e RS03-CA08.
+As verificações auxiliares cobrem RS03-CA04, RS03-CA05, RS03-CA06 e RS03-CA08, e
+a validação de entrada da operação de alteração de perfil (HTTP 400).
 
 Execução:  python teste_autorizacao_servidor.py
 """
 
 from autorizacao_servidor import (
     ErroAutorizacao,
+    ErroDeEntrada,
     ServicoDeAutorizacao,
     ServicoDeFuncionarios,
     Sessao,
@@ -238,11 +240,64 @@ def teste_3_verificacoes_auxiliares() -> None:
     print("     campos de autenticacao na listagem............... nenhum")
 
 
+def teste_4_entrada_invalida() -> None:
+    """Validação de entrada da alteração de perfil - HTTP 400, e nada gravado.
+
+    Não é critério de RS03: a cláusula 3 fala de *quem* pode alterar, não de
+    *para qual valor*. É o complemento necessário para que a decisão do servidor
+    nunca opere sobre um nível fora do conjunto de domínio, e para que entrada
+    malformada de cliente não vire erro de servidor.
+    """
+    servico, trilha = montar_servico()
+
+    # Nível inexistente, com sessão plenamente autorizada: a alçada não autoriza
+    # inventar perfil.
+    try:
+        servico.executar(
+            SESSAO_DIRETOR,
+            "alterarPerfil",
+            id_alvo="F003",
+            corpo={"novoNivelAcesso": "SuperDiretor"},
+        )
+        raise AssertionError("nivel fora do conjunto conhecido tem de ser recusado")
+    except ErroDeEntrada as erro:
+        assert erro.codigo_http == 400, "entrada invalida e 400, nao 403"
+
+    assert servico.nivel_acesso_de("F003") == "Supervisor", (
+        "recusa por nivel invalido nao pode deixar gravacao"
+    )
+
+    # Parâmetro ausente: 400, e não KeyError virando 500.
+    try:
+        servico.executar(
+            SESSAO_DIRETOR, "alterarPerfil", id_alvo="F003", corpo={}
+        )
+        raise AssertionError("parametro ausente tem de ser recusado")
+    except KeyError:
+        raise AssertionError("parametro ausente nao pode virar KeyError (HTTP 500)")
+    except ErroDeEntrada as erro:
+        assert erro.codigo_http == 400
+
+    assert servico.nivel_acesso_de("F003") == "Supervisor", (
+        "recusa por parametro ausente nao pode deixar gravacao"
+    )
+    assert not trilha.alertas_de_elevacao(), (
+        "nenhuma elevacao foi efetivada: nada a alertar"
+    )
+
+    print("[OK] Validacao de entrada da alteracao de perfil")
+    print("     promocao para nivel inexistente.................. recusada (400)")
+    print("     parametro novoNivelAcesso ausente................ recusado (400), sem KeyError")
+    print(f"     nivelAcesso persistido apos as duas tentativas... {servico.nivel_acesso_de('F003')}")
+
+
 if __name__ == "__main__":
     teste_1_caso_valido()
     print()
     teste_2_caso_nao_autorizado()
     print()
     teste_3_verificacoes_auxiliares()
+    print()
+    teste_4_entrada_invalida()
     print()
     print("Todos os testes passaram.")

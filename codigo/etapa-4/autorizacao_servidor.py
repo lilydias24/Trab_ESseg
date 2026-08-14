@@ -24,6 +24,11 @@ O que este módulo demonstra
    servidor (cláusula 5). O alerta da cláusula 7 é só das elevações
    **efetivadas**; as tentativas alimentam a Regra 3 da Etapa 6 por outros
    gatilhos - daí as duas consultas distintas na trilha.
+6. O valor de destino da alteração de perfil sai de um conjunto fechado
+   (`NIVEIS_DE_ACESSO`) e a ausência do parâmetro é recusada como HTTP 400
+   (`ErroDeEntrada`), não como 403 nem como erro de servidor. Não é cláusula de
+   RS03 - é a higiene de entrada que impede a decisão do servidor de operar
+   sobre um nível que ela não conhece.
 
 O que este módulo não é: um framework de autorização. É o menor modelo capaz de
 tornar essas decisões visíveis - uma sessão, um cadastro em memória, um decisor
@@ -55,14 +60,33 @@ CAMPOS_FUNCIONAIS_GRAVAVEIS = ("nome", "setor")
 # o registro do Diretor (cláusula 3 - quem solicita não é quem aprova).
 ALCADAS_SOBRE_TERCEIROS = ("GerenteGeral", "Diretor")
 
+# Conjunto fechado de níveis do modelo de domínio. É allowlist de valores, e não
+# só de campos: sem ela, uma sessão autorizada gravaria qualquer string como
+# nível - `"SuperDiretor"`, `""` - e a própria decisão de `decidir`, que compara
+# `nivel_acesso` com literais, passaria a operar sobre um valor que não conhece.
+NIVEIS_DE_ACESSO = ("Supervisor", "GerenteSetor", "GerenteGeral", "Diretor")
+
 LIMITE_DE_LISTAGEM = 50
 CODIGO_NAO_AUTORIZADO = 403
+CODIGO_ENTRADA_INVALIDA = 400
 
 
 class ErroAutorizacao(Exception):
     """Recusa de autorização. Corresponde à resposta HTTP 403 da cláusula 4."""
 
     codigo_http = CODIGO_NAO_AUTORIZADO
+
+
+class ErroDeEntrada(Exception):
+    """Recusa por requisição malformada. Corresponde a HTTP 400, não a 403.
+
+    A distinção não é cosmética: 403 diz "você não pode", 400 diz "o pedido não
+    faz sentido". Tratar parâmetro ausente como erro de autorização mentiria na
+    trilha; deixá-lo virar `KeyError` devolveria 500 - erro de servidor para
+    entrada malformada de cliente.
+    """
+
+    codigo_http = CODIGO_ENTRADA_INVALIDA
 
 
 @dataclass(frozen=True)
@@ -234,6 +258,11 @@ class ServicoDeFuncionarios:
             # recusa não pode virar fonte de enumeração.
             raise ErroAutorizacao("operacao nao autorizada")
 
+        if operacao in ("alterarPerfil", "salvarCadastro") and id_alvo is None:
+            # Operação sobre registro sem dizer qual registro é pedido
+            # malformado, não recusa de alçada: 400, e antes de qualquer escrita.
+            raise ErroDeEntrada("operacao exige identificacao do registro alvo")
+
         if operacao == "alterarPerfil":
             return self._alterar_perfil(sessao, id_alvo, corpo, decisao)
         if operacao == "salvarCadastro":
@@ -256,6 +285,12 @@ class ServicoDeFuncionarios:
     def _alterar_perfil(
         self, sessao: Sessao, id_alvo: str, corpo: dict, decisao: Decisao
     ) -> dict:
+        """Efetiva a alteração de perfil já autorizada.
+
+        Levanta `ErroDeEntrada` (HTTP 400) se `novoNivelAcesso` não vier no corpo
+        ou trouxer valor fora de `NIVEIS_DE_ACESSO`. Não é `ErroAutorizacao`: a
+        alçada foi verificada e aprovada antes daqui - o que falha é o pedido.
+        """
         registro = self._cadastro[id_alvo]
         anterior = registro["nivelAcesso"]
         # O valor novo é parâmetro da operação própria de alteração de perfil -
@@ -263,7 +298,14 @@ class ServicoDeFuncionarios:
         # foi descartado na entrada. O primeiro é o que a operação autorizada
         # concede a um terceiro; o segundo seria o cliente afirmando a própria
         # alçada. É a cláusula 3 tomando forma no código.
+        if "novoNivelAcesso" not in corpo:
+            raise ErroDeEntrada("parametro novoNivelAcesso ausente")
         novo = corpo["novoNivelAcesso"]
+        # Estar autorizado a alterar o perfil de alguém não é estar autorizado a
+        # inventar um perfil: a validação vem depois da decisão porque é sobre o
+        # valor, não sobre quem pede.
+        if novo not in NIVEIS_DE_ACESSO:
+            raise ErroDeEntrada("nivel de acesso fora do conjunto conhecido")
         registro["nivelAcesso"] = novo
         self._trilha.registrar(
             sessao, "alterarPerfil", id_alvo, "EFETIVADA", decisao.motivo,
