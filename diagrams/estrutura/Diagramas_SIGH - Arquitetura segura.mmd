@@ -1,0 +1,131 @@
+%%{init: {"theme": "neutral", "markdownAutoWrap": false, "flowchart": {"curve": "linear", "nodeSpacing": 55, "rankSpacing": 95, "wrappingWidth": 520}}}%%
+flowchart LR
+  %% Arquitetura segura do SIGH - Etapa 3, seção 3 (@lorenzoficher)
+  %% Este é o arquivo-fonte editável do diagrama. Ele é a origem de
+  %% "Diagramas_SIGH - Arquitetura segura.png": ao editar o desenho, edite ESTE
+  %% arquivo e reexporte o PNG com o mesmo nome, para não quebrar as referências
+  %% em docs/E3_Arquitetura_segura.md e em diagrams/README.md.
+  %%   npx -y @mermaid-js/mermaid-cli -i "Diagramas_SIGH - Arquitetura segura.mmd"
+  %%       -o "Diagramas_SIGH - Arquitetura segura.png" -s 7 -b white
+  %% O conteúdo do desenho é a especificação das seções 3.1 a 3.3 da Etapa 3:
+  %% 3.1 dá os componentes acrescentados, 3.2 as cinco fronteiras de confiança e
+  %% 3.3 o fluxo de referência do registro de óbito (UC10). Preenchimento cinza
+  %% marca o que é novo nesta etapa; branco é o que já existia no diagrama de
+  %% componentes do SIGH.
+
+  subgraph ZNC["Zona não confiável"]
+    CLI["`«executable»
+    **DesktopCliente**
+    *identidade, papel, autor e data/hora
+    enviados daqui não são confiáveis*`"]
+  end
+
+  subgraph SIGH["SIGH — fronteira da instituição"]
+    GW["`«component»
+    **APIGateway**
+    *descarta identidade, papel, autor e
+    data/hora do cliente e os reconstrói
+    a partir da sessão*`"]
+
+    AUT["`«component»
+    **Serviço de Autenticação**
+    *único emissor da identidade de sessão*
+    DA03 · RS01 · R01-C1 a R01-C4
+    **novo nesta etapa**`"]
+
+    AZ["`«component»
+    **Serviço de Autorização**
+    *decisão fora do serviço que executa*
+    RS02 e RS03 · R02-C2, R03-C1, R06-C1
+    **novo nesta etapa**`"]
+
+    AUD["`«component»
+    **Serviço de Auditoria**
+    *único com escrita na trilha*
+    DA01 · R02-C4, R03-C3, R06-C3
+    **novo nesta etapa**`"]
+
+    CAT["`«component»
+    **Catálogo Clínico versionado**
+    RS02 · R02-C3
+    **novo nesta etapa**`"]
+
+    NEG["`«executable»
+    **Serviços de Negócio (7)**
+    Paciente · AtendimentoPaciente
+    AcompanhamentoPaciente · InternacaoPaciente
+    Funcionario · AgendaFuncionario · Refeicao
+    *não são isolados entre si: todos os DAOs
+    terminam no mesmo SGBD central (R04, R05)*`"]
+
+    DB[("`«persistent»
+    **SGBD central**`")]
+  end
+
+  AUDDB[("`«persistent»
+  **Armazenamento de Auditoria**
+  *somente acréscimo — nenhum perfil
+  da aplicação altera ou exclui*`")]
+
+  GOV["`«system»
+  **Sistema Governamental**`"]
+
+  %% Fronteira 1 da seção 3.2: o que vem do cliente é entrada não confiável
+  CLI -->|"`registrarObito(causaCID,
+  dataHoraObito)
+  *sem autor, sem carimbo*`"| GW
+
+  GW -->|"`valida sessão +
+  reautenticação`"| AUT
+
+  GW -->|"`identidade verificada:
+  quem, papel
+  e quando reautenticou
+  (DA03)`"| NEG
+
+  %% Fronteira 2: a decisão de autorização fica fora do serviço que executa
+  NEG -->|"`papel médico + vínculo?
+  (R03-C1)`"| AZ
+
+  AUT -->|"`eventos de autenticação,
+  bloqueio e
+  reautenticação (RS01,
+  cláusula 7)`"| AUD
+
+  %% Fronteira 3: seta de mão única para a auditoria
+  NEG -->|"`append *via buffer local
+  durável*:
+  autor, qualidade da
+  identidade (2FA,
+  reautenticação ou break-
+  glass), sessão,
+  terminal e
+  dataHoraRegistro do
+  servidor
+  (R03-C2, R03-C3)`"| AUD
+
+  %% Fronteira 4: armazenamento de auditoria separado do SGBD central (DA01)
+  AUD -->|"append — mão única"| AUDDB
+
+  NEG -->|"faixa terapêutica (R02-C3)"| CAT
+
+  %% Seção 3.3: a gravação acontece DEPOIS do append, nunca antes
+  NEG -->|"`grava Obito e encerra o
+  prontuário
+  **somente após o append
+  ter sucesso**`"| DB
+
+  %% Fronteira 5: a transmissão do óbito atravessa a fronteira da instituição
+  NEG -->|"`envio + registro probatório
+  (R03-C4)`"| GOV
+
+  classDef novo fill:#e8e8e8,stroke:#333,stroke-width:1.5px,color:#000
+  classDef existente fill:#ffffff,stroke:#333,stroke-width:1.5px,color:#000
+  classDef externo fill:#ffffff,stroke:#333,stroke-width:1.5px,stroke-dasharray:6 4,color:#000
+
+  class AUT,AZ,AUD,CAT,AUDDB novo
+  class CLI,GW,NEG,DB existente
+  class GOV externo
+
+  style ZNC fill:#ffffff,stroke:#999,color:#333
+  style SIGH fill:#fafafa,stroke:#999,color:#333
