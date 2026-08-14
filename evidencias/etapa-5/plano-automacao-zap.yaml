@@ -50,10 +50,14 @@ jobs:
       maxScanDurationInMins: 20
       threadPerHost: 5
 
+  # reportDir relativo ao diretorio de trabalho de onde o ZAP e chamado, para que o
+  # plano rode em qualquer sistema operacional sem edicao previa. Na sessao de
+  # 13/08/2026 o diretorio usado foi "C:/tmp/zap-out" (Windows); os dois relatorios
+  # gerados sao exatamente os versionados nesta pasta.
   - type: report
     parameters:
       template: traditional-html
-      reportDir: "C:/tmp/zap-out"
+      reportDir: "./zap-out"
       reportFile: "relatorio-zap-juiceshop"
       reportTitle: "Etapa 5 - Verificacao de Vulnerabilidades (OWASP ZAP / Juice Shop)"
       reportDescription: "Sessao unica de verificacao conduzida para a Etapa 5 do trabalho de Engenharia de Software Seguro."
@@ -61,11 +65,5 @@ jobs:
   - type: report
     parameters:
       template: traditional-json
-      reportDir: "C:/tmp/zap-out"
+      reportDir: "./zap-out"
       reportFile: "relatorio-zap-juiceshop"
-
-  - type: report
-    parameters:
-      template: risk-confidence-html
-      reportDir: "C:/tmp/zap-out"
-      reportFile: "relatorio-zap-juiceshop-risco-confianca"
