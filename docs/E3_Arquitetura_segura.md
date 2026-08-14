@@ -532,6 +532,28 @@ o que impede que exista um óbito sem rastro, e é a diferença entre auditar e 
 
 ## 4. Decisões de arquitetura
 
+O §18.4 do enunciado pede que cada decisão registre **cinco** campos: problema ou risco
+tratado, decisão tomada, motivo, componente afetado e resultado esperado. As subseções
+abaixo estão no formato de registro de decisão adotado pelo grupo - contexto, decisão,
+alternativas consideradas e consequências -, que é mais completo em alternativas descartadas
+mas não nomeia em campo próprio o componente afetado nem o resultado esperado. O quadro
+abaixo faz essa correspondência para as três decisões, sem substituir o texto de nenhuma
+delas: cada linha aponta para a subseção onde a justificativa está desenvolvida.
+*(Quadro acrescentado por @PPrauchner; o conteúdo de cada decisão é de seu autor.)*
+
+| Decisão | Problema ou risco tratado | Motivo | Componente afetado | Resultado esperado |
+| --- | --- | --- | --- | --- |
+| **DA01** - trilha de auditoria como serviço próprio, somente de acréscimo, com armazenamento separado do SGBD central | **R03** (Repudiation) como risco principal; as evidências exigidas por **R01**, **R02** e **R06** dependem da mesma capacidade inexistente | Quem tem permissão de escrita no SGBD central para gravar o registro tem, pela mesma credencial, permissão para alterá-lo - a trilha ficaria sob controle de quem ela audita, que é a condição explorada por R06. E o banco único já é o ponto de concentração de R05 | Novo **Serviço de Auditoria** com armazenamento próprio; os 7 serviços de negócio passam a ter apenas `append`, com buffer local durável; SGBD central deixa de hospedar a trilha | Óbito (UC10) e alta (UC06) só se concluem depois que o evento está durável; apagar o dado e o seu rastro passa a exigir **dois** comprometimentos distintos |
+| **DA02** - Serviço de Autorização centralizado como ponto único de decisão de acesso | **R06** (`nivelAcesso` validado só na interface), **R02** (papel médico e vínculo) e **R04** (vínculo profissional-paciente na consulta) | Decisão de autorização tomada na interface é contornável reenviando a requisição (CWE-602, passo 3 do CA05); tomada dentro de cada serviço, seria repetida sete vezes, com sete oportunidades de divergência | Novo **Serviço de Autorização**, entre o API Gateway/Serviço de Autenticação e os 7 serviços de negócio; políticas de papel × `nivelAcesso` × vínculo deixam de viver no código de cada serviço | Uma única implementação atende RS02, RS03 e R04-C2; toda decisão, permitida ou negada, vira evento na auditoria e alimenta a Regra 3 da Etapa 6 |
+| **DA03** - serviço de autenticação dedicado como emissor único da identidade de sessão | **R01** (Spoofing); habilita RS02 e RS03, que dependem de o servidor saber quem chama | As credenciais são atributos de `Funcionario`, dentro do serviço de cadastro administrativo: alcançar o cadastro é alcançar as senhas (T06/CA05), e não existe lugar único onde impor MFA, bloqueio e expiração de sessão | Novo **Serviço de Autenticação**; **Serviço de Funcionários** perde a guarda das credenciais; **API Gateway** passa a validar a sessão e propagar identidade verificada; fluxo de login do **Desktop Cliente** é reescrito | Identidade de sessão verificada como única fonte de identidade do sistema; ler o cadastro deixa de implicar ler credenciais, cortando o encadeamento T06 → T01 de CA05 |
+
+As três decisões compartilham a mesma consequência negativa, e o quadro a torna visível de
+uma vez: cada uma acrescenta um componente de passagem obrigatória a um sistema que já
+tinha o API Gateway e o SGBD único como pontos de concentração - exatamente a característica
+que sustenta **R05**. É por isso que a conciliação registrada ao final desta seção não é
+formalidade: sem redundância e sem política explícita de indisponibilidade, a arquitetura
+segura melhora quatro riscos piorando um quinto.
+
 ### DA01 - Trilha de auditoria como serviço próprio, somente de acréscimo e com armazenamento separado do SGBD central - @lorenzoficher
 
 - **Contexto.** A arquitetura atual não tem onde registrar quem fez o quê: os 7
