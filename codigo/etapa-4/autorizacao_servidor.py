@@ -1,0 +1,270 @@
+"""Controle de autorização no servidor para o `nivelAcesso` do Administrador.
+
+Etapa 4 do ESSEG - Prática 2, de responsabilidade de @PPrauchner.
+Atende ao risco R06 (Elevation of Privilege) e ao requisito RS03 da Etapa 3.
+
+Referência: OWASP Authorization Cheat Sheet
+https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html
+
+O que este módulo demonstra
+--------------------------
+1. Identidade, perfil e `nivelAcesso` vêm da **sessão autenticada**; os campos
+   homônimos recebidos no corpo são **descartados antes de qualquer validação**
+   (cláusula 1 de RS03). Descartar, e não validar: validar um valor controlado
+   pelo cliente ainda é confiar nele.
+2. A decisão de autorização é explícita, no servidor e **fora** do componente
+   que executa a operação - é o Serviço de Autorização da DA02 -, com **negação
+   por padrão**: operação sem regra declarada é recusada (cláusula 2).
+3. `nivelAcesso` não é gravável pela via de salvamento do cadastro; a mudança de
+   perfil é operação própria, exige alçada de Diretor e o titular nunca é
+   autorizado sobre o próprio registro (cláusula 3).
+4. A recusa é HTTP 403 e precede a persistência, sem efeito parcial (cláusula 4).
+5. Alterações efetivadas **e** recusadas vão para a trilha de auditoria, com
+   autor, valor anterior, valor novo, terminal e data/hora carimbados pelo
+   servidor (cláusula 5), alimentando o alerta da Regra 3 (cláusula 7).
+
+O que este módulo não é: um framework de autorização. É o menor modelo capaz de
+tornar essas decisões visíveis - uma sessão, um cadastro em memória, um decisor
+e uma trilha somente de acréscimo.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime, timezone
+
+# Campos que o cliente pode enviar mas que só a sessão tem autoridade para
+# afirmar. São removidos do corpo na entrada do serviço.
+CAMPOS_DE_SESSAO = ("idFuncionario", "perfil", "nivelAcesso")
+
+# Campos de autenticação nunca retornam em resposta administrativa: eles residem
+# no serviço de autenticação instituído pela DA03 (cláusula 8).
+CAMPOS_DE_AUTENTICACAO = ("nomeLogin", "senhaLogin")
+
+LIMITE_DE_LISTAGEM = 50
+CODIGO_NAO_AUTORIZADO = 403
+
+
+class ErroAutorizacao(Exception):
+    """Recusa de autorização. Corresponde à resposta HTTP 403 da cláusula 4."""
+
+    codigo_http = CODIGO_NAO_AUTORIZADO
+
+
+@dataclass(frozen=True)
+class Sessao:
+    """Identidade emitida pelo serviço de autenticação (DA03).
+
+    É a única fonte de perfil e de `nivelAcesso` aceita pelo servidor. Imutável
+    porque a sessão não pode ser reescrita pelo conteúdo de uma requisição.
+    """
+
+    id_funcionario: str
+    perfil: str
+    nivel_acesso: str
+    terminal: str
+
+
+@dataclass(frozen=True)
+class Decisao:
+    permitida: bool
+    motivo: str
+
+
+def descartar_campos_de_sessao(corpo: dict) -> tuple[dict, tuple[str, ...]]:
+    """Remove do corpo os campos que só a sessão pode afirmar.
+
+    Devolve o corpo já limpo e a lista do que foi descartado - a segunda é o que
+    permite registrar a tentativa em vez de ignorá-la em silêncio (RS03-CA04).
+    """
+    descartados = tuple(campo for campo in CAMPOS_DE_SESSAO if campo in corpo)
+    limpo = {chave: valor for chave, valor in corpo.items() if chave not in CAMPOS_DE_SESSAO}
+    return limpo, descartados
+
+
+class TrilhaDeAuditoria:
+    """Trilha somente de acréscimo, no papel do Serviço de Auditoria (DA01)."""
+
+    def __init__(self) -> None:
+        self._entradas: list[dict] = []
+
+    def registrar(
+        self,
+        sessao: Sessao,
+        operacao: str,
+        id_alvo: str | None,
+        resultado: str,
+        motivo: str = "",
+        valor_anterior: str | None = None,
+        valor_novo: str | None = None,
+        campos_descartados: tuple[str, ...] = (),
+    ) -> None:
+        self._entradas.append(
+            {
+                # O carimbo é do servidor, nunca do cliente: em R06 a data da
+                # mudança de perfil é justamente o que não se consegue
+                # reconstruir depois.
+                "momento_servidor": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                "autor": sessao.id_funcionario,
+                "perfil_autor": sessao.nivel_acesso,
+                "terminal": sessao.terminal,
+                "operacao": operacao,
+                "alvo": id_alvo,
+                "resultado": resultado,
+                "motivo": motivo,
+                "valor_anterior": valor_anterior,
+                "valor_novo": valor_novo,
+                "campos_descartados": campos_descartados,
+            }
+        )
+
+    def entradas(self) -> tuple[dict, ...]:
+        return tuple(self._entradas)
+
+    def alertas_de_elevacao(self) -> tuple[dict, ...]:
+        """Eventos que alimentam a Regra 3 da Etapa 6.
+
+        Inclui as tentativas recusadas: em R06 o que interessa detectar é a
+        tentativa, e não apenas a elevação que deu certo.
+        """
+        return tuple(e for e in self._entradas if e["operacao"] == "alterarPerfil")
+
+
+class ServicoDeAutorizacao:
+    """Ponto único de decisão de acesso, conforme a DA02.
+
+    Fica fora do serviço que executa a operação: se a decisão morasse dentro
+    dele, seria alcançável pelo mesmo caminho que se quer barrar.
+    """
+
+    def decidir(self, sessao: Sessao, operacao: str, id_alvo: str | None) -> Decisao:
+        if operacao == "alterarPerfil":
+            if sessao.nivel_acesso != "Diretor":
+                return Decisao(False, "alteracao de perfil exige alcada de Diretor")
+            if id_alvo == sessao.id_funcionario:
+                return Decisao(False, "o titular nao tem alcada sobre o proprio registro")
+            return Decisao(True, "sessao com alcada de Diretor sobre outro funcionario")
+
+        if operacao == "salvarCadastro":
+            if sessao.perfil != "Administrador":
+                return Decisao(False, "operacao administrativa exige perfil Administrador")
+            return Decisao(True, "dados funcionais dentro da alcada administrativa")
+
+        if operacao == "listarCadastro":
+            if sessao.nivel_acesso not in ("GerenteGeral", "Diretor"):
+                return Decisao(False, "listagem em massa exige alcada de GerenteGeral")
+            return Decisao(True, "listagem autorizada, sujeita a limite de volume")
+
+        # Negação por padrão: um endpoint administrativo novo, que ninguém
+        # lembrou de declarar aqui, nasce recusado - nunca liberado por omissão.
+        return Decisao(False, "operacao sem regra de autorizacao declarada")
+
+
+class ServicoDeFuncionarios:
+    """Componente que executa a operação, depois de autorizada em outro lugar."""
+
+    limite_de_listagem = LIMITE_DE_LISTAGEM
+
+    def __init__(
+        self,
+        cadastro: dict[str, dict],
+        autorizacao: ServicoDeAutorizacao,
+        trilha: TrilhaDeAuditoria,
+    ) -> None:
+        self._cadastro = cadastro
+        self._autorizacao = autorizacao
+        self._trilha = trilha
+
+    def executar(self, sessao: Sessao, operacao: str, id_alvo: str | None, corpo: dict):
+        """Entrada única do serviço - o endpoint, com ou sem interface na frente.
+
+        A ordem das três primeiras linhas é o requisito: descartar o que veio do
+        cliente, decidir, e só então executar. Persistir antes de decidir seria
+        o efeito parcial que a cláusula 4 proíbe.
+        """
+        corpo, descartados = descartar_campos_de_sessao(corpo)
+        decisao = self._autorizacao.decidir(sessao, operacao, id_alvo)
+
+        if not decisao.permitida:
+            self._trilha.registrar(
+                sessao, operacao, id_alvo, "RECUSADA", decisao.motivo,
+                campos_descartados=descartados,
+            )
+            # A mensagem não diz qual campo ou perfil existe: a resposta de
+            # recusa não pode virar fonte de enumeração.
+            raise ErroAutorizacao("operacao nao autorizada")
+
+        if operacao == "alterarPerfil":
+            return self._alterar_perfil(sessao, id_alvo, corpo, decisao)
+        if operacao == "salvarCadastro":
+            return self._salvar_cadastro(sessao, id_alvo, corpo, descartados)
+        return self._listar_cadastro(sessao)
+
+    def nivel_acesso_de(self, id_funcionario: str) -> str:
+        return self._cadastro[id_funcionario]["nivelAcesso"]
+
+    def _alterar_perfil(
+        self, sessao: Sessao, id_alvo: str, corpo: dict, decisao: Decisao
+    ) -> dict:
+        registro = self._cadastro[id_alvo]
+        anterior = registro["nivelAcesso"]
+        # O valor novo é parâmetro da operação própria de alteração de perfil -
+        # `novoNivelAcesso`, e não o `nivelAcesso` do corpo do salvamento, que já
+        # foi descartado na entrada. O primeiro é o que a operação autorizada
+        # concede a um terceiro; o segundo seria o cliente afirmando a própria
+        # alçada. É a cláusula 3 tomando forma no código.
+        novo = corpo["novoNivelAcesso"]
+        registro["nivelAcesso"] = novo
+        self._trilha.registrar(
+            sessao, "alterarPerfil", id_alvo, "EFETIVADA", decisao.motivo,
+            valor_anterior=anterior, valor_novo=novo,
+        )
+        return self._sem_campos_de_autenticacao(registro)
+
+    def _salvar_cadastro(
+        self, sessao: Sessao, id_alvo: str, corpo: dict, descartados: tuple[str, ...]
+    ) -> dict:
+        registro = self._cadastro[id_alvo]
+        registro.update(corpo)
+        self._trilha.registrar(
+            sessao, "salvarCadastro", id_alvo, "EFETIVADA",
+            "dados funcionais gravados", campos_descartados=descartados,
+        )
+        return self._sem_campos_de_autenticacao(registro)
+
+    def _listar_cadastro(self, sessao: Sessao) -> list[dict]:
+        pagina = [
+            self._sem_campos_de_autenticacao(registro)
+            for registro in list(self._cadastro.values())[: self.limite_de_listagem]
+        ]
+        self._trilha.registrar(
+            sessao, "listarCadastro", None, "EFETIVADA",
+            f"{len(pagina)} registros retornados",
+        )
+        return pagina
+
+    @staticmethod
+    def _sem_campos_de_autenticacao(registro: dict) -> dict:
+        return {
+            chave: valor
+            for chave, valor in registro.items()
+            if chave not in CAMPOS_DE_AUTENTICACAO
+        }
+
+
+def cadastro_de_exemplo() -> dict[str, dict]:
+    """Recorte mínimo do cadastro de `Funcionario`, com os campos que importam."""
+    return {
+        "F001": {
+            "nome": "Helena Duarte", "setor": "Diretoria", "nivelAcesso": "Diretor",
+            "nomeLogin": "hduarte", "senhaLogin": "<registro scrypt da Pratica 1>",
+        },
+        "F002": {
+            "nome": "Marcos Vieira", "setor": "Internacao", "nivelAcesso": "GerenteGeral",
+            "nomeLogin": "mvieira", "senhaLogin": "<registro scrypt da Pratica 1>",
+        },
+        "F003": {
+            "nome": "Rita Camargo", "setor": "Farmacia", "nivelAcesso": "Supervisor",
+            "nomeLogin": "rcamargo", "senhaLogin": "<registro scrypt da Pratica 1>",
+        },
+    }
