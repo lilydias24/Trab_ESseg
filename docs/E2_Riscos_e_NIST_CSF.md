@@ -19,7 +19,7 @@
 | 14.4 Plano de tratamento | Todos | Todos concluídos |
 | 14.5 Ordem de implementação | @mariasanchez0’s | Concluído |
 | 14.6 Risco residual | Todos | Todos concluídos |
-| 15. Considerações finais | @PPrauchner (rascunho) + revisão de todos | Rascunho concluído sobre R01, R02, R05 e R06 (revisão após R03, R04, 13.6 e 14.5) |
+| 15. Considerações finais | @PPrauchner + revisão de todos | Concluída (revisada sobre os seis riscos, após R03, R04, 13.6 e 14.5) |
 
 ---
 
@@ -650,100 +650,110 @@ pressupõe aquele tratamento em curso.
 
 ## 15. Considerações finais (Etapa 2)
 
-> Rascunho de responsabilidade do **@PPrauchner**, com revisão de todos.
+> Seção de responsabilidade do **@PPrauchner**, com revisão de todos. Escrita sobre
+> os **seis riscos registrados** em 13.4, com a priorização de 13.6 e a ordem de
+> implementação de 14.5 já compiladas.
 
-> **Rascunho provisório.** Esta seção sintetiza os **quatro riscos registrados até
-> aqui** - R01, R02, R05 e R06. **R03 (Repudiation) e R04 (Information Disclosure)
-> ainda não foram registrados em 13.4**, e a priorização geral (13.6) e a ordem de
-> implementação (14.5) ainda não foram compiladas. Tudo o que segue vale sobre esse
-> recorte parcial e deve ser revisto quando as duas trilhas pendentes entrarem no
-> documento - inclusive as afirmações sobre quais riscos ocupam o topo e quais
-> funções do NIST predominam, que podem mudar de ordem.
+**Riscos mais importantes.** Dos seis riscos registrados, **cinco são Críticos e um é
+Alto** - e a distinção que interessa não é o nível, que quase não separa, e sim o
+papel de cada um na cadeia. **R01 (16, Crítico)** e **R04 (16, Crítico)** empatam na
+pontuação máxima da escala por combinarem probabilidade e impacto máximos, mas por
+motivos opostos: R01 é barato de executar porque `senhaLogin` está em texto simples na
+classe `Funcionario`, com fator único e sem bloqueio por tentativas - as
+justificativas de 13.5 mostram quatro caminhos para obter a credencial -, enquanto R04
+é caro de suportar porque o `idPaciente` sequencial torna o incidente **enumerável**:
+um evento alcança a base inteira, não um paciente. **R02 (12, Crítico)** é o único
+cujo dano não é informacional: entre a `dosagemMedicamento` alterada e o prejuízo
+existe apenas a enfermagem cumprindo o que a tela mostra, e o efeito se torna
+irreversível no instante da administração. **R03 (12, Crítico)** é o único que
+compromete a **capacidade de provar** os demais - sem autoria carimbada pelo servidor,
+nenhum dos outros cinco eventos pode ser apurado depois de ocorrido. **R05 (12,
+Crítico)** é o único que **não exige ator malicioso**: o fechamento de faturamento do
+RF25, rodando no Serviço de Atendimento Médico por não existir microsserviço
+Financeiro, disputa as conexões do mesmo SGBD de que o Serviço de Internação precisa;
+o uso legítimo já produz a condição do risco. E **R06 (8, Alto)** é o de menor
+pontuação do registro, mas a fórmula não o mede bem: ele expõe `nomeLogin` e
+`senhaLogin` de todos os perfis de uma vez, e 13.5 já argumenta que ele pede urgência
+acima do que um 8 sugere - argumento que 13.6 acolheu ao colocá-lo em segundo lugar.
 
-**Riscos mais importantes.** Entre os quatro registrados, três são o núcleo da
-atenção, por razões que não se repetem. **R01 (16, Crítico)** é o de maior pontuação
-da escala e o único que combina a probabilidade máxima com o impacto máximo: com
-`senhaLogin` em texto simples na classe `Funcionario`, fator único e sem bloqueio
-por tentativas, o obstáculo entre o atacante e a conta é saber a senha - e as
-justificativas de 13.5 mostram quatro caminhos baratos para obtê-la. **R02 (12,
-Crítico)** é o único cujo dano não é informacional: entre a `dosagemMedicamento`
-alterada e o prejuízo existe apenas a enfermagem cumprindo o que a tela mostra, e o
-efeito se torna irreversível no instante da administração. **R05 (12, Crítico)** é o
-único que **não exige ator malicioso** - o fechamento de faturamento do RF25,
-rodando no Serviço de Atendimento Médico por não existir microsserviço Financeiro,
-disputa as conexões do mesmo SGBD de que o Serviço de Internação precisa; o uso
-legítimo já produz a condição do risco. **R06 (8, Alto)** fica abaixo na pontuação,
-mas é registrado aqui porque a fórmula não o mede bem: ele é o risco que multiplica
-os outros, e 13.5 já argumenta que ele pede urgência acima do que um 8 sugere.
-
-**Razões que determinaram a priorização.** Três critérios ordenaram os quatro
-riscos, e nenhum deles é a pontuação isolada. O primeiro é o **encadeamento**: R01 e
-R06 são riscos **habilitadores** - uma conta assumida ou um perfil promovido
-destravam R02, R03 e R04, e os casos de abuso CA02, CA03 e CA04 citam nominalmente a
-conta assumida como caminho de entrada alternativo. Tratá-los reduz a probabilidade
-efetiva de riscos cujos próprios controles ainda nem foram implantados. O segundo é
-a **irreversibilidade**: onde o dano é físico (R02) ou já consumado (R06), não
-existe tratamento posterior, e todo o esforço tem de ser deslocado para antes do
-evento; onde há restauração possível (R05), a urgência é alta mas a janela de
-correção existe. O terceiro é a **assimetria entre probabilidade e impacto**,
-observada por 13.7 e confirmada pelos quatro registros: a probabilidade vem quase
-sempre de controle ausente - fator único, validação apenas na interface, ausência de
-cota de conexões -, enquanto o impacto vem da natureza do ativo, que é prontuário,
-prescrição e credencial. Como o impacto quase não se reduz por engenharia (três dos
-quatro residuais de 14.6 mantêm o impacto 4), a priorização recai sobre os riscos
+**Razões que determinaram a priorização.** A ordem consolidada em 13.6 - **R01, R06,
+R04, R02, R03, R05** - não segue a pontuação, e o desvio é deliberado. O critério de
+maior peso é o **encadeamento**: R01 e R06 são riscos **habilitadores**, e é por isso
+que ocupam as duas primeiras posições mesmo com R06 valendo 8, à frente de quatro
+riscos de pontuação maior. Uma conta assumida ou um perfil promovido destravam R02,
+R03 e R04 - os casos de abuso CA02, CA03 e CA04 citam nominalmente a conta assumida
+como caminho de entrada alternativo -, de modo que tratá-los reduz a probabilidade
+efetiva de riscos cujos controles próprios ainda nem foram implantados. Depois dos
+habilitadores, três critérios separam os quatro riscos restantes: o **alcance por
+incidente** põe R04 à frente, porque é o único enumerável; a **irreversibilidade**
+põe R02 em seguida, porque o dano físico não admite correção alguma, nem mesmo a
+retificação que R03 obtém junto ao Sistema Governamental; e a **possibilidade de
+recuperação** empurra R05 para a última posição entre os Críticos, por ser o único
+cujo dano se desfaz restaurando o serviço. Sustentando tudo isso está a **assimetria
+entre probabilidade e impacto** que 13.7 observa e os seis registros confirmam: a
+probabilidade vem quase sempre de controle ausente - fator único, validação apenas na
+interface, identificador sequencial, ausência de cota de conexões -, enquanto o
+impacto vem da natureza do ativo, que é prontuário, prescrição, registro de óbito e
+credencial. Como o impacto quase não se reduz por engenharia (cinco dos seis
+residuais de 14.6 preservam o impacto 4 ou 3), a priorização recai sobre os riscos
 onde a probabilidade ainda pode cair muito.
 
-**Estratégias de tratamento predominantes.** Os quatro riscos registrados escolheram
-**Reduzir**, e o que interessa não é a unanimidade, e sim o fato de as três outras
-estratégias serem descartadas pelas **mesmas razões estruturais** em todos eles.
-*Evitar* está fora porque a função de origem é essencial ao SIGH: não se elimina a
-autenticação de profissionais (R01), a alteração de prescrição (R02), o acesso
+**Estratégias de tratamento predominantes.** Os seis riscos escolheram **Reduzir**, e o
+que interessa não é a unanimidade, e sim o fato de as três outras estratégias serem
+descartadas pelas **mesmas razões estruturais** em todos eles. *Evitar* está fora
+porque a função de origem é essencial ao SIGH: não se elimina a autenticação de
+profissionais (R01), a alteração de prescrição (R02), o registro de óbito (R03) - que
+é obrigação legal, não conveniência -, a consulta ao prontuário (R04), o acesso
 concorrente dos módulos ao banco (R05) nem a graduação de acesso do `Administrador`
-(R06) - no caso de R06, retirar o `nivelAcesso` pioraria a situação, porque ele é o
-único mecanismo de autorização que o modelo tem. *Compartilhar* está fora porque a
-consequência é clínica e indelegável: um provedor de identidade externo assume a
-implementação da autenticação, não a responsabilidade do hospital sobre o prontuário,
-e o caso de R05 é ainda mais eloquente - a parcela já compartilhada, a validação de
-cobertura pelo «system» Convênio (RF06), hoje **amplia** o risco por ser síncrona e
-sem modo degradado. *Aceitar* está fora porque três dos quatro riscos são Críticos e
-o quarto expõe as credenciais de todos os perfis. A conclusão que o grupo tira daí é
-que o SIGH não tem risco de sobra a negociar nesta etapa: todo o tratamento é
-engenharia de redução, e a discussão real não é *se* reduzir, é *em que ordem* - o
-que remete a 14.5.
+(R06), cuja retirada pioraria a situação, porque o `nivelAcesso` é o único mecanismo
+de autorização que o modelo tem. *Compartilhar* está fora porque a consequência é
+clínica e indelegável: um provedor de identidade externo assume a implementação da
+autenticação, não a responsabilidade do hospital sobre o prontuário; um serviço de
+carimbo de tempo ancora **quando** o óbito foi registrado, mas não a autoria do ato; e
+o caso de R05 é o mais eloquente de todos - a parcela já compartilhada, a validação de
+cobertura pelo «system» Convênio (RF06), hoje **amplia** o risco por ser síncrona e sem
+modo degradado. *Aceitar* está fora porque cinco dos seis riscos são Críticos e o
+sexto expõe as credenciais de todos os perfis. A conclusão que o grupo tira daí é que
+o SIGH não tem risco de sobra a negociar nesta etapa: todo o tratamento é engenharia
+de redução, e a discussão real não é *se* reduzir, é *em que ordem* - o que remete a
+14.5.
 
-**Funções do NIST mais relevantes para o sistema.** **Protect** e **Detect** aparecem
-nos quatro riscos registrados, e a razão é a mesma que sustenta a estratégia
+**Funções do NIST mais relevantes para o sistema.** **Protect**, **Detect** e
+**Respond** aparecem nos seis riscos, e a razão é a mesma que sustenta a estratégia
 Reduzir: os controles de 14.4 atuam sobre condições que o modelo do SIGH deixou
-abertas. **Govern** aparece em três (R01, R02 e R06) e a exceção é informativa - R05
-não a marca porque a política já existe e é explícita nos RNF01, RNF02 e RNF03; ali
-o que falta não é decisão nem dono, é contrapartida de projeto, e por isso a lacuna
-é arquitetural e migra para a Etapa 3. Mas a assimetria mais reveladora é a de
-**Recover**, marcada apenas em R01 e R05. Nos riscos de dano físico ou informacional
-já consumado - a dose administrada em R02, o privilégio já exercido em R06 - não
-existe o que restaurar: reverter o `nivelAcesso` é escrever um valor de volta em um
-campo, operação que não repara nada do que foi feito com ele. Isso empurra todo o
-tratamento desses dois riscos para antes do evento e é o que explica por que
-**Identify** só aparece em R05, o único risco cujo tratamento ainda depende de um
+abertas, e nenhuma delas dispensa impedir, observar e reagir. **Govern** aparece em
+cinco, e a exceção é informativa - R05 não a marca porque a política já existe e é
+explícita nos RNF01, RNF02 e RNF03; ali o que falta não é decisão nem dono, é
+contrapartida de projeto, e por isso a lacuna é arquitetural e migra para a Etapa 3.
+Mas a assimetria mais reveladora é a de **Recover**, ausente exatamente em R02 e R06.
+Nos riscos de dano físico ou de privilégio já exercido - a dose administrada, o
+cadastro completo já lido - não existe o que restaurar: reverter o `nivelAcesso` é
+escrever um valor de volta em um campo, operação que não repara nada do que foi feito
+com ele. Isso empurra todo o tratamento desses dois riscos para antes do evento. E
+**Identify** aparece só em R05, o único risco cujo tratamento ainda depende de um
 levantamento que não foi feito - capacidade do SGBD central, consumo por
-microsserviço e inventário de dependências externas, sem o qual cota e *rate
-limiting* não têm como ser calibrados.
+microsserviço e inventário de dependências externas, sem o qual cota e *rate limiting*
+não têm como ser calibrados.
 
-**Controles considerados essenciais.** Três se destacam entre os do plano de 14.4.
-O **R01-C1** - armazenar `senhaLogin` com hash e salt - é essencial por ser
-pré-requisito: enquanto as senhas estiverem em texto simples, o impacto de R06
-permanece 4 mesmo com todos os controles próprios de R06 implantados, como a
-justificativa do residual de R06 registra. O **R06-C1** - revalidação de autorização
-no servidor, com o perfil vindo da sessão autenticada e o `nivelAcesso` do corpo da
-requisição descartado - é essencial por alcance: é a mesma checagem de que o
-**R02-C2** depende para garantir que só médicos vinculados alterem tratamentos, o
-que faz dele o único controle da análise que reduz dois riscos com uma implementação
-só. E a **trilha de auditoria imutável** é essencial por recorrência: ela reaparece
-como R01-C3, R02-C4 e R06-C3 sob nomes diferentes, supre a lacuna que o Tópico 9
-deixou aberta ao excluir do escopo o registro de eventos críticos de acesso indevido,
-e é o que a §8.7 da Etapa 1 chamou de "ativo faltante mais caro do recorte". O que
-os três têm em comum é serem controles de **base**, não de cobertura: cada um habilita
-a eficácia de outros, e é por isso que a compilação de 14.5 deve considerá-los antes
-dos demais.
+**Controles considerados essenciais.** Três se destacam entre os do plano de 14.4, e
+os três aparecem nas primeiras ondas de 14.5 pelo mesmo motivo. O **R01-C1** -
+armazenar `senhaLogin` com hash e salt - é essencial por ser pré-requisito: enquanto
+as senhas estiverem em texto simples, o impacto de R06 permanece 4 mesmo com todos os
+controles próprios de R06 implantados, como a justificativa do residual de R06
+registra. O **R06-C1** - revalidação de autorização no servidor, com o perfil vindo da
+sessão autenticada e o `nivelAcesso` do corpo da requisição descartado - é essencial
+por alcance: é a mesma checagem de que **R02-C2** (papel médico e vínculo com o
+paciente) e **R04-C2** (vínculo profissional-paciente na consulta ao prontuário)
+dependem, o que faz dele a única implementação da análise que reduz **três** riscos de
+uma vez. E a **trilha de auditoria imutável** é essencial por recorrência: ela
+reaparece como R02-C4, R03-C3 e R06-C3 sob nomes diferentes, é o destino do alerta de
+padrão de consulta do R04-C5, supre a lacuna que o Tópico 9 deixou aberta ao excluir
+do escopo o registro de eventos críticos de acesso indevido, e é o que a §8.7 da Etapa
+1 chamou de "ativo faltante mais caro do recorte". O que os três têm em comum é serem
+controles de **base**, não de cobertura: cada um habilita a eficácia de outros. É esse
+o raciocínio que a onda 0 de 14.5 formaliza ao colocar o serviço de auditoria (DA01) e
+o de autenticação (DA03) antes de qualquer controle, e que a Etapa 3 recebe como
+decisão de arquitetura em vez de item de plano.
 
 **Principais dificuldades encontradas.** A primeira foi **quantificar sem histórico
 operacional**: as escalas de 13.1 e 13.2 pedem probabilidade e impacto, mas o SIGH
@@ -762,45 +772,54 @@ identidade do profissional (ataque), Spoofing (ameaça) e a exposição resultan
 (risco) precisou ser refeita explicitamente. A quarta foi **sincronizar seções
 compartilhadas**: 13.4, 13.5, 14.1, 14.3, 14.4 e 14.6 são tabelas de linha por
 integrante, e cada um edita a mesma região do arquivo - a convenção de uma branch por
-tarefa com Pull Request foi adotada durante esta etapa justamente por isso.
+tarefa com Pull Request foi adotada durante esta etapa justamente por isso. A ela se
+soma uma quinta, específica das seções de síntese: **13.6, 13.7, 14.5 e esta 15 só
+podem ser fechadas depois de todas as trilhas individuais**, e as quatro tiveram de
+ser revistas quando os últimos riscos entraram no registro - esta seção é ela própria
+uma revisão, escrita primeiro sobre quatro riscos e reescrita sobre os seis.
 
 **Limitações da avaliação.** São quatro, e todas restringem o alcance do que está
 escrito acima. **(1) O SIGH não está implementado.** A análise foi lida do modelo, e
 não do código: só se pode afirmar que o modelo **não especifica** determinada
-verificação, nunca que o sistema não a faz. R02 e R06 dependem inteiramente da
+verificação, nunca que o sistema não a faz. R02, R04 e R06 dependem inteiramente da
 hipótese de que a validação existe apenas na interface - plausível diante do modelo,
 não verificável nesta etapa. **(2) Os residuais de 14.6 são estimativas.** O
 enunciado é explícito ao proibir afirmar que o risco foi reduzido porque um controle
 foi proposto; a redução só se confirma após implementação, testes e evidências, e a
 coluna "condição para aceitar o residual" existe exatamente para tornar esse
-pressuposto verificável. **(3) Dois riscos estão fora da síntese.** R03 e R04 não
-foram registrados, e ambos são consequência direta dos habilitadores já analisados -
-R05 fabrica a condição de R03 ao produzir registros digitados depois da janela de
-indisponibilidade, e R06 alcança o cadastro completo que interessa a R04. É provável
-que a entrada deles reforce a priorização atual, mas isso é hipótese, não resultado.
-**(4) As escalas de 1 a 4 comprimem diferenças reais.** Quatro faixas de
+pressuposto verificável. **(3) O registro não é exaustivo.** 13.4 traz **um risco por
+categoria STRIDE**, o mais representativo de cada uma segundo a Etapa 1 - não todos os
+riscos do recorte. Cada categoria comporta outros eventos que não foram registrados, e
+a ausência de um risco nesta tabela não significa que a categoria esteja esgotada por
+ele. **(4) As escalas de 1 a 4 comprimem diferenças reais.** Quatro faixas de
 probabilidade e quatro de impacto não distinguem riscos de naturezas muito distintas
-que caem na mesma célula, e o caso de R06 já mostra o efeito. A avaliação, além
+que caem na mesma célula: R02, R03 e R05 pontuam 12 sendo incomparáveis entre si, e
+foram as agravantes de 13.6 - não a fórmula - que os ordenaram. A avaliação, além
 disso, cobre apenas o recorte de cinco módulos, não o SIGH inteiro.
 
 **Pontos que precisarão ser detalhados nas próximas etapas.** A **Etapa 3** recebe as
 duas lacunas que não são controle, e sim arquitetura: o **SGBD único** de R05 - a
 réplica de leitura do R05-C3 tira carga da instância, mas não elimina o ponto único
 de escrita - e a segregação de permissões dentro do próprio perfil médico, apontada
-pelo residual de R01 como a única mudança capaz de tirar aquele risco do impacto 4. A
-**Etapa 4** recebe os testes com caso válido e caso malicioso já nomeados na coluna de
-evidências de 14.4: o armazenamento com hash e salt do R01-C1, e os dois de R06 -
-promoção legítima por sessão de Diretor, e tentativa por sessão de Supervisor
-esperando HTTP 403 com o campo inalterado. A **Etapa 5**, liderada pelo Integrante 5,
-recebe a verificação prática desses controles e a produção das evidências que 14.6
-exige como condição para aceitar cada residual. A **Etapa 6** recebe as três regras de
-detecção já citadas nominalmente em 14.3 e 14.4 - tentativas de autenticação (R01),
-alteração de dosagem fora de faixa ou sem segunda assinatura (R02) e alteração de
-`nivelAcesso` (R06) -, às quais deve somar-se o alerta de saturação de 80% do pool de
-conexões do R05-C5, o único indicador **antecedente** da análise: ele avisa antes da
-queda, e não depois. E a **Etapa 7** recebe o encaixe desses controles no pipeline. No
-próprio documento, permanecem em aberto os exemplos do SIGH em 13.2, o registro de
-R03 e R04, a priorização de 13.6 e a ordem de 14.5.
+pelo residual de R01 como a única mudança capaz de tirar aquele risco do impacto 4;
+recebe também os três controles de base identificados acima, que a onda 0 de 14.5 já
+antecipa como decisão de arquitetura e não como item de plano. A **Etapa 4** recebe os
+testes com caso válido e caso malicioso já nomeados na coluna de evidências de 14.4: o
+armazenamento com hash e salt do R01-C1, e os dois de R06 - promoção legítima por
+sessão de Diretor, e tentativa por sessão de Supervisor esperando HTTP 403 com o campo
+inalterado. A **Etapa 5**, liderada pelo Integrante 5, recebe a verificação prática
+desses controles e a produção das evidências que 14.6 exige como condição para aceitar
+cada residual. A **Etapa 6** recebe as três regras de detecção já citadas nominalmente
+em 14.3 e 14.4 - tentativas de autenticação (R01), alteração de dosagem fora de faixa
+ou sem segunda assinatura (R02) e alteração de `nivelAcesso` (R06) -, às quais devem
+somar-se o alerta de padrão de consulta atípico do R04-C5 e o de saturação de 80% do
+pool de conexões do R05-C5, este último o único indicador **antecedente** da análise:
+ele avisa antes da queda, e não depois. E a **Etapa 7** recebe o encaixe desses
+controles no pipeline. No próprio documento, esta etapa se encerra com as seis trilhas
+registradas, justificadas, tratadas, mapeadas ao NIST CSF e priorizadas; o que
+permanece em aberto não é conteúdo desta análise, e sim a condição que a valida - as
+evidências de 14.4 e de 14.6, que só existirão quando os controles forem implementados
+e verificados.
 
-> *Rascunho do Integrante 5, escrito sobre R01, R02, R05 e R06; revisão prevista
-> quando R03 e R04 forem registrados e quando 13.6 e 14.5 forem compiladas.*
+> *Revisão do Integrante 5 sobre os seis riscos registrados, incorporando R03, R04, a
+> priorização de 13.6 e a ordem de implementação de 14.5.*

@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | RS01 - requisito e vulnerabilidade | @lilydias24 | Concluído (aguarda revisão cruzada) |
 | RS02 - requisito e vulnerabilidade | @ARTHUR9011 | Concluído (aguarda revisão cruzada) |
-| RS03 - requisito e vulnerabilidade | @PPrauchner | Pendente |
+| RS03 - requisito e vulnerabilidade | @PPrauchner | Concluído (aguarda revisão cruzada); apoia-se na DA02 |
 | Diagrama da arquitetura segura | @lorenzoficher | Concluído (seções 3.1 a 3.3 e PNG versionado) |
 | Decisão de arquitetura 1 (ligada ao diagrama) | @lorenzoficher | Concluída (DA01) |
 | Decisão de arquitetura 2 (ligada a RS03) | @mariasanchez0 | Concluída (DA02) |
@@ -19,13 +19,18 @@
 
 ## 1. Requisitos de segurança
 
-| ID | Risco de origem | Requisito de segurança | Responsável |
-| --- | --- | --- | --- |
-| RS01 | R01 - Spoofing | O sistema deve exigir autenticação multifator no login e reautenticação antes de operações sensíveis envolvendo a conta de `Funcionario` | @lilydias24 |
-| RS02 | R02 - Tampering | Toda alteração de prescrição ativa deve ser autorizada e validada no servidor, confirmada por segundo profissional e registrada com autoria e versionamento em trilha de auditoria imutável | @ARTHUR9011 |
-| RS03 | R06 - Elevation of Privilege | O sistema deve validar `nivelAcesso` no servidor em toda operação administrativa, e não apenas ocultar opções na interface | @PPrauchner |
+| ID | Risco de origem | Requisito de segurança | Critério de verificação | Responsável |
+| --- | --- | --- | --- | --- |
+| RS01 | R01 - Spoofing | O sistema deve exigir autenticação multifator no login e reautenticação antes de operações sensíveis envolvendo a conta de `Funcionario` | Operação sensível pedida sem segundo fator válido ou fora da janela de reautenticação é recusada, e o valor persistido em `senhaLogin` não é diretamente reutilizável (RS01-CA01 a RS01-CA09) | @lilydias24 |
+| RS02 | R02 - Tampering | Toda alteração de prescrição ativa deve ser autorizada e validada no servidor, confirmada por segundo profissional e registrada com autoria e versionamento em trilha de auditoria imutável | Alteração sem autorização no servidor, fora da faixa terapêutica ou sem o segundo confirmador não publica versão vigente, e a tentativa fica registrada na auditoria (RS02-CA01 a RS02-CA08) | @ARTHUR9011 |
+| RS03 | R06 - Elevation of Privilege | O sistema deve validar `nivelAcesso` no servidor em toda operação administrativa, e não apenas ocultar opções na interface | Requisição que altera `nivelAcesso` partindo de sessão sem alçada é recusada com HTTP 403 e registrada na trilha, mesmo quando enviada direto ao endpoint, sem passar pela interface (RS03-CA01 a RS03-CA08) | @PPrauchner |
 
-> RS01 e RS02 estão detalhados abaixo. RS03 permanece com seu responsável.
+> A coluna *Critério de verificação* foi acrescentada porque o §18.1 do enunciado a exige
+> na tabela de requisitos - o requisito precisa ser "específico e verificável", e é essa
+> coluna que demonstra o segundo adjetivo. Cada célula resume em uma linha os critérios
+> detalhados na subseção do requisito correspondente; nenhum critério novo foi criado aqui.
+
+> Os três requisitos estão detalhados abaixo, cada um na subseção do seu responsável.
 
 ### RS01 - Autenticação forte e reautenticação em operações sensíveis (@lilydias24)
 
@@ -157,15 +162,96 @@ cenários forem demonstrados por testes automatizados e pela consulta à auditor
 | RS02-CA07 | Um usuário da aplicação tenta alterar ou excluir uma versão já registrada | A operação é recusada e a trilha preserva integralmente o histórico |
 | RS02-CA08 | Duas alterações concorrentes tentam partir da mesma versão-base | No máximo uma delas torna-se vigente; a outra recebe conflito, não sobrescreve dados e precisa passar novamente pelas validações e pela confirmação sobre a nova base |
 
+### RS03 - Autorização de operação administrativa decidida no servidor (@PPrauchner)
+
+**Risco de origem.** R06 - um `Administrador` de nível Supervisor persiste
+`nivelAcesso: Diretor` no próprio cadastro e passa a operar com alçada de Diretor sobre o
+Serviço de Funcionários. O requisito atua sobre a condição exata que dá a R06 sua
+probabilidade 2 na [Etapa 2](E2_Riscos_e_NIST_CSF.md): a decisão de autorização existir
+apenas na montagem da interface, de modo que o campo trafega no salvamento comum do
+cadastro (CA05, passo 3) e nada no servidor verifica se quem pediu tem alçada sobre ele.
+
+Vale fixar por que este requisito não é uma variação de RS01. Em R06 **a identidade não
+foi falsificada, foi promovida**: o ator autentica com a própria senha e a sessão é
+legítima do início ao fim. Autenticar melhor - que é o que RS01 faz - não impede nada
+aqui, porque nunca houve dúvida sobre quem é o usuário. A dúvida é sobre o que ele pode.
+
+**Enunciado completo.** Toda operação administrativa do Serviço de Funcionários -
+alteração de perfil, cadastro de profissional, gestão de escalas e de medicamentos e
+listagem em massa do cadastro - só pode ser executada quando o SIGH:
+
+1. obtiver perfil e `nivelAcesso` do solicitante **da sessão autenticada** emitida pelo
+   serviço de autenticação (DA03), **descartando** identidade, papel e `nivelAcesso`
+   recebidos no corpo, na URL ou em cabeçalho da requisição **antes** de qualquer
+   validação - e não apenas ignorando-os na decisão;
+2. submeter a operação a uma decisão de autorização **explícita e no servidor**, tomada
+   fora do componente que a executa (Serviço de Autorização da seção 3.1), com **negação
+   por padrão**: operação administrativa sem regra correspondente é recusada, nunca
+   permitida por omissão;
+3. tratar `nivelAcesso` como campo **não gravável pela via de salvamento do cadastro**: a
+   mudança de perfil só ocorre por operação própria de alteração de perfil, exigindo
+   alçada de Diretor, e o titular **nunca** é autorizado sobre o próprio registro - quem
+   solicita a promoção não é quem a aprova;
+4. recusar a requisição não autorizada com **HTTP 403**, sem executar efeito parcial
+   algum: a verificação precede a persistência e a operação inteira é revertida se
+   qualquer etapa falhar; a resposta não revela quais campos ou perfis existem;
+5. registrar na trilha de auditoria imutável (DA01) tanto as alterações **efetivadas**
+   quanto as **recusadas**, com autor obtido da sessão, perfil vigente no momento,
+   valor anterior, valor novo, terminal de origem e data/hora carimbados pelo servidor;
+6. **reavaliar a autorização a cada requisição** e reemitir a identidade de sessão quando
+   o perfil mudar: sessão aberta antes da promoção não carrega a alçada nova, e sessão de
+   perfil rebaixado perde a alçada antiga imediatamente, sem depender de novo login;
+7. emitir alerta ao Diretor e à Segurança da Informação **no momento** de toda elevação de
+   perfil efetivada, e não em relatório posterior - é a fonte da Regra 3 da
+   [Etapa 6](E6_Monitoramento_e_deteccao.md); e
+8. aplicar a mesma decisão às **leituras em massa** do cadastro, com limite de volume e
+   registro por consulta. A cláusula existe porque em CA05 o dano não vem da promoção em
+   si, e sim do que ela permite ler em seguida - o cadastro completo de todas as unidades,
+   com `nomeLogin` e `senhaLogin` de todos os perfis - e porque esse mesmo volume, sobre o
+   SGBD único, é o caminho de indisponibilidade de R05.
+
+**Comportamento esperado.** A falha é fechada e a decisão é do servidor, sempre: ocultar
+a opção na interface deixa de ser um controle e passa a ser conveniência de usabilidade.
+O `nivelAcesso` que chega do Desktop Cliente é **descartado**, não validado - a diferença
+importa, porque validar um valor controlado pelo cliente ainda é confiar nele. Nenhuma
+credencial de outro funcionário aparece em resposta de listagem administrativa: o cadastro
+retorna dados funcionais, não os campos de autenticação, que residem no serviço de
+autenticação a partir da DA03.
+
+**Limite reconhecido do requisito.** RS03 fecha o caminho de CA05, mas não fecha a
+promoção legítima indevida: uma conta de Diretor comprometida, ou o conluio de quem
+aprova, continua produzindo uma elevação válida - agora datada, atribuída e alertada, o
+que muda a detecção, não a possibilidade. E o requisito **não reduz o impacto de R06**: se
+a elevação ocorrer, o alcance permanece o mesmo enquanto `senhaLogin` estiver em texto
+simples, porque o dano de R06 se realiza sobre as credenciais que RS01 protege. Por isso o
+residual de R06 na [Etapa 2](E2_Riscos_e_NIST_CSF.md) mantém impacto 4 mesmo com todos os
+controles próprios implantados: **a redução do impacto de R06 depende de RS01, não de
+RS03.** Os dois requisitos precisam avançar juntos.
+
+**Critérios de verificação.** O requisito é considerado atendido quando os cenários abaixo
+forem demonstrados por testes automatizados e pela consulta à trilha de auditoria. Os dois
+primeiros são exatamente os testes escritos na [Etapa 4](E4_Codigo_seguro_e_testes.md).
+
+| ID | Cenário | Resultado verificável |
+| --- | --- | --- |
+| RS03-CA01 | Sessão com `nivelAcesso = Diretor` promove outro funcionário a GerenteSetor | Alteração aceita; a trilha registra autor, valor anterior, valor novo e data/hora do servidor |
+| RS03-CA02 | Sessão com `nivelAcesso = Supervisor` envia o próprio cadastro com `nivelAcesso: "Diretor"` no corpo | HTTP 403; o campo permanece `Supervisor`; a tentativa é registrada e o alerta da Regra 3 dispara |
+| RS03-CA03 | A mesma requisição de CA02 é enviada **direto ao endpoint**, sem passar pela interface | Resultado idêntico ao de RS03-CA02 - a recusa não depende da tela ter ou não montado a opção |
+| RS03-CA04 | Requisição legítima de alteração de dados funcionais traz `nivelAcesso` alterado junto no corpo | Os dados funcionais são gravados e o `nivelAcesso` permanece inalterado, sem erro silencioso: a tentativa de gravá-lo é registrada |
+| RS03-CA05 | Diretor tenta elevar o **próprio** `nivelAcesso` | HTTP 403 - a alçada não alcança o próprio registro, e a promoção exige aprovador distinto do solicitante |
+| RS03-CA06 | Novo endpoint administrativo entra no serviço sem regra de autorização declarada | Toda chamada é recusada por omissão de regra, e não permitida - a negação por padrão é verificada, não presumida |
+| RS03-CA07 | Sessão aberta antes de uma promoção legítima chama operação exclusiva do perfil novo; e sessão de perfil rebaixado chama operação do perfil antigo | A primeira é recusada até a identidade de sessão ser reemitida; a segunda é recusada imediatamente |
+| RS03-CA08 | Sessão administrativa percorre o cadastro completo de funcionários de todas as unidades | O limite de volume é aplicado, nenhum campo de autenticação é retornado e cada consulta fica registrada |
+
 ## 2. Vulnerabilidades catalogadas (CWE/OWASP)
 
 | Requisito | Vulnerabilidade relacionada | Referência | Responsável |
 | --- | --- | --- | --- |
 | RS01 | Senha persistida em texto simples, autenticação de fator único, ausência de limite de tentativas e sessão sem expiração | CWE-256, CWE-308, CWE-307, CWE-613 e CWE-287 | @lilydias24 |
 | RS02 | Ausência de autorização no servidor, confiança em validações do cliente, entrada clínica sem validação e auditoria insuficiente | CWE-862, CWE-602, CWE-20 e CWE-778; OWASP A01, A06 e A09:2025 | @ARTHUR9011 |
-| RS03 | Missing Authorization / Broken Access Control | CWE-862, OWASP A01 (a confirmar/complementar) | @PPrauchner |
+| RS03 | Autorização ausente no servidor, campo de privilégio gravável pelo próprio titular junto com o cadastro e gestão indevida de privilégio | CWE-862, CWE-915, CWE-269 e CWE-639; OWASP A01:2025 e ASVS V4 | @PPrauchner |
 
-> Os mapeamentos de RS01 e RS02 estão detalhados abaixo. RS03 permanece com seu responsável.
+> Os três mapeamentos estão detalhados abaixo, cada um na subseção do seu responsável.
 
 ### Vulnerabilidades relacionadas a RS01 (@lilydias24)
 
@@ -287,6 +373,101 @@ alterações concluídas quanto tentativas recusadas, usando o identificador de 
 para detectar valor fora da faixa, autorização inválida ou ausência de confirmação sem
 depender de uma alteração insegura ter sido persistida.
 
+### Vulnerabilidades relacionadas a RS03 (@PPrauchner)
+
+Como o SIGH não está implementado, os itens abaixo são **fraquezas potenciais indicadas
+pelo modelo**, e não vulnerabilidades confirmadas em código - a mesma ressalva que a
+[Etapa 1](E1_Casos_de_abuso_e_Stride.md) registra ao dizer que só é possível afirmar que o
+modelo *não especifica* a verificação, nunca que o sistema *não a faz*. Duas delas, porém,
+são menos hipotéticas que as demais: `nivelAcesso` é o único atributo de autorização do
+modelo inteiro (observação 1 da seção 8.3) e ele aparece como atributo comum do cadastro,
+sem operação própria - as duas coisas estão no diagrama de classes, não em uma suposição.
+
+| Referência | Relação concreta com o SIGH |
+| --- | --- |
+| [CWE-862 - Missing Authorization](https://cwe.mitre.org/data/definitions/862.html) | É a fraqueza principal de RS03. O modelo não expõe nenhuma verificação de alçada no servidor antes de gravar o cadastro de `Funcionario`: a restrição de perfil aparece na montagem da tela, e o firewall declarado antes de cada DAO separa serviço de serviço, sem distinguir qual perfil emitiu a chamada dentro de uma sessão já autenticada. |
+| [CWE-915 - Improperly Controlled Modification of Dynamically-Determined Object Attributes](https://cwe.mitre.org/data/definitions/915.html) | É o mecanismo exato de CA05, passo 3: `nivelAcesso` viaja no mesmo salvamento dos demais dados do cadastro, de modo que **alterar o próprio privilégio não exige uma operação diferente de alterar o próprio telefone** - basta um campo a mais no corpo. É a fraqueza que a cláusula 3 fecha ao tirar o campo da via de salvamento. |
+| [CWE-269 - Improper Privilege Management](https://cwe.mitre.org/data/definitions/269.html) | O modelo não define quem concede, quem aprova nem quem revoga `nivelAcesso`: o enum existe, o fluxo de atribuição não. Sem isso, o titular é, por omissão, autoridade sobre o próprio nível - e uma promoção não tem como ser distinguida de uma correção de cadastro. |
+| [CWE-639 - Authorization Bypass Through User-Controlled Key](https://cwe.mitre.org/data/definitions/639.html) | Complementa a leitura em massa da cláusula 8: os identificadores do SIGH são sequenciais - `buscarPacientePorIdentificador(idPaciente)` é o caso citado em CA01 e CA05 -, e o alcance obtido pela elevação se converte em varredura simplesmente variando o identificador, sem nova decisão de autorização por registro acessado. |
+
+Duas fraquezas já mapeadas em outros requisitos valem igualmente aqui e **não são
+repetidas** para não inflar a lista: **CWE-602 - Client-Side Enforcement of Server-Side
+Security**, mapeada em RS02, descreve com precisão o "ocultar o botão em vez de recusar a
+chamada" que RS03 combate; e **CWE-778 - Insufficient Logging**, também de RS02, é o que
+torna a elevação silenciosa e permanente, condição registrada em T06 e no Tópico 9 do
+documento original.
+
+No **OWASP Top 10:2025**, a relação principal é com
+[A01 - Broken Access Control](https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/),
+que é a mesma categoria de RS02 - e a coincidência é informativa, não um problema de
+mapeamento: os dois requisitos atacam a mesma classe de falha em pontos diferentes do
+sistema, RS02 na operação clínica e RS03 na operação administrativa que **concede** a
+permissão de executá-la. O desenho também toca
+[A06 - Insecure Design](https://owasp.org/Top10/2025/A06_2025-Insecure_Design/), pela
+ausência de um fluxo de atribuição de privilégio no modelo.
+
+As referências de controle usadas aqui, que não dependem da numeração da edição, são o
+[OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html)
+- de onde vêm a negação por padrão da cláusula 2 e a reavaliação por requisição da
+cláusula 6 - e o capítulo **V4 - Access Control** do
+[OWASP ASVS](https://owasp.org/www-project-application-security-verification-standard/),
+que o §20 do enunciado sugere para selecionar requisitos verificáveis e que sustenta os
+critérios RS03-CA03 (decisão no servidor, não na interface) e RS03-CA06 (negação por
+omissão de regra).
+
+### Rastreabilidade de RS03
+
+RS03 concretiza os controles R06-C1 a R06-C4 definidos no plano de tratamento da
+[Etapa 2](E2_Riscos_e_NIST_CSF.md).
+
+| Controle de R06 | Realização em RS03 | Critérios que o verificam | Evidência esperada quando houver implementação |
+| --- | --- | --- | --- |
+| R06-C1 - revalidação de autorização no servidor, com o `nivelAcesso` do corpo descartado | Cláusulas 1, 2, 4 e 6 | RS03-CA02, RS03-CA03, RS03-CA06 e RS03-CA07 | Os dois testes da [Etapa 4](E4_Codigo_seguro_e_testes.md), mais o teste que envia a requisição direto ao endpoint e o que verifica a recusa por omissão de regra |
+| R06-C2 - `nivelAcesso` imutável pelo próprio titular, mudança só por fluxo de aprovação | Cláusula 3 | RS03-CA01, RS03-CA04 e RS03-CA05 | Promoção legítima por sessão Diretor sobre outro funcionário; tentativa sobre o próprio registro recusada; gravação de dados funcionais que ignora o campo de privilégio |
+| R06-C3 - trilha imutável de toda alteração de perfil, com autor, valor anterior e novo e data/hora do servidor | Cláusula 5 | RS03-CA01, RS03-CA02 e RS03-CA04 | Consulta à trilha exibindo alterações efetivadas **e** recusadas, com autoria vinda da sessão - garantida pelo Serviço de Auditoria da DA01 |
+| R06-C4 - alerta ao Diretor e à Segurança da Informação a cada elevação | Cláusula 7 | RS03-CA02 | Regra 3 da [Etapa 6](E6_Monitoramento_e_deteccao.md) disparando em uma elevação simulada, com destinatário definido |
+
+A cláusula 8 não realiza um controle de R06: ela fecha a continuação do CA05, em que o
+privilégio obtido vira varredura do cadastro e, pelo volume sobre o SGBD único, alcança a
+disponibilidade tratada em **R05**. Está aqui porque o requisito ficaria incompleto sem
+ela - conter a elevação e deixar aberta a leitura em massa que a motiva resolveria metade
+do caso de abuso.
+
+**Contratos necessários para a arquitetura segura.** O diagrama da seção 3 deve permitir
+identificar, ainda que em nível lógico:
+
+- o **Serviço de Autorização** como componente distinto do Serviço de Funcionários - a
+  decisão não pode viver dentro do serviço que ela autoriza, ou volta a ser possível
+  alcançá-la pelo mesmo caminho que se quer barrar;
+- o ponto do **API Gateway** em que identidade, papel e `nivelAcesso` vindos do cliente
+  são descartados, e não apenas ignorados (fronteira 1 da seção 3.2);
+- a **operação própria de alteração de perfil**, separada do salvamento do cadastro, com
+  o aprovador como identidade distinta do solicitante;
+- o **canal de eventos de autorização** - concessões e recusas - alimentando o Serviço de
+  Auditoria e, a partir dele, a Regra 3 da Etapa 6; e
+- o ponto em que as **credenciais deixam de estar no Serviço de Funcionários** (DA03): sem
+  isso, o alcance administrativo continua alcançando `senhaLogin`, e o impacto 4 de R06
+  permanece por construção.
+
+**Dependências para as próximas etapas.** Os critérios acima são critérios de arquitetura
+enquanto o SIGH não possui implementação, e não devem ser apresentados como evidência
+executada. A decisão de arquitetura que sustenta este requisito é a **DA02**, da
+@mariasanchez0: ela institui o Serviço de Autorização como ponto único de decisão, que é
+o componente pressuposto pelas cláusulas 2 e 6 - sem ele, a revalidação no servidor teria
+de ser repetida dentro de cada um dos 7 microsserviços, com as sete divergências que a
+própria DA02 rejeita. A cláusula 3 (`nivelAcesso` fora da via de salvamento do cadastro)
+é a única que permanece como responsabilidade do Serviço de Funcionários, porque diz
+respeito ao que se **grava**, e não a quem decide.
+
+Vale registrar a consequência que a DA02 assume e que atinge esta trilha: o Serviço de
+Autorização vira passagem obrigatória de toda operação sensível, somando-se ao API
+Gateway, ao Serviço de Autenticação e ao SGBD central como ponto de concentração - a mesma
+característica que sustenta **R05**, o outro risco desta trilha. A negação por padrão da
+cláusula 2 é justamente o que torna a indisponibilidade desse serviço uma parada de
+operação, e não uma passagem livre. É a troca correta, mas ela precisa da redundância e da
+política de latência máxima que a DA02 registra como pendência a conciliar com a DA01 e a
+DA03.
+
 ## 3. Diagrama da arquitetura segura
 
 > Responsável: **@lorenzoficher** - parte de `diagrams/estrutura/Diagramas_SIGH - Componentes.png` (já versionado) e acrescenta o serviço de autenticação instituído pela DA03, o serviço de autorização, o serviço de auditoria instituído pela DA01 e o catálogo clínico. Versionado como `diagrams/estrutura/Diagramas_SIGH - Arquitetura segura.png`.
@@ -350,6 +531,28 @@ depois do registro de auditoria, e não antes**. Se o append falhar, nada é per
 o que impede que exista um óbito sem rastro, e é a diferença entre auditar e ter auditoria.
 
 ## 4. Decisões de arquitetura
+
+O §18.4 do enunciado pede que cada decisão registre **cinco** campos: problema ou risco
+tratado, decisão tomada, motivo, componente afetado e resultado esperado. As subseções
+abaixo estão no formato de registro de decisão adotado pelo grupo - contexto, decisão,
+alternativas consideradas e consequências -, que é mais completo em alternativas descartadas
+mas não nomeia em campo próprio o componente afetado nem o resultado esperado. O quadro
+abaixo faz essa correspondência para as três decisões, sem substituir o texto de nenhuma
+delas: cada linha aponta para a subseção onde a justificativa está desenvolvida.
+*(Quadro acrescentado por @PPrauchner; o conteúdo de cada decisão é de seu autor.)*
+
+| Decisão | Problema ou risco tratado | Motivo | Componente afetado | Resultado esperado |
+| --- | --- | --- | --- | --- |
+| **DA01** - trilha de auditoria como serviço próprio, somente de acréscimo, com armazenamento separado do SGBD central | **R03** (Repudiation) como risco principal; as evidências exigidas por **R01**, **R02** e **R06** dependem da mesma capacidade inexistente | Quem tem permissão de escrita no SGBD central para gravar o registro tem, pela mesma credencial, permissão para alterá-lo - a trilha ficaria sob controle de quem ela audita, que é a condição explorada por R06. E o banco único já é o ponto de concentração de R05 | Novo **Serviço de Auditoria** com armazenamento próprio; os 7 serviços de negócio passam a ter apenas `append`, com buffer local durável; SGBD central deixa de hospedar a trilha | Óbito (UC10) e alta (UC06) só se concluem depois que o evento está durável; apagar o dado e o seu rastro passa a exigir **dois** comprometimentos distintos |
+| **DA02** - Serviço de Autorização centralizado como ponto único de decisão de acesso | **R06** (`nivelAcesso` validado só na interface), **R02** (papel médico e vínculo) e **R04** (vínculo profissional-paciente na consulta) | Decisão de autorização tomada na interface é contornável reenviando a requisição (CWE-602, passo 3 do CA05); tomada dentro de cada serviço, seria repetida sete vezes, com sete oportunidades de divergência | Novo **Serviço de Autorização**, entre o API Gateway/Serviço de Autenticação e os 7 serviços de negócio; políticas de papel × `nivelAcesso` × vínculo deixam de viver no código de cada serviço | Uma única implementação atende RS02, RS03 e R04-C2; toda decisão, permitida ou negada, vira evento na auditoria e alimenta a Regra 3 da Etapa 6 |
+| **DA03** - serviço de autenticação dedicado como emissor único da identidade de sessão | **R01** (Spoofing); habilita RS02 e RS03, que dependem de o servidor saber quem chama | As credenciais são atributos de `Funcionario`, dentro do serviço de cadastro administrativo: alcançar o cadastro é alcançar as senhas (T06/CA05), e não existe lugar único onde impor MFA, bloqueio e expiração de sessão | Novo **Serviço de Autenticação**; **Serviço de Funcionários** perde a guarda das credenciais; **API Gateway** passa a validar a sessão e propagar identidade verificada; fluxo de login do **Desktop Cliente** é reescrito | Identidade de sessão verificada como única fonte de identidade do sistema; ler o cadastro deixa de implicar ler credenciais, cortando o encadeamento T06 → T01 de CA05 |
+
+As três decisões compartilham a mesma consequência negativa, e o quadro a torna visível de
+uma vez: cada uma acrescenta um componente de passagem obrigatória a um sistema que já
+tinha o API Gateway e o SGBD único como pontos de concentração - exatamente a característica
+que sustenta **R05**. É por isso que a conciliação registrada ao final desta seção não é
+formalidade: sem redundância e sem política explícita de indisponibilidade, a arquitetura
+segura melhora quatro riscos piorando um quinto.
 
 ### DA01 - Trilha de auditoria como serviço próprio, somente de acréscimo e com armazenamento separado do SGBD central - @lorenzoficher
 
