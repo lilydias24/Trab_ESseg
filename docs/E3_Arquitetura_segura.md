@@ -14,6 +14,7 @@
 | Decisão de arquitetura 2 (ligada a RS03) | @mariasanchez0 | Concluída (DA02) |
 | Decisão de arquitetura 3 (reforço de autenticação) | @lilydias24 | Concluída (DA03; ponto de contato com a DA01 sinalizado) |
 | Conciliação entre DA01 e DA03 | @lorenzoficher | Concluída (responde ao ponto levantado na DA03) |
+| Conciliação entre a DA02 e as demais decisões | @mariasanchez0 | Concluída |
 
 ---
 
@@ -817,3 +818,41 @@ operações irreversíveis, o acréscimo à trilha. A regra de degradação prev
 precisa dizer explicitamente o que é suspenso e o que é preservado durante a saturação, e
 o acréscimo à trilha tem de estar no conjunto preservado. Isso é matéria da RS03 e da
 DA02, e fica registrado aqui como dependência.
+
+### Conciliação entre a DA02 e as demais decisões - @mariasanchez0
+
+A própria DA02 pediu, nas suas consequências negativas, conciliação com a DA01 e a DA03
+(redundância e política de latência máxima). A conciliação entre a DA01 e a DA03 deixou
+uma segunda pendência apontada de volta para cá: a regra de degradação do R05-C5 precisa
+dizer o que fica preservado durante a saturação, e a decisão de autorização tem de estar
+nesse conjunto - sem ela, nem prontuário nem prescrição se completam, preservados ou não.
+
+**A tensão que precisa ser resolvida.** A cláusula 2 de RS03 manda negar por padrão toda
+operação sensível quando o Serviço de Autorização não responde. Isso é o comportamento
+certo em condição normal, mas, se o próprio serviço for vítima da saturação que o R05-C5
+descreve, a falha fechada passa a negar exatamente as operações que o R05-C5 promete
+preservar - prontuário, prescrição, mapa de leitos -, e o faz de um jeito que não aparece
+como queda: parece o sistema recusando acesso normalmente, não indisponibilidade.
+
+**A resolução reaproveita o R05-C1, não cria mecanismo novo.** O R05-C1 já estabelece cota
+de conexões do SGBD por microsserviço, para que o fechamento de faturamento não consuma o
+que o atendimento precisa. A mesma cota se aplica ao Serviço de Autorização: uma fatia
+reservada e dimensionada para o pior caso de decisão do conjunto preservado, isolada da
+fatia que R05-C2 (rate limiting) e R05-C4 (timeout e modo degradado) já restringem para
+relatórios e exportações. Como o Serviço de Autorização nunca disputa a fatia que satura
+primeiro, ele não precisa - e não deve ter - um modo degradado ou de falha aberta: a
+negação por padrão de RS03 continua valendo exatamente como escrita, sem exceção, porque a
+fome de recursos é evitada a montante, pelo dimensionamento de capacidade, e não por uma
+flexibilização da regra durante o incidente.
+
+**A trilha da própria decisão já está coberta, não é pendência nova.** Toda decisão do
+Serviço de Autorização é registrada na DA01. A conciliação entre a DA01 e a DA03 já
+resolveu o que a DA01 exige durante indisponibilidade curta: não que o serviço esteja no
+ar, e sim que o evento fique durável no buffer local. O mesmo mecanismo cobre os registros
+da DA02, sem precisar de nada além do que já foi decidido ali.
+
+**O que falta, e é pequeno.** O texto do R05-C5 na [Etapa 2](E2_Riscos_e_NIST_CSF.md) hoje
+lista como preservado "prontuário, prescrição e mapa de leitos", sem citar a decisão que os
+viabiliza. Sugiro ao @PPrauchner, dono de R05, acrescentar ali algo como "e a decisão do
+Serviço de Autorização que os viabiliza (DA02), garantida por cota própria dentro do
+R05-C1" - fechando o texto no lugar onde a exigência nasceu.
