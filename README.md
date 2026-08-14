@@ -78,10 +78,13 @@ Trab_ESseg/
 │   ├── atividade/                             # ACT01 a ACT10
 │   └── sequencia/                             # DS01 a DS10, DS1.1 e DS1.2
 ├── codigo/etapa-4/                            # Práticas de código seguro e testes (Etapa 4)
+├── evidencias/etapa-5/                        # Relatório do ZAP, plano de automação e capturas (Etapa 5)
 └── images/                                    # Outras imagens de apoio
 ```
 
-Pastas a serem criadas conforme as etapas avançarem: `evidencias/etapa-5/` (Etapa 5) e `roteiros/` (Etapa 6).
+Pasta a ser criada conforme as etapas avançarem: `roteiros/`, com
+`etapa-6-deteccao-de-intrusoes.md` (Etapa 6) e `etapa-7-devsecops-e-video-final.md`
+(Etapa 7) - os dois caminhos exigidos pelos §27 e §31 do enunciado.
 
 > Os diagramas são exportações dos documentos do grupo no Lucid, versionadas de fato no repositório - o enunciado não aceita apenas o link para a ferramenta externa. Os links dos documentos-fonte estão em [`diagrams/README.md`](diagrams/README.md).
 
@@ -112,15 +115,15 @@ Pastas a serem criadas conforme as etapas avançarem: `evidencias/etapa-5/` (Eta
 - [x] 14.4 Plano de tratamento - todos os seis riscos concluídos
 - [x] 14.5 Ordem de implementação - @mariasanchez0
 - [x] 14.6 Risco residual - todos os seis riscos concluídos
-- [ ] 15. Considerações finais - @PPrauchner (rascunho sobre recorte parcial; revisão pendente agora que R04, 13.6 e 14.5 estão completos)
+- [x] 15. Considerações finais - @PPrauchner (revisada sobre os seis riscos, depois de R03, R04, 13.6 e 14.5)
 
 ### Etapas 3 a 7
 
-- [ ] Etapa 3 - RS01, RS02 e RS03 concluídos (aguardam revisão cruzada). Diagrama da arquitetura segura concluído e versionado (@lorenzoficher) - **falta versionar o arquivo-fonte editável**, exigido pelo §18.3 do enunciado. DA01 (@lorenzoficher), DA02 (@mariasanchez0) e DA03 (@lilydias24) concluídas, com o quadro dos cinco campos do §18.4 na abertura da seção 4
-- [ ] Etapa 4 - Prática 1 (armazenamento seguro de senhas, @lilydias24) concluída, testes executados; Prática 2 (autorização no servidor, @PPrauchner) pendente
-- [ ] Etapa 5 - uma verificação com até três achados analisados
-- [ ] Etapa 6 - Regras 1 (@lilydias24) e 2 (@ARTHUR9011) concluídas; Regra 3 (@PPrauchner) e a compilação do roteiro pendentes
-- [ ] Etapa 7 - pipeline concluído com as observações da revisão incorporadas; blocos Abertura, Spoofing (@lilydias24), Tampering e Repudiation concluídos; Information Disclosure (@mariasanchez0) aguarda os achados do ZAP; bloco DoS/EoP (@PPrauchner), gravação e publicação pendentes
+- [ ] Etapa 3 - RS01, RS02 e RS03 concluídos (aguardam revisão cruzada). Diagrama da arquitetura segura concluído e versionado (@lorenzoficher) - **falta versionar o arquivo-fonte editável**, exigido pelo §18.3 do enunciado. DA01 (@lorenzoficher), DA02 (@mariasanchez0) e DA03 (@lilydias24) concluídas, com o quadro dos cinco campos do §18.4 na abertura da seção 4. Os critérios RS03-CA02 e RS03-CA04, que se contradiziam, foram conciliados depois que a implementação da Etapa 4 expôs a contradição
+- [x] Etapa 4 - as duas práticas concluídas com testes executados: armazenamento seguro de senhas (@lilydias24) e controle de autorização no servidor (@PPrauchner). Revisão dos dois PRs pela @mariasanchez0’s pendente
+- [ ] Etapa 5 - sessão conduzida em 13/08/2026 sobre o OWASP Juice Shop 20.2.0 com o ZAP 2.17.0 (@PPrauchner); relatório, plano de automação e capturas versionados em `evidencias/etapa-5/`; três achados identificados. **Falta** a análise de impacto e correção (@mariasanchez0’s) e a revisão cruzada (@lilydias24 e @lorenzoficher)
+- [ ] Etapa 6 - as três regras concluídas: 1 (@lilydias24), 2 (@ARTHUR9011) e 3 (@PPrauchner). **Falta** a compilação do roteiro em `roteiros/etapa-6-deteccao-de-intrusoes.md` (@lilydias24)
+- [ ] Etapa 7 - pipeline concluído com as observações da revisão incorporadas; os seis blocos do roteiro escritos, incluindo Information Disclosure (@mariasanchez0) e DoS/EoP (@PPrauchner). **Falta** a organização em documento único, a gravação (5-8 min) e a publicação do link
 
 ## Como contribuir (para o grupo)
 
