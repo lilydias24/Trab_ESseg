@@ -125,7 +125,7 @@ mas não como arquivo próprio em `roteiros/` - ver a pendência na Etapa 7 abai
 - [ ] Etapa 4 - as duas práticas concluídas com testes executados: armazenamento seguro de senhas (@lilydias24) e controle de autorização no servidor (@PPrauchner). Revisão dos dois PRs pela @mariasanchez0’s pendente
 - [ ] Etapa 5 - sessão conduzida em 13/08/2026 (@PPrauchner); análise dos 3 achados concluída (@mariasanchez0). Falta apenas a revisão cruzada (@lilydias24 e @lorenzoficher)
 - [x] Etapa 6 - as três regras concluídas (1 @lilydias24, 2 @ARTHUR9011, 3 @PPrauchner) e o roteiro compilado em [`roteiros/etapa-6-deteccao-de-intrusoes.md`](roteiros/etapa-6-deteccao-de-intrusoes.md), com convenções comuns, correlação entre regras e tabela de rastreabilidade até a Etapa 1
-- [ ] Etapa 7 - pipeline concluído com as observações da revisão incorporadas. Dos 7 blocos do roteiro, 6 estão concluídos (Abertura, Spoofing, Tampering, Repudiation, DoS/EoP e o rascunho de Encerramento); o bloco Information Disclosure (@mariasanchez0) é rascunho e aguarda a análise dos achados da Etapa 5. Os blocos já estão reunidos em `docs/E7_DevSecOps_e_video.md`, mas falta o arquivo próprio em `roteiros/` exigido pelo §31 (ver nota acima). **Falta** a gravação (5-8 min) e a publicação do link - a soma das durações-alvo hoje fecha entre 7min e 8min10s, acima do teto de 8 min em cenário de pior caso
+- [ ] Etapa 7 - pipeline e os sete blocos do roteiro concluídos. Arquivo `roteiros/etapa-7-devsecops-e-video-final.md` criado (§31). **Falta** ajustar a duração (soma hoje passa do teto de 8 min no pior caso) e a gravação/publicação do link
 
 ## Como contribuir (para o grupo)
 
