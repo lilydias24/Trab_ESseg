@@ -557,7 +557,7 @@ auditoria) e uma quinta - a própria autorização - que ainda não tem.
 ![Arquitetura segura do SIGH](../diagrams/estrutura/Diagramas_SIGH%20-%20Arquitetura%20segura.png)
 
 O diagrama parte da arquitetura já modelada - Desktop Cliente, API Gateway e 7
-microsserviços em 5 camadas sobre um SGBD central - e acrescenta os três componentes que
+microsserviços em 5 camadas sobre um SGBD central - e acrescenta os quatro componentes que
 os requisitos desta etapa exigem, sem redesenhar o que já existe. A leitura abaixo é a
 legenda do diagrama e serve para conferir se ele mostra o que precisa mostrar.
 
