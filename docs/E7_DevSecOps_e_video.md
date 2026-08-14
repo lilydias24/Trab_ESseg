@@ -327,7 +327,7 @@ documento, não precisam ser narrados.
 | 0-15 s | T04 e CA04 na [Etapa 1](E1_Casos_de_abuso_e_Stride.md), com `buscarPacientePorIdentificador(idPaciente)` no diagrama de classes | O identificador sequencial e a ausência de vínculo são a porta de entrada |
 | 15-30 s | Registro e justificativa de R04 na [Etapa 2](E2_Riscos_e_NIST_CSF.md) | 4 × 4 = 16, Crítico, empatado com o risco de maior pontuação do trabalho |
 | 30-45 s | Controles R04-C1 a R04-C5 em 14.4 e a DA02 na [Etapa 3](E3_Arquitetura_segura.md) | O Serviço de Autorização único decide vínculo e `nivelAcesso` no mesmo lugar |
-| 45-65 s | Achados relacionados a controle de acesso na [Etapa 5](E5_Verificacao_de_vulnerabilidades.md), quando disponíveis | Onde a varredura dinâmica confirma, na prática, o mesmo tipo de lacuna |
+| 45-65 s | Achado V03 (Cross-Domain Misconfiguration) na [Etapa 5](E5_Verificacao_de_vulnerabilidades.md) | O mesmo problema de fronteira ausente, agora observado em código real |
 
 Durante a gravação, destacar os identificadores `T04`, `R04`, `DA02` e o número **16** ao
 lado do de R01, para reforçar visualmente o empate. Se a Etapa 5 já tiver achados de
