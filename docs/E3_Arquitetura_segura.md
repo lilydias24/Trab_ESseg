@@ -6,9 +6,9 @@
 
 | Item | Responsável | Situação |
 | --- | --- | --- |
-| RS01 - requisito e vulnerabilidade | @lilydias24 | Concluído (aguarda revisão cruzada) |
-| RS02 - requisito e vulnerabilidade | @ARTHUR9011 | Concluído (aguarda revisão cruzada) |
-| RS03 - requisito e vulnerabilidade | @PPrauchner | Concluído (aguarda revisão cruzada); apoia-se na DA02 |
+| RS01 - requisito e vulnerabilidade | @lilydias24 | Concluído (revisão cruzada por @mariasanchez0: numeração OWASP a corrigir) |
+| RS02 - requisito e vulnerabilidade | @ARTHUR9011 | Concluído (revisão cruzada por @mariasanchez0: sem achados) |
+| RS03 - requisito e vulnerabilidade | @PPrauchner | Concluído (revisão cruzada por @mariasanchez0: cláusula 6 pode ganhar frase de esclarecimento); apoia-se na DA02 |
 | Diagrama da arquitetura segura | @lorenzoficher | Concluído (seções 3.1 a 3.3 e PNG versionado) |
 | Decisão de arquitetura 1 (ligada ao diagrama) | @lorenzoficher | Concluída (DA01) |
 | Decisão de arquitetura 2 (ligada a RS03) | @mariasanchez0 | Concluída (DA02) |
@@ -488,6 +488,56 @@ cláusula 2 é justamente o que torna a indisponibilidade desse serviço uma par
 operação, e não uma passagem livre. É a troca correta, mas ela precisa da redundância e da
 política de latência máxima que a DA02 registra como pendência a conciliar com a DA01 e a
 DA03.
+
+### Revisão cruzada de RS01, RS02 e RS03 (@mariasanchez0)
+
+Revisão dos três requisitos por quem não os escreveu, conferindo cada um contra os
+próprios critérios de verificação, a rastreabilidade e o que já foi registrado nas
+demais etapas.
+
+**RS01 - a numeração do OWASP Top 10:2025 pode ser fechada.** A seção de
+vulnerabilidades deixa em aberto a numeração exata das categorias de "falhas de
+identificação e autenticação" e "falhas criptográficas" na edição 2025, pedindo
+conferência antes da entrega final. Conferi na lista oficial
+([owasp.org/Top10/2025](https://owasp.org/Top10/2025/)): são
+**A07:2025 - Authentication Failures** e **A04:2025 - Cryptographic Failures**,
+respectivamente. Sugiro substituir o trecho de incerteza por essas duas referências, no
+mesmo padrão que RS02 e RS03 já usam para A01, A02, A05, A06 e A09. Fora isso, as 9
+cláusulas, os 9 critérios de verificação e a rastreabilidade para R01-C1 a C5 são
+consistentes entre si e com o residual Alto justificado na Etapa 2.
+
+**RS02 - sem achados que exijam correção.** As seis cláusulas, os oito critérios de
+verificação e a rastreabilidade para R02-C1 a C5 se sustentam entre si; a ressalva sobre
+CWE-345 e a distinção entre "confirmação eletrônica" e "assinatura digital
+criptográfica" fecham as duas ambiguidades mais prováveis de surgir na gravação do
+vídeo. Único ponto a observar, não a corrigir: o requisito não descreve por qual
+interface o segundo confirmador revisa a alteração antes de confirmar - detalhe
+razoável de deixar em aberto nesta etapa.
+
+**RS03 - a cláusula 6 mistura dois mecanismos que valem a pena separar por escrito.**
+"Reavaliar a autorização a cada requisição" e "reemitir a identidade de sessão quando o
+perfil mudar" soam como a mesma coisa, mas o RS03-CA07 revela que não são: a sessão
+carrega o perfil como reivindicação (*claim*), e é por isso que uma sessão aberta antes
+da promoção continua presa ao perfil antigo até ser reemitida - se a reavaliação fosse
+busca ao vivo do `nivelAcesso` no banco a cada chamada, reemitir sessão seria redundante.
+Sugiro acrescentar uma frase explícita na cláusula 6 dizendo que a reavaliação verifica a
+reivindicação de perfil **da própria sessão** contra a política vigente, e que o valor de
+`nivelAcesso` só é lido de novo do cadastro no momento da reemissão - hoje isso só fica
+claro juntando a cláusula ao teste, o que exige que quem lê já saiba a resposta.
+
+**Achado que não é de nenhum requisito isolado, e que atinge a minha própria DA02.** A
+DA01 e a DA03 têm uma seção própria de conciliação, escrita depois que a DA03 registrou
+nas próprias consequências negativas que precisava ser conciliada com a DA01. A DA02 fez
+o mesmo pedido - "este ponto precisa ser conciliado com a DA01 e a DA03" -, e a própria
+conciliação DA01↔DA03 registra a pendência de volta: "[a política de degradação] é
+matéria da RS03 e da DA02, e fica registrado aqui como dependência." Ninguém escreveu
+essa conciliação ainda. Como é a minha própria decisão que está em aberto, não vou
+fechá-la sozinha nesta revisão - registro o achado para o grupo: falta uma "Conciliação
+entre a DA02 e as demais decisões" dizendo o que acontece com o Serviço de Autorização
+durante a saturação prevista em R05-C5 - ele entra no conjunto preservado, como a trilha
+de auditoria, ou degrada com uma política própria? Hoje a arquitetura tem quatro
+passagens obrigatórias com regra de degradação escrita (Gateway, autenticação, SGBD,
+auditoria) e uma quinta - a própria autorização - que ainda não tem.
 
 ## 3. Diagrama da arquitetura segura
 
