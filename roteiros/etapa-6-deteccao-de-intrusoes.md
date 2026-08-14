@@ -23,11 +23,11 @@ que fazer diante de um alerta.
 
 ## Quadro-resumo das três regras
 
-| Regra | Risco observado | Fonte de dados | Condição de alerta | Ação esperada | Responsável |
+| Regra | Risco observado | Fonte de dados | Condição de alerta | Resposta inicial | Responsável |
 | --- | --- | --- | --- | --- | --- |
 | 1 | R01 - Spoofing | Eventos de segurança do serviço de autenticação (RS01, cláusula 7), correlacionados com os de operação sensível | Crítico: sucesso após rajada de falhas, sessões simultâneas em zonas distintas, ou operação sensível de dispositivo desconhecido. Alto: 5 falhas em 15 min na mesma conta, ou mesma origem falhando contra 10 contas | Confirmar a sessão com o titular fora do sistema antes de revogar; havendo comprometimento, revisar o que foi executado durante a sessão | @lilydias24 |
 | 2 | R02 - Tampering | Eventos de segurança e trilha de auditoria das prescrições | Publicação que viola uma invariante de RS02, ou 3 recusas suspeitas pelo mesmo autor/prescrição em 10 minutos | Acionar resposta clínica e de segurança conforme a severidade, preservando as evidências | @ARTHUR9011 |
-| 3 | R06 - Elevation of Privilege | Decisões do Serviço de Autorização (DA02) e trilha imutável de alteração de perfil (DA01), conforme as cláusulas 5 e 7 de RS03 | Notificação obrigatória a cada elevação. Crítico: elevação com solicitante igual ao titular, aprovador igual ao solicitante, decisão fora do servidor, campo gravado pela via do cadastro, ou leitura administrativa em massa até 60 min depois. Alto: 3 recusas de privilégio em 10 min, requisição direto ao endpoint, ou 3 usos de alçada nova em sessão anterior à promoção | Notificar Diretor e Segurança da Informação; havendo anomalia, reverter o `nivelAcesso` pelo fluxo de aprovação, reemitir a sessão e apurar o que a alçada leu | @PPrauchner |
+| 3 | R06 - Elevation of Privilege | Decisões do Serviço de Autorização (DA02) e trilha imutável de alteração de perfil (DA01), conforme as cláusulas 5 e 7 de RS03 | Notificação obrigatória, sem limiar, a cada elevação efetivada (Gatilho A, controle R06-C4). Crítico: elevação com solicitante igual ao titular, aprovador igual ao solicitante, `decisionSource` diferente do Serviço de Autorização ou `ruleId` vazio, campo gravado pela via de salvamento do cadastro, ou leitura acima do limite de volume da cláusula 8 até 60 min depois de uma elevação do próprio autor da leitura. Alto: 3 recusas de privilégio em 10 min, requisição direto ao endpoint, 3 usos em 10 min de alçada nova em sessão anterior à promoção, uso isolado de alçada já retirada por rebaixamento, ou leitura acima do limite de volume sem elevação prévia do próprio autor | Notificar Diretor e Segurança da Informação; havendo anomalia, reverter o `nivelAcesso` pelo fluxo de aprovação, reemitir a sessão e apurar o que a alçada leu | @PPrauchner |
 
 ## Convenções comuns às três regras
 
@@ -231,11 +231,12 @@ original do SIGH não produz.
 | --- | --- |
 | `eventTime`, `eventType`, `correlationId` | Ordenação, janela e deduplicação |
 | `actorId`, `actorRole`, `actorLevel` | Solicitante, com perfil obtido da sessão |
-| `subjectId`, `previousLevel`, `newLevel` | Titular afetado e a transição - `newLevel` > `previousLevel` define elevação |
+| `subjectId`, `previousLevel`, `newLevel` | Titular afetado e a transição aplicada pelo servidor - `newLevel` > `previousLevel` define elevação |
+| `claimedLevel` | `nivelAcesso` descartado do corpo pela cláusula 1, guardado como afirmação do cliente (cláusula 5). Evidência e contagem do Gatilho C, nunca decisão |
 | `approverId`, `approverDistinctFromRequester`, `approverLevel` | Alçada de Diretor e separação entre quem pede e quem aprova |
 | `decisionSource`, `ruleId`, `writePath` | Decisão veio do Serviço de Autorização, sob qual regra, e por qual via |
 | `bypassedUi` | Requisição chegou ao endpoint sem passar pela interface |
-| `sessionId`, `sessionIssuedAt`, `sessionLevel` | Alçada nova exercida em sessão anterior à promoção |
+| `sessionId`, `sessionIssuedAt`, `sessionLevel` | Alçada nova exercida em sessão anterior à promoção, e alçada antiga exercida em sessão já rebaixada (cláusula 6) |
 | `outcome`, `denyReason`, `httpStatus` | Resultado e motivo da recusa |
 | `recordsReturned`, `queryScope`, `unitScope` | Volume e abrangência de leitura administrativa |
 | `deviceId`, `networkZone`, `sourceService` | Contexto técnico, mesma convenção das Regras 1 e 2 |
@@ -255,15 +256,26 @@ entram no evento.
 - **C - Alto por repetição.** Recusas por autopromoção, campo não gravável, alçada
   insuficiente, aprovador igual ao solicitante ou regra ausente: 3ª ocorrência em 10 min
   no mesmo autor **ou** titular abre alerta. Recusa isolada com `bypassedUi` verdadeiro
-  abre alerta Alto **sozinha**.
-- **D - Alto por sessão desatualizada.** Operação exclusiva de perfil novo com sessão
-  emitida antes da promoção: 3ª ocorrência do mesmo `sessionId` em 10 min abre alerta - as
-  duas primeiras são esperadas (o promovido ainda não teve a sessão reemitida).
-- **E - Crítico por sequência de CA05.** Leitura administrativa em massa nos 60 min
-  seguintes a uma promoção do mesmo autor, com volume ou abrangência acima do limite. É o
-  único gatilho que também protege R05: o mesmo volume, sobre o SGBD único, é caminho de
-  indisponibilidade. Quando o alerta de 80% do pool (R05-C5) disparar na mesma janela,
-  correlacionar no mesmo incidente.
+  abre alerta Alto **sozinha**. Evento vindo da via de salvamento só conta quando
+  `claimedLevel` difere de `previousLevel`: corpo com o valor vigente é reenvio do registro
+  pelo cliente, fica registrado sem somar ao limiar. A comparação é com `claimedLevel`
+  porque nessa via nada foi aplicado - `newLevel` sempre igualaria `previousLevel`.
+- **D - Alto por sessão desatualizada.** Recusa pela cláusula 6, com `denyReason`
+  `STALE_SESSION_LEVEL`, nas duas metades de RS03-CA07. Sessão **anterior a uma promoção**
+  (`sessionLevel` inferior): 3ª ocorrência do mesmo `sessionId` em 10 min abre alerta - as
+  duas primeiras são esperadas (o promovido ainda não teve a sessão reemitida). Sessão de
+  perfil **rebaixado** (`sessionLevel` superior): alerta Alto **na primeira**, sem limiar,
+  e com revogação da sessão - exercer alçada já retirada é acesso indevido em curso, não
+  tentativa frustrada.
+- **E - Leitura em massa do cadastro.** Volume ou abrangência acima do limite da cláusula
+  8. **Crítico** quando ocorre nos 60 min seguintes a uma promoção do mesmo autor (a
+  sequência do CA05); **Alto** quando não há promoção **do mesmo autor** na janela - o
+  cenário puro de RS03-CA08, que a cláusula 8 cobre pelo volume, não pela origem da
+  alçada. As duas condições são complementares de propósito: promoção de outra pessoa na
+  janela não é a sequência do CA05, e sem isso a leitura cairia fora das duas. É o único
+  gatilho que também protege R05, nas duas severidades: o mesmo volume, sobre o SGBD
+  único, é caminho de indisponibilidade. Quando o alerta de 80% do pool (R05-C5) disparar
+  na mesma janela, correlacionar no mesmo incidente.
 
 ### Ação da equipe
 
@@ -291,7 +303,10 @@ fechou.
 
 Promoção em lote por reestruturação (Gatilho A notifica uma a uma - declarar com
 antecedência para agrupar os avisos, nunca suprimi-los); sessão antiga após promoção
-legítima (Gatilho D, limiar 3 por esse motivo); inventário periódico de acessos (Gatilho
+legítima (Gatilho D, limiar 3 por esse motivo - a tolerância não vale para a sessão
+rebaixada); reenvio do registro inteiro pelo cliente, que carrega o `nivelAcesso` vigente
+no corpo (não conta no Gatilho C, porque `claimedLevel` não difere de `previousLevel`);
+inventário periódico de acessos (Gatilho
 E - precisa de janela, executor e escopo declarados); correção de cadastro errado
 (indistinguível de promoção nos dados - só o reconhecimento do Diretor no Gatilho A
 separa os dois casos, limite honesto da regra).
@@ -301,13 +316,13 @@ separa os dois casos, limite honesto da regra).
 | ID | Entrada simulada | Resultado esperado |
 | --- | --- | --- |
 | R3-TV01 | Diretor promove funcionário, aprovador distinto | Notificação obrigatória, sem incidente |
-| R3-TV02 | Supervisor envia `nivelAcesso: "Diretor"` no próprio cadastro | Recusa 403; contabilizada no Gatilho C |
-| R3-TV03 | Mesma requisição direto ao endpoint | Alerta Alto imediato por `bypassedUi` |
-| R3-TV04 | Alteração legítima trazendo `nivelAcesso` junto no corpo | Dados gravados, campo inalterado, registrado |
-| R3-TV05 | Diretor tenta elevar o próprio nível | Recusa registrada; Crítico se efetivada por falha |
+| R3-TV02 | Supervisor tenta se promover pelos dois caminhos: no corpo do próprio cadastro, depois pela operação de perfil | Via de salvamento, **sem 403**: campo descartado, demais dados gravados. Operação própria: recusa 403. As duas contam no Gatilho C |
+| R3-TV03 | Cada uma das duas requisições direto ao endpoint | Alerta Alto imediato por `bypassedUi`, em ambas |
+| R3-TV04 | Alteração legítima trazendo `nivelAcesso` alterado; e a mesma trazendo o valor vigente | Dados gravados e campo inalterado nas duas; só a primeira conta no Gatilho C |
+| R3-TV05 | Diretor tenta elevar o próprio nível | Recusa `SELF_PRIVILEGE_CHANGE`, contada no Gatilho C; Crítico se efetivada por falha |
 | R3-TV06 | Operação nova sem regra de autorização declarada | Recusa por regra ausente; Crítico se efetivada |
-| R3-TV07 | Sessão pré-promoção chama operação nova 3x em 10 min | 2 recusas informativas + 1 alerta Alto |
-| R3-TV08 | Cadastro completo lido 20 min após promoção | Alerta Crítico pelo Gatilho E |
+| R3-TV07 | Sessão pré-promoção chama operação nova 3x em 10 min; e sessão rebaixada chama 1x a operação antiga | `STALE_SESSION_LEVEL` nas duas. 2 informativas + Alto na 3ª; Alto já na 1ª no rebaixamento, com revogação da sessão |
+| R3-TV08 | Cadastro completo lido 20 min após a promoção do próprio autor; o mesmo volume sem promoção na janela; e 30 min após a promoção de outro funcionário | Crítico pelo Gatilho E na primeira; Alto na segunda e na terceira |
 | R3-TV09 | Aprovador não reconhece o pedido na confirmação | Notificação escala para incidente Crítico |
 | R3-TV10 | Evento com `senhaLogin` ou `nomeLogin` de terceiros | Quarentena; falha de esquema |
 | R3-TV11 | Perda de 2 heartbeats consecutivos | Alerta operacional; regra sem cobertura |

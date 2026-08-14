@@ -130,7 +130,7 @@ Cada integrante escreve a parte referente à própria trilha: o que fez, qual de
 | Trilha Repudiation → R03 → DA01 → trilha de auditoria | Da operação sem autor à decisão de arquitetura que produz a prova | @lorenzoficher | Concluído (incluído no documento único) |
 | Trilha Information Disclosure → R04, priorização e achados do ZAP | Da ausência de segunda barreira após o login à decisão de arquitetura DA02 e à detecção de padrão de consulta | @mariasanchez0 | Concluído |
 | Trilha DoS/EoP → R05 e R06 → RS03 → autorização → regra 3 | Das duas categorias que se encontram no CA05 à autorização decidida no servidor e à detecção da elevação | @PPrauchner | Concluído |
-| Encerramento e conclusões | Síntese das cinco trilhas nas três decisões de arquitetura e no que ainda falta implementar | @mariasanchez0 (organiza) | Concluído (rascunho; ajustar duração após o bloco DoS/EoP entrar) |
+| Encerramento e conclusões | Síntese das cinco trilhas nas três decisões de arquitetura e no que ainda falta implementar | @mariasanchez0 (organiza) | Rascunho concluído (duração já conferida contra o orçamento total dos sete blocos) |
 
 ### Abertura - roteiro de @lilydias24
 
@@ -337,13 +337,15 @@ candidata a sair: o argumento de R04 e DA02 já fecha a trilha sem ela.
 
 ### Bloco DoS/EoP - roteiro de @PPrauchner
 
-- **Duração-alvo:** 80 a 90 segundos.
+- **Duração-alvo:** 70 a 80 segundos.
 - **Objetivo:** mostrar a única trilha que carrega **duas** categorias do STRIDE e explicar
   por que elas foram levadas juntas - o volume de leitura que a elevação de privilégio
   permite é o mesmo volume que satura o banco. É também o único bloco que precisa fixar a
   distinção que separa esta trilha da de Spoofing: aqui a identidade não foi falsificada,
-  foi promovida. Os dois argumentos não cabem no tempo dos demais blocos, e é isso que
-  justifica ultrapassar os 80 segundos.
+  foi promovida. Os dois argumentos ocupam o teto da faixa dos blocos de trilha: o bloco é
+  narrado no limite de 80 segundos, e não acima dele, porque o orçamento total do vídeo
+  precisa caber nos 8 minutos do §32 - a leitura dos RNF01-RNF03 é o que sai primeiro para
+  isso.
 
 **Narração sugerida:**
 
@@ -379,12 +381,12 @@ candidata a sair: o argumento de R04 e DA02 já fecha a trilha sem ela.
 
 | Tempo | Mostrar na tela | Mensagem principal |
 | --- | --- | --- |
-| 0-15 s | T05 e T06 na [Etapa 1](E1_Casos_de_abuso_e_Stride.md), com o [diagrama de implantação](../diagrams/estrutura/Diagramas_SIGH%20-%20Implantacao.png) | Um SGBD único para os sete serviços; e o `nivelAcesso` como única autorização do modelo |
-| 15-30 s | Fluxo de abuso do CA05 na [Etapa 1](E1_Casos_de_abuso_e_Stride.md), passos 3 a 7 | A elevação é o meio, a indisponibilidade é a consequência do uso do privilégio obtido |
-| 30-45 s | Registros de R05 e R06 em 13.4 na [Etapa 2](E2_Riscos_e_NIST_CSF.md) | 12 Crítico e 8 Alto - e a identidade promovida, não falsificada |
-| 45-62 s | Cláusulas 1, 2, 3 e 8 da RS03 e a DA02 na [Etapa 3](E3_Arquitetura_segura.md) | Decisão no servidor, fora de quem executa, com negação por padrão |
-| 62-76 s | Saída dos testes da Prática 2 na [Etapa 4](E4_Codigo_seguro_e_testes.md) | O `nivelAcesso` do cliente é descartado; a tentativa vira 403 registrado |
-| 76-88 s | Gatilho E da Regra 3 na [Etapa 6](E6_Monitoramento_e_deteccao.md) e os residuais de R05 e R06 em 14.6 na [Etapa 2](E2_Riscos_e_NIST_CSF.md) | Leitura em massa logo após uma elevação; e o que os controles não resolvem |
+| 0-12 s | T05 e T06 na [Etapa 1](E1_Casos_de_abuso_e_Stride.md), com o [diagrama de implantação](../diagrams/estrutura/Diagramas_SIGH%20-%20Implantacao.png) | Um SGBD único para os sete serviços; e o `nivelAcesso` como única autorização do modelo |
+| 12-26 s | Fluxo de abuso do CA05 na [Etapa 1](E1_Casos_de_abuso_e_Stride.md), passos 3 a 7 | A elevação é o meio, a indisponibilidade é a consequência do uso do privilégio obtido |
+| 26-40 s | Registros de R05 e R06 em 13.4 na [Etapa 2](E2_Riscos_e_NIST_CSF.md) | 12 Crítico e 8 Alto - e a identidade promovida, não falsificada |
+| 40-56 s | Cláusulas 1, 2, 3 e 8 da RS03 e a DA02 na [Etapa 3](E3_Arquitetura_segura.md) | Decisão no servidor, fora de quem executa, com negação por padrão |
+| 56-68 s | Saída dos testes da Prática 2 na [Etapa 4](E4_Codigo_seguro_e_testes.md) | O `nivelAcesso` do cliente é descartado; a tentativa vira 403 registrado |
+| 68-80 s | Gatilho E da Regra 3 na [Etapa 6](E6_Monitoramento_e_deteccao.md) e os residuais de R05 e R06 em 14.6 na [Etapa 2](E2_Riscos_e_NIST_CSF.md) | Leitura em massa logo após uma elevação; e o que os controles não resolvem |
 
 Durante a gravação, destacar os identificadores `T05`, `T06`, `CA05`, `R05`, `R06`, `RS03`
 e `Regra 3`, e manter a cláusula 8 visível quando a narração disser que as duas categorias
@@ -438,3 +440,20 @@ com todas as letras.
 
 - **Duração:** 5 a 8 minutos
 - **Link:** *(a publicar - responsabilidade do @ARTHUR9011)*
+
+### Orçamento de tempo dos sete blocos
+
+O §32 pede preferencialmente entre 5 e 8 minutos, ou seja, no máximo 480 segundos. A soma
+dos limites superiores das sete faixas fecha exatamente nesse teto, sem folga: qualquer
+bloco gravado acima da própria faixa estoura o vídeo.
+
+| Bloco | Duração-alvo |
+| --- | --- |
+| Abertura | 45-55 s |
+| Spoofing | 70-80 s |
+| Repudiation | 70-80 s |
+| Tampering | 70-80 s |
+| Information Disclosure | 60-70 s |
+| DoS/EoP | 70-80 s |
+| Encerramento | 25-35 s |
+| **Total** | **410-480 s** (6:50 a 8:00) |

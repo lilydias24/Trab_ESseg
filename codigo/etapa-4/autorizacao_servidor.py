@@ -22,8 +22,15 @@ O que este módulo demonstra
 5. Alterações efetivadas **e** recusadas vão para a trilha de auditoria, com
    autor, valor anterior, valor novo, terminal e data/hora carimbados pelo
    servidor (cláusula 5). O alerta da cláusula 7 é só das elevações
-   **efetivadas**; as tentativas alimentam a Regra 3 da Etapa 6 por outros
-   gatilhos - daí as duas consultas distintas na trilha.
+   **efetivadas** - rebaixamento é registrado e não notifica; as tentativas
+   alimentam a Regra 3 da Etapa 6 por outros gatilhos - daí as duas consultas
+   distintas na trilha.
+6. O valor de destino da alteração de perfil sai de um conjunto fechado
+   (`NIVEIS_DE_ACESSO`); a ausência do parâmetro e o alvo fora do cadastro são
+   recusados como HTTP 400 (`ErroDeEntrada`), não como 403 nem como erro de
+   servidor. Não é cláusula de RS03 - é a higiene de entrada que impede a
+   decisão do servidor de operar sobre um nível ou um registro que ela não
+   conhece.
 
 O que este módulo não é: um framework de autorização. É o menor modelo capaz de
 tornar essas decisões visíveis - uma sessão, um cadastro em memória, um decisor
@@ -55,14 +62,33 @@ CAMPOS_FUNCIONAIS_GRAVAVEIS = ("nome", "setor")
 # o registro do Diretor (cláusula 3 - quem solicita não é quem aprova).
 ALCADAS_SOBRE_TERCEIROS = ("GerenteGeral", "Diretor")
 
+# Conjunto fechado de níveis do modelo de domínio. É allowlist de valores, e não
+# só de campos: sem ela, uma sessão autorizada gravaria qualquer string como
+# nível - `"SuperDiretor"`, `""` - e a própria decisão de `decidir`, que compara
+# `nivel_acesso` com literais, passaria a operar sobre um valor que não conhece.
+NIVEIS_DE_ACESSO = ("Supervisor", "GerenteSetor", "GerenteGeral", "Diretor")
+
 LIMITE_DE_LISTAGEM = 50
 CODIGO_NAO_AUTORIZADO = 403
+CODIGO_ENTRADA_INVALIDA = 400
 
 
 class ErroAutorizacao(Exception):
     """Recusa de autorização. Corresponde à resposta HTTP 403 da cláusula 4."""
 
     codigo_http = CODIGO_NAO_AUTORIZADO
+
+
+class ErroDeEntrada(Exception):
+    """Recusa por requisição malformada. Corresponde a HTTP 400, não a 403.
+
+    A distinção não é cosmética: 403 diz "você não pode", 400 diz "o pedido não
+    faz sentido". Tratar parâmetro ausente como erro de autorização mentiria na
+    trilha; deixá-lo virar `KeyError` devolveria 500 - erro de servidor para
+    entrada malformada de cliente.
+    """
+
+    codigo_http = CODIGO_ENTRADA_INVALIDA
 
 
 @dataclass(frozen=True)
@@ -85,13 +111,18 @@ class Decisao:
     motivo: str
 
 
-def descartar_campos_de_sessao(corpo: dict) -> tuple[dict, tuple[str, ...]]:
+def descartar_campos_de_sessao(corpo: dict) -> tuple[dict, dict]:
     """Remove do corpo os campos que só a sessão pode afirmar.
 
-    Devolve o corpo já limpo e a lista do que foi descartado - a segunda é o que
-    permite registrar a tentativa em vez de ignorá-la em silêncio (RS03-CA04).
+    Devolve o corpo já limpo e o que foi descartado, **com os valores** - o
+    segundo é o que permite registrar a tentativa em vez de ignorá-la em
+    silêncio (RS03-CA04). Guardar o valor não é confiar nele: nenhuma decisão
+    o consulta, e a cláusula 5 exige registrar o valor novo pretendido também
+    nas alterações recusadas. É o campo `claimedLevel` do contrato de eventos
+    da Regra 3 da Etapa 6, que separa reenvio de rotina de tentativa de
+    gravação comparando-o com o nível vigente.
     """
-    descartados = tuple(campo for campo in CAMPOS_DE_SESSAO if campo in corpo)
+    descartados = {campo: corpo[campo] for campo in CAMPOS_DE_SESSAO if campo in corpo}
     limpo = {chave: valor for chave, valor in corpo.items() if chave not in CAMPOS_DE_SESSAO}
     return limpo, descartados
 
@@ -112,6 +143,7 @@ class TrilhaDeAuditoria:
         valor_anterior: str | None = None,
         valor_novo: str | None = None,
         campos_descartados: tuple[str, ...] = (),
+        nivel_afirmado: str | None = None,
     ) -> None:
         self._entradas.append(
             {
@@ -129,6 +161,10 @@ class TrilhaDeAuditoria:
                 "valor_anterior": valor_anterior,
                 "valor_novo": valor_novo,
                 "campos_descartados": campos_descartados,
+                # O `nivelAcesso` que o corpo afirmava, preservado como
+                # afirmação do cliente e não como fato do servidor. É o
+                # `claimedLevel` da Regra 3 da Etapa 6.
+                "nivel_afirmado": nivel_afirmado,
             }
         )
 
@@ -142,11 +178,18 @@ class TrilhaDeAuditoria:
         elevação. Uma tentativa recusada não é elevação, e prometer alerta nela
         seria prometer um limiar que a Regra 3 não tem: recusa entra na regra
         pelos gatilhos de repetição, não por notificação imediata.
+
+        Rebaixamento também não é elevação. Alterar perfil para baixo fica
+        registrado na trilha, mas não notifica por este caminho - é o Gatilho A
+        da Regra 3 tal como a Etapa 6 o define.
         """
         return tuple(
             e
             for e in self._entradas
-            if e["operacao"] == "alterarPerfil" and e["resultado"] == "EFETIVADA"
+            if e["operacao"] == "alterarPerfil"
+            and e["resultado"] == "EFETIVADA"
+            and NIVEIS_DE_ACESSO.index(e["valor_novo"])
+            > NIVEIS_DE_ACESSO.index(e["valor_anterior"])
         )
 
     def eventos_para_regra_3(self) -> tuple[dict, ...]:
@@ -228,11 +271,25 @@ class ServicoDeFuncionarios:
         if not decisao.permitida:
             self._trilha.registrar(
                 sessao, operacao, id_alvo, "RECUSADA", decisao.motivo,
-                campos_descartados=descartados,
+                campos_descartados=tuple(descartados),
+                nivel_afirmado=descartados.get("nivelAcesso"),
             )
             # A mensagem não diz qual campo ou perfil existe: a resposta de
             # recusa não pode virar fonte de enumeração.
             raise ErroAutorizacao("operacao nao autorizada")
+
+        if operacao in ("alterarPerfil", "salvarCadastro"):
+            if id_alvo is None:
+                # Operação sobre registro sem dizer qual registro é pedido
+                # malformado, não recusa de alçada: 400, e antes de qualquer
+                # escrita.
+                raise ErroDeEntrada("operacao exige identificacao do registro alvo")
+            if id_alvo not in self._cadastro:
+                # Mesmo caso: alvo que não existe é pedido malformado. Sem este
+                # guarda, a busca no cadastro levantaria `KeyError` - erro de
+                # servidor para entrada de cliente. A mensagem não confirma nem
+                # nega a existência do identificador, para não virar enumeração.
+                raise ErroDeEntrada("operacao exige identificacao do registro alvo")
 
         if operacao == "alterarPerfil":
             return self._alterar_perfil(sessao, id_alvo, corpo, decisao)
@@ -256,6 +313,12 @@ class ServicoDeFuncionarios:
     def _alterar_perfil(
         self, sessao: Sessao, id_alvo: str, corpo: dict, decisao: Decisao
     ) -> dict:
+        """Efetiva a alteração de perfil já autorizada.
+
+        Levanta `ErroDeEntrada` (HTTP 400) se `novoNivelAcesso` não vier no corpo
+        ou trouxer valor fora de `NIVEIS_DE_ACESSO`. Não é `ErroAutorizacao`: a
+        alçada foi verificada e aprovada antes daqui - o que falha é o pedido.
+        """
         registro = self._cadastro[id_alvo]
         anterior = registro["nivelAcesso"]
         # O valor novo é parâmetro da operação própria de alteração de perfil -
@@ -263,7 +326,14 @@ class ServicoDeFuncionarios:
         # foi descartado na entrada. O primeiro é o que a operação autorizada
         # concede a um terceiro; o segundo seria o cliente afirmando a própria
         # alçada. É a cláusula 3 tomando forma no código.
+        if "novoNivelAcesso" not in corpo:
+            raise ErroDeEntrada("parametro novoNivelAcesso ausente")
         novo = corpo["novoNivelAcesso"]
+        # Estar autorizado a alterar o perfil de alguém não é estar autorizado a
+        # inventar um perfil: a validação vem depois da decisão porque é sobre o
+        # valor, não sobre quem pede.
+        if novo not in NIVEIS_DE_ACESSO:
+            raise ErroDeEntrada("nivel de acesso fora do conjunto conhecido")
         registro["nivelAcesso"] = novo
         self._trilha.registrar(
             sessao, "alterarPerfil", id_alvo, "EFETIVADA", decisao.motivo,
@@ -272,7 +342,7 @@ class ServicoDeFuncionarios:
         return self._sem_campos_de_autenticacao(registro)
 
     def _salvar_cadastro(
-        self, sessao: Sessao, id_alvo: str, corpo: dict, descartados: tuple[str, ...]
+        self, sessao: Sessao, id_alvo: str, corpo: dict, descartados: dict
     ) -> dict:
         registro = self._cadastro[id_alvo]
         # `registro.update(corpo)` gravaria qualquer chave que o cliente
@@ -288,7 +358,13 @@ class ServicoDeFuncionarios:
         registro.update(gravaveis)
         self._trilha.registrar(
             sessao, "salvarCadastro", id_alvo, "EFETIVADA",
-            "dados funcionais gravados", campos_descartados=descartados + ignorados,
+            "dados funcionais gravados",
+            # `valor_anterior` é o nível vigente, do servidor; `nivel_afirmado` é
+            # o que o corpo dizia. A Regra 3 compara os dois para separar reenvio
+            # de rotina - valores iguais - de tentativa de gravar o campo.
+            valor_anterior=registro["nivelAcesso"],
+            campos_descartados=tuple(descartados) + ignorados,
+            nivel_afirmado=descartados.get("nivelAcesso"),
         )
         return self._sem_campos_de_autenticacao(registro)
 

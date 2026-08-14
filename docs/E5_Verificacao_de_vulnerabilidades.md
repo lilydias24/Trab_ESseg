@@ -24,7 +24,12 @@
   sobre Java 25), em modo linha de comando com o **Automation Framework**. O plano
   usado está versionado em
   [`plano-automacao-zap.yaml`](../evidencias/etapa-5/plano-automacao-zap.yaml), para
-  que a sessão possa ser repetida por qualquer integrante.
+  que a sessão possa ser repetida por qualquer integrante. O plano versionado recebeu
+  dois acertos **posteriores à sessão**, sem nova execução: o `reportDir` passou de
+  `C:/tmp/zap-out` (absoluto, de Windows) para `./zap-out`, relativo ao diretório de
+  onde o ZAP é chamado, e o terceiro job de relatório
+  (`risk-confidence-html`) foi removido, porque gerava um artefato que não está
+  versionado aqui. Assim, rodar o plano produz exatamente os dois relatórios abaixo.
 - **Tipo de varredura:** varredura completa em quatro fases encadeadas -
   *spider* tradicional (18 s), *AJAX spider* com Edge headless (34 s, 142 URLs, e é
   ele que alcança a interface Angular), varredura **passiva** sobre todo o tráfego
@@ -95,11 +100,18 @@ Os três achados levados à análise são os de maior risco atribuído pela ferr
 As colunas *Possível impacto* e *Correção proposta* são a análise da @mariasanchez0’s
 (seção 3); as demais registram o que a sessão produziu.
 
-| ID | Achado | Severidade (ZAP) | Evidência | Possível impacto | CWE/OWASP | Correção proposta |
+| ID | Achado | Severidade (ZAP) | Evidência | Possível impacto | CWE/WASC | Correção proposta |
 | --- | --- | --- | --- | --- | --- | --- |
-| V01 | **SQL Injection** em `GET /rest/products/search`, parâmetro `q`. Carga `'(` produz `HTTP 500` com `SQLITE_ERROR: near "(": syntax error` | Alto (confiança Baixa segundo o ZAP - **verificado como verdadeiro positivo**, ver abaixo) | [captura 03](../evidencias/etapa-5/capturas-de-tela/03-sqli-erro-sqlite.png); `pluginid` 40018 no [JSON](../evidencias/etapa-5/relatorio-zap-juiceshop.json) | Leitura, adulteração ou exclusão de dados no banco por trás do endpoint, caso a exploração avance além do erro de sintaxe já confirmado | CWE-89; WASC-19 | Consultas parametrizadas (prepared statements) e resposta de erro genérica, sem stack trace nem versão de framework |
-| V02 | **Content Security Policy (CSP) Header Not Set** - 5 instâncias, incluindo a raiz da aplicação | Médio (confiança Alta) | [captura 02](../evidencias/etapa-5/capturas-de-tela/02-zap-relatorio-alertas.png); `pluginid` 10038 | Amplia o efeito de qualquer XSS presente na aplicação, por faltar a camada do navegador que conteria um script injetado | CWE-693; WASC-15 | Cabeçalho `Content-Security-Policy` restritivo (`default-src 'self'`, sem `unsafe-inline`/`unsafe-eval`) em todas as respostas |
-| V03 | **Cross-Domain Misconfiguration** - resposta traz `Access-Control-Allow-Origin: *`, em 3 instâncias | Médio (confiança Média) | [captura 02](../evidencias/etapa-5/capturas-de-tela/02-zap-relatorio-alertas.png); `pluginid` 10098 | Qualquer origem pode ler resposta autenticada via requisição cross-site, ampliando furto de sessão ou dado por site malicioso | CWE-264; WASC-14 | Allowlist de origens confiáveis no `Access-Control-Allow-Origin`, nunca combinado com `Access-Control-Allow-Credentials: true` |
+| V01 | **SQL Injection** em `GET /rest/products/search`, parâmetro `q`. Carga `'(` produz `HTTP 500` com `SQLITE_ERROR: near "(": syntax error` | Alto (confiança Baixa segundo o ZAP - **verificado como verdadeiro positivo**, ver abaixo) | [captura 03](../evidencias/etapa-5/capturas-de-tela/03-sqli-erro-sqlite.png); `pluginid` 40018 no [JSON](../evidencias/etapa-5/relatorio-zap-juiceshop.json) e no *Alert Detail* do [HTML](../evidencias/etapa-5/relatorio-zap-juiceshop.html), com URL, parâmetro, carga e `evidence: HTTP/1.1 500 Internal Server Error` | Leitura, adulteração ou exclusão de dados no banco por trás do endpoint, caso a exploração avance além do erro de sintaxe já confirmado | CWE-89; WASC-19 | Consultas parametrizadas (prepared statements) e resposta de erro genérica, sem stack trace nem versão de framework |
+| V02 | **Content Security Policy (CSP) Header Not Set** - 5 instâncias, incluindo a raiz da aplicação | Médio (confiança Alta) | `pluginid` 10038 no [JSON](../evidencias/etapa-5/relatorio-zap-juiceshop.json) e no *Alert Detail* do [HTML](../evidencias/etapa-5/relatorio-zap-juiceshop.html): 5 instâncias `GET` - `/`, `/ftp/eastere.gg`, `/ftp/encrypt.pyc`, `/ftp/package-lock.json.bak` e `/sitemap.xml`. O campo `evidence` vem vazio porque o achado é a **ausência** do cabeçalho na resposta | Amplia o efeito de qualquer XSS presente na aplicação, por faltar a camada do navegador que conteria um script injetado | CWE-693; WASC-15 | Cabeçalho `Content-Security-Policy` restritivo (`default-src 'self'`, sem `unsafe-inline`/`unsafe-eval`) em todas as respostas |
+| V03 | **Cross-Domain Misconfiguration** - resposta traz `Access-Control-Allow-Origin: *`, em 3 instâncias | Médio (confiança Média) | `pluginid` 10098 no [JSON](../evidencias/etapa-5/relatorio-zap-juiceshop.json) e no *Alert Detail* do [HTML](../evidencias/etapa-5/relatorio-zap-juiceshop.html): 3 instâncias `GET` - `/`, `/scripts.js` e `/styles.css` -, todas com `evidence: Access-Control-Allow-Origin: *` | Qualquer origem pode ler resposta autenticada via requisição cross-site, ampliando furto de sessão ou dado por site malicioso | CWE-264; WASC-14 | Allowlist de origens confiáveis no `Access-Control-Allow-Origin`, nunca combinado com `Access-Control-Allow-Credentials: true` |
+
+A coluna traz a classificação **como a ferramenta a devolve**: CWE e WASC são os dois
+identificadores presentes no relatório do ZAP; o §25 aceita "OWASP **ou** CWE". O
+mapeamento para a categoria do OWASP Top 10 faz parte da análise da seção 3 - por isso
+a coluna não se chama "CWE/OWASP". A captura 02 mostra apenas o *Summary of Alerts*, a
+lista de nomes e o *Alert Detail* do V01; por isso V02 e V03 são referenciados
+diretamente ao relatório, onde constam URL, método e evidência de cada instância.
 
 ### Verificação do V01: verdadeiro positivo, não falso positivo
 
@@ -123,7 +135,10 @@ completamente as vulnerabilidades").
 
 *Resposta ao payload `'(`. Além de confirmar a injeção, a página revela o framework e
 a versão (`Express ^4.22.1`) - tratamento de erro que devolve detalhe interno ao
-cliente é, por si, um segundo problema.*
+cliente é, por si, um segundo problema. A captura foi recortada no corpo do erro e
+**não inclui a barra de endereços**: sozinha, ela não liga o `HTTP 500` à URL
+`/rest/products/search?q='(`. Essa ligação está no relatório do ZAP, que registra a
+URL completa, o parâmetro, a carga e a evidência da resposta.*
 
 ### Alertas descartados desta análise
 
@@ -133,8 +148,8 @@ alertas restantes não entraram entre os três analisados:
 | Alerta | Risco | Por que foi descartado |
 | --- | --- | --- |
 | Private IP Disclosure (`192.168.99.100:3000`) | Baixo | Endereço interno devolvido por `/rest/admin/application-configuration`. É exposição real, mas de baixo alcance e, neste caso, um valor de configuração de exemplo do próprio Juice Shop, não da infraestrutura em que a sessão rodou |
-| Timestamp Disclosure - Unix | Baixo | **Provável falso positivo.** O ZAP reconhece qualquer inteiro de 10 dígitos como *timestamp*; o valor sinalizado (`1666666667`) é uma constante do código, não um carimbo de tempo real |
-| Information Disclosure - Suspicious Comments | Informativo | A "evidência" é a palavra `SELECT` dentro de `chunk-DAJ4olp_.js`, um bundle Angular minificado. Padrão textual, não vazamento |
+| Timestamp Disclosure - Unix | Baixo | **Provável falso positivo.** O ZAP reconhece qualquer inteiro de 10 dígitos como *timestamp*. As **5 instâncias** foram conferidas no JSON: três valores distintos (`1666666667`, `1839622642` e `1528301887`), todos em conteúdo estático (raiz da página, `/sitemap.xml`, `/styles.css`), os dois primeiros repetidos em recursos diferentes. Nenhum acompanha a data da sessão, e `1839622642` corresponde a 2028-04-17 - data futura, incompatível com carimbo de tempo real. Não foi inspecionado o código-fonte do Juice Shop para confirmar a origem de cada valor |
+| Information Disclosure - Suspicious Comments | Informativo | As **4 instâncias** foram conferidas no JSON: os padrões `\bSELECT\b` (em `chunk-DAJ4olp_.js`), `\bDB\b` (`chunk-eYAgyLdn.js`) e `\bQUERY\b` (`hacking-instructor-BXwB7EFQ.js` e `main.js`), todos dentro de bundles JavaScript minificados. São coincidências de padrão textual em código empacotado, não comentários vazando informação |
 | Modern Web Application | Informativo | Não é vulnerabilidade: o ZAP apenas registra que o alvo é uma SPA e que links podem depender de JavaScript |
 | User Agent Fuzzer | Informativo | Resultado de teste, não achado: o ZAP variou o cabeçalho `User-Agent` e comparou respostas |
 

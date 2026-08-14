@@ -101,8 +101,12 @@ tempo real, que é o caminho remanescente, não passa pelo banco de dados.
 
 ## Prática 2 - Controle de autorização no servidor (@PPrauchner)
 
-- **Risco e requisito atendidos:** R06 (Elevation of Privilege) / RS03, cláusulas 1 a 5,
-  7 e 8; realiza os controles R06-C1, R06-C2 e R06-C3 do plano de tratamento da
+- **Risco e requisito atendidos:** R06 (Elevation of Privilege) / RS03, cláusulas 1, 2, 3,
+  5 e 8, e a **fonte de evento** da cláusula 7 - o código expõe a consulta às elevações
+  efetivadas, não a notificação ao Diretor e à Segurança da Informação. Da cláusula 4 vale
+  o que o modelo de fato garante: a decisão precede a persistência, de modo que não há
+  efeito parcial a reverter - **não** há rollback de uma operação que falhe no meio.
+  Realiza os controles R06-C1, R06-C2 e R06-C3 do plano de tratamento da
   [Etapa 2](E2_Riscos_e_NIST_CSF.md)
 - **Referência OWASP:** [Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html);
   OWASP A01:2025 e as CWE mapeadas para RS03 na [Etapa 3](E3_Arquitetura_segura.md) -
@@ -140,20 +144,30 @@ declarada, recusado por omissão - cláusula 2) e **RS03-CA08** (leitura em mass
 de volume e sem campos de autenticação na resposta - cláusula 8). O **RS03-CA03**
 (requisição enviada direto ao endpoint) está dentro do teste 2: o modelo não tem camada de
 interface, todas as chamadas partem do serviço, e é justamente isso que ele precisa
-demonstrar.
+demonstrar. Duas verificações finais, fora dos critérios do E3, cobrem o que o modelo
+precisa acertar para não mentir na trilha: a **validação de entrada** da operação de
+alteração de perfil - nível inexistente, parâmetro `novoNivelAcesso` ausente e alvo fora
+do cadastro, os três recusados com **HTTP 400** e sem gravação - e a **direção** da
+alteração, porque o alerta da cláusula 7 é de elevação e um rebaixamento não pode
+dispará-lo.
 
 ### Implementação
 
 Implementação executável em Python, apenas com a biblioteca padrão, no mesmo formato da
 Prática 1. O modelo é o menor possível: uma `Sessao` imutável, um cadastro em memória, um
 `ServicoDeAutorizacao`, um `ServicoDeFuncionarios` e uma `TrilhaDeAuditoria` somente de
-acréscimo. Cinco decisões merecem registro:
+acréscimo. Seis decisões merecem registro:
 
 - **Descartar, não validar.** `descartar_campos_de_sessao` remove `idFuncionario`,
   `perfil` e `nivelAcesso` do corpo **antes** da decisão de autorização, e devolve à parte
-  a lista do que removeu. A ordem importa: validar um valor controlado pelo cliente ainda
-  é confiar nele. A lista de descartados não é decorativa - é ela que permite registrar a
-  tentativa em vez de ignorá-la em silêncio, que é o resultado exigido por RS03-CA04.
+  o que removeu, **com os valores**. A ordem importa: validar um valor controlado pelo
+  cliente ainda é confiar nele. O que foi descartado não é registro decorativo - é ele que
+  permite registrar a tentativa em vez de ignorá-la em silêncio, que é o resultado exigido
+  por RS03-CA04. Guardar o **valor** afirmado, e não só o nome do campo, é a cláusula 5
+  pedindo valor anterior e valor novo também nas alterações recusadas, e é o que a Regra 3
+  da [Etapa 6](E6_Monitoramento_e_deteccao.md) compara, no campo `claimedLevel`, para
+  separar reenvio de rotina do registro inteiro de tentativa de gravar o privilégio.
+  Registrar não é confiar: a entrada `nivel_afirmado` da trilha nunca alimenta decisão.
 - **A decisão mora fora de quem executa.** `ServicoDeAutorizacao.decidir` é consultado por
   `ServicoDeFuncionarios.executar` antes de qualquer despacho, no papel do Serviço de
   Autorização instituído pela DA02. Se a decisão vivesse dentro do serviço, seria
@@ -169,6 +183,14 @@ acréscimo. Cinco decisões merecem registro:
   chamada já autorizada concede a **outro** funcionário. Separá-los foi necessário porque
   a cláusula 3 exige que o perfil mude por operação própria, e não pela via de salvamento
   do cadastro.
+- **Estar autorizado a alterar um perfil não é poder inventar um.** O destino da alteração
+  sai de um conjunto fechado (`NIVEIS_DE_ACESSO`), e a ausência do parâmetro é recusada
+  como **HTTP 400** (`ErroDeEntrada`), nunca como 403 e nunca como `KeyError` virando 500 -
+  erro de servidor para entrada malformada de cliente. A recusa por valor não é recusa de
+  alçada: 403 diz "você não pode", 400 diz "o pedido não faz sentido", e conflatá-los
+  mentiria na trilha. A validação não é cláusula de RS03 - a cláusula 3 fala de *quem*
+  altera, não de *para qual valor* -, mas sem ela a própria decisão do servidor passaria a
+  comparar `nivelAcesso` com um valor que não conhece.
 - **Autorização é sobre o recurso, não sobre o menu.** A decisão de `salvarCadastro` não
   se contenta com o perfil da sessão: exige vínculo com o alvo - o próprio registro, ou
   alçada de GerenteGeral para gravar sobre terceiro. E a gravação passa por uma
@@ -195,7 +217,7 @@ $ python teste_autorizacao_servidor.py
      nivelAcesso do alvo apos a operacao.............. GerenteSetor
      trilha - autor................................... F001
      trilha - valor anterior / valor novo............. Supervisor -> GerenteSetor
-     trilha - data/hora carimbada pelo servidor....... 2026-08-14T05:32:05+00:00
+     trilha - data/hora carimbada pelo servidor....... 2026-08-14T14:49:49+00:00
      alerta da clausula 7 (elevacao efetivada)........ emitido
 
 [OK] Teste 2 - caso nao autorizado (RS03-CA02 e RS03-CA03)
@@ -216,6 +238,17 @@ $ python teste_autorizacao_servidor.py
      senhaLogin pela via de salvamento................ fora da allowlist
      listagem em massa limitada a 50 registros........ CA08
      campos de autenticacao na listagem............... nenhum
+
+[OK] Validacao de entrada da alteracao de perfil
+     promocao para nivel inexistente.................. recusada (400)
+     parametro novoNivelAcesso ausente................ recusado (400), sem KeyError
+     alvo inexistente no cadastro..................... recusado (400), sem KeyError
+     nivelAcesso persistido apos as tres tentativas... Supervisor
+
+[OK] Direcao da alteracao de perfil (clausula 7)
+     rebaixamento GerenteGeral -> Supervisor.......... registrado, sem alerta
+     elevacao Supervisor -> GerenteGeral.............. alerta emitido
+     alertas da clausula 7 apos as duas operacoes..... 1
 
 Todos os testes passaram.
 ```
@@ -241,6 +274,13 @@ outros gatilhos. Por isso o serviço expõe duas consultas distintas à trilha -
 6 - e o teste 2 verifica que a recusa **não** dispara o alerta, ao mesmo tempo que as duas
 faces do ataque entram na regra.
 
+`alertas_de_elevacao` também compara a **direção** da mudança contra a ordem de
+`NIVEIS_DE_ACESSO`, e não apenas o resultado da operação. Um rebaixamento é uma alteração
+de perfil efetivada, mas não é elevação: fica na trilha e não notifica, como o
+[Gatilho A da Regra 3](E6_Monitoramento_e_deteccao.md) exige. Sem essa comparação, a
+prática emitiria o evento da cláusula 7 num caso em que a cláusula não o pede - e a
+Etapa 6, que consome esta fonte, herdaria o alerta falso.
+
 **O que isto comprova e o que não comprova.** Comprova os controles **R06-C1** (perfil
 vindo da sessão, `nivelAcesso` do corpo descartado, 403 para quem não é Diretor),
 **R06-C2** (campo imutável pelo titular, mudança só por operação própria) e a parte de
@@ -252,7 +292,10 @@ SIGH. Também não comprova a cláusula 6 (reemissão da identidade de sessão q
 muda, RS03-CA07), que é responsabilidade do serviço de autenticação da DA03, nem o
 **R06-C4**, cujo destinatário e canal de alerta são matéria da
 [Etapa 6](E6_Monitoramento_e_deteccao.md): o que existe aqui é a fonte do evento, não a
-notificação.
+notificação. Da cláusula 4, comprova a recusa em 403 anterior à persistência - nada é
+gravado antes da decisão, e por isso não há efeito parcial -, mas **não** comprova a
+reversão de uma operação que falhe no meio da execução: o modelo não tem transação nem
+rollback, e essa garantia depende do SGBD único da arquitetura.
 
 E há um limite que a prática não move, já reconhecido em RS03: ela fecha o caminho de
 CA05, mas **não reduz o impacto de R06**. Uma conta de Diretor comprometida, ou o conluio
