@@ -7,7 +7,7 @@
 | --- | --- | --- |
 | Pipeline DevSecOps (8 momentos + 3 condições de bloqueio) | @ARTHUR9011 (rascunho), @lorenzoficher (revisão) | Concluído (observações da revisão incorporadas) |
 | Roteiro do vídeo - parte de cada trilha | Todos | Concluído (Abertura e os cinco blocos de trilha escritos; Information Disclosure aguarda apenas o trecho final do ZAP) |
-| Organização do roteiro em documento único | @mariasanchez0 | Concluído (blocos Information Disclosure e Encerramento adicionados; o bloco DoS/EoP do @PPrauchner já foi escrito e falta integrá-lo) |
+| Organização do roteiro em documento único | @mariasanchez0 | Concluído (os sete blocos reunidos aqui, incluindo o DoS/EoP do @PPrauchner; falta o arquivo próprio em `roteiros/`, exigido pelo §31) |
 | Gravação (5-8 min) e publicação do link | Todos; edição por @ARTHUR9011 | Pendente |
 
 ---
@@ -375,7 +375,7 @@ o argumento de R04 e DA02 já fecha a trilha com evidência própria.
 
 | Tempo | Mostrar na tela | Mensagem principal |
 | --- | --- | --- |
-| 0-15 s | T05 e T06 na [Etapa 1](E1_Casos_de_abuso_e_Stride.md), com `diagrams/estrutura/Diagramas_SIGH - Implantacao.png` | Um SGBD único para os sete serviços; e o `nivelAcesso` como única autorização do modelo |
+| 0-15 s | T05 e T06 na [Etapa 1](E1_Casos_de_abuso_e_Stride.md), com o [diagrama de implantação](../diagrams/estrutura/Diagramas_SIGH%20-%20Implantacao.png) | Um SGBD único para os sete serviços; e o `nivelAcesso` como única autorização do modelo |
 | 15-30 s | Fluxo de abuso do CA05 na [Etapa 1](E1_Casos_de_abuso_e_Stride.md), passos 3 a 7 | A elevação é o meio, a indisponibilidade é a consequência do uso do privilégio obtido |
 | 30-45 s | Registros de R05 e R06 em 13.4 na [Etapa 2](E2_Riscos_e_NIST_CSF.md) | 12 Crítico e 8 Alto - e a identidade promovida, não falsificada |
 | 45-62 s | Cláusulas 1, 2, 3 e 8 da RS03 e a DA02 na [Etapa 3](E3_Arquitetura_segura.md) | Decisão no servidor, fora de quem executa, com negação por padrão |
@@ -404,9 +404,11 @@ RS01; a leitura de RNF01, RNF02 e RNF03 e o segundo caminho de R05 - a chamada s
 > lacuna, a ausência de uma segunda verificação depois do login, seja para autenticar
 > quem está entrando, para autorizar o que essa sessão pode fazer, ou para provar depois
 > o que foi feito. Spoofing e Elevation of Privilege habilitam os demais; Tampering e
-> Repudiation mostram o dano quando não há verificação nem prova; e Information
+> Repudiation mostram o dano quando não há verificação nem prova; Information
 > Disclosure mostra que a mesma ausência que permite agir também permite ler o que não
-> deveria. O tratamento proposto converge para três decisões de arquitetura -
+> deveria; e Denial of Service mostra que ler demais, sobre um SGBD único, já é
+> derrubar - a leitura em massa é o mesmo caminho nas duas pontas. O tratamento
+> proposto converge para três decisões de arquitetura -
 > autenticação, autorização e auditoria centralizadas - que sozinhas não eliminam o
 > risco, mas mudam sua natureza: de ausência de barreira para barreira com dono, testável
 > e observável. O que fica declarado, e não escondido, é que o SIGH segue sem
@@ -422,9 +424,11 @@ RS01; a leitura de RNF01, RNF02 e RNF03 e o segundo caminho de R05 - a chamada s
 | 22-32 s | Pipeline da [Etapa 7](E7_DevSecOps_e_video.md) | O que falta é implementar e verificar - o método já está pronto |
 
 Durante a gravação, não apresentar nenhuma parte do SIGH como implementada; o vídeo
-inteiro descreve especificação e testes definidos antes do código, exceto a prática de
-armazenamento de senhas da Etapa 4, que é a única evidência executada de todo o
-trabalho.
+inteiro descreve especificação e testes definidos antes do código, exceto as **duas
+práticas da Etapa 4** - armazenamento de senhas e autorização no servidor -, que têm
+execução real. A Etapa 5 também traz evidência executada, mas de **outro sistema**: a
+sessão do ZAP rodou sobre o Juice Shop, não sobre o SIGH, e o vídeo precisa dizer isso
+com todas as letras.
 
 ## 3. Vídeo final
 

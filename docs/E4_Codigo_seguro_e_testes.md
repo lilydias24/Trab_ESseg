@@ -130,7 +130,7 @@ já registrava como "exatamente os testes escritos na Etapa 4".
 | # | Cenário | Entrada | Resultado esperado |
 | --- | --- | --- | --- |
 | 1 | **Caso válido** (RS03-CA01) - Diretor promove outro funcionário a GerenteSetor | Sessão `nivelAcesso = Diretor` (F001), alvo F003, operação `alterarPerfil` com `novoNivelAcesso: "GerenteSetor"` | Alteração aceita; a trilha registra autor, valor anterior, valor novo, terminal e data/hora carimbada pelo servidor |
-| 2 | **Caso não autorizado** (RS03-CA02) - Supervisor tenta elevar o próprio `nivelAcesso`, como no passo 3 de CA05 | Sessão `nivelAcesso = Supervisor` (F003) enviando o próprio cadastro com `nivelAcesso: "Diretor"` no corpo, e depois chamando a operação de alteração de perfil sobre o próprio registro | HTTP 403; o campo permanece `Supervisor`; a tentativa é registrada e o alerta da Regra 3 dispara |
+| 2 | **Caso não autorizado** (RS03-CA02) - Supervisor tenta elevar o próprio `nivelAcesso`, como no passo 3 de CA05 | Sessão `nivelAcesso = Supervisor` (F003) enviando o próprio cadastro com `nivelAcesso: "Diretor"` no corpo, e depois chamando a operação de alteração de perfil sobre o próprio registro | Pela via de salvamento: o campo é descartado antes de qualquer validação, os demais dados seguem o fluxo normal e a tentativa é registrada. Pela operação própria: **HTTP 403**, sem efeito parcial. Em nenhum dos dois o campo deixa de ser `Supervisor`, e os dois alimentam a Regra 3 |
 
 As verificações auxiliares cobrem os demais critérios já especificados no E3, e com eles
 as cláusulas que os dois testes principais não alcançam: **RS03-CA04** (dados funcionais
@@ -147,7 +147,7 @@ demonstrar.
 Implementação executável em Python, apenas com a biblioteca padrão, no mesmo formato da
 Prática 1. O modelo é o menor possível: uma `Sessao` imutável, um cadastro em memória, um
 `ServicoDeAutorizacao`, um `ServicoDeFuncionarios` e uma `TrilhaDeAuditoria` somente de
-acréscimo. Quatro decisões merecem registro:
+acréscimo. Cinco decisões merecem registro:
 
 - **Descartar, não validar.** `descartar_campos_de_sessao` remove `idFuncionario`,
   `perfil` e `nivelAcesso` do corpo **antes** da decisão de autorização, e devolve à parte
@@ -169,6 +169,14 @@ acréscimo. Quatro decisões merecem registro:
   chamada já autorizada concede a **outro** funcionário. Separá-los foi necessário porque
   a cláusula 3 exige que o perfil mude por operação própria, e não pela via de salvamento
   do cadastro.
+- **Autorização é sobre o recurso, não sobre o menu.** A decisão de `salvarCadastro` não
+  se contenta com o perfil da sessão: exige vínculo com o alvo - o próprio registro, ou
+  alçada de GerenteGeral para gravar sobre terceiro. E a gravação passa por uma
+  **allowlist** de dados funcionais, em vez de aplicar o corpo inteiro sobre o registro.
+  Sem os dois limites, uma sessão de Supervisor reescreveria a `senhaLogin` do Diretor
+  pela via de salvamento e entraria como ele: R06 se realizando por outro caminho, sobre
+  exatamente o ativo que RS01 protege. Campo que o cadastro venha a ganhar nasce **não
+  gravável** por esta via, pelo mesmo princípio que faz operação nova nascer recusada.
 
 A recusa levanta `ErroAutorizacao`, com `codigo_http = 403`, antes de qualquer escrita:
 não há efeito parcial a reverter porque nada chegou a ser gravado. A mensagem devolvida é
@@ -187,8 +195,8 @@ $ python teste_autorizacao_servidor.py
      nivelAcesso do alvo apos a operacao.............. GerenteSetor
      trilha - autor................................... F001
      trilha - valor anterior / valor novo............. Supervisor -> GerenteSetor
-     trilha - data/hora carimbada pelo servidor....... 2026-08-14T00:49:31+00:00
-     alerta de elevacao (Regra 3, Etapa 6)............ emitido
+     trilha - data/hora carimbada pelo servidor....... 2026-08-14T05:32:05+00:00
+     alerta da clausula 7 (elevacao efetivada)........ emitido
 
 [OK] Teste 2 - caso nao autorizado (RS03-CA02 e RS03-CA03)
      nivelAcesso enviado no salvamento do cadastro.... descartado
@@ -197,26 +205,41 @@ $ python teste_autorizacao_servidor.py
      requisicao enviada direto ao endpoint............ mesmo resultado
      efeito parcial no cadastro....................... nenhum
      trilha - tentativa recusada registrada........... sim
-     alerta de elevacao (Regra 3, Etapa 6)............ emitido
+     eventos que alimentam a Regra 3.................. 2 (as duas faces)
+     alerta da clausula 7 (elevacao efetivada)........ nenhum, como esperado
 
 [OK] Verificacoes auxiliares - RS03-CA04 a RS03-CA08
      dados funcionais gravados, nivelAcesso ignorado.. CA04
      Diretor elevando a si mesmo...................... CA05, recusado (403)
      endpoint sem regra declarada..................... CA06, negado por padrao
+     salvar cadastro de terceiro sem alcada........... recusado (403)
+     senhaLogin pela via de salvamento................ fora da allowlist
      listagem em massa limitada a 50 registros........ CA08
      campos de autenticacao na listagem............... nenhum
 
 Todos os testes passaram.
 ```
 
-Uma observação de escrita que vale registrar, porque mudou o desenho. O critério
-RS03-CA02 espera **HTTP 403** para o corpo que traz `nivelAcesso` alterado, e o RS03-CA04
-espera, para uma entrada da mesma forma, que os dados funcionais sejam **gravados** e o
-campo apenas ignorado. Os dois não podem valer para a mesma chamada. A leitura adotada é
-que o ataque de CA02 se define pela intenção, não pelo formato do corpo: a via de
-salvamento nunca grava o campo, e a operação que de fato altera perfil recusa com 403. O
-teste 2 exercita as duas faces, e por isso comprova o "campo permanece `Supervisor`" e o
-"HTTP 403" que o critério pede. O ponto foi anotado para revisão cruzada do E3.
+Uma observação de escrita que vale registrar, porque mudou o desenho. Na redação original
+do E3, RS03-CA02 esperava **HTTP 403** para o corpo que trazia `nivelAcesso` alterado, e
+RS03-CA04 esperava, para uma entrada da mesma forma, que os dados funcionais fossem
+**gravados** e o campo apenas ignorado. Nenhum servidor satisfaz os dois, porque a
+requisição é a mesma - só a intenção difere, e intenção não é observável. Foi a tentativa
+de codificar ambos, aqui, que expôs a contradição.
+
+A revisão cruzada foi feita e **o critério já está conciliado no E3**: a cláusula 3 dava a
+resposta desde o início, e CA02 passou a exercitar os **dois caminhos** - descarte com
+registro pela via de salvamento, HTTP 403 pela operação própria de alteração de perfil -,
+enquanto CA04 deixou de ser caso concorrente e passou a demonstrar que o desfecho da via
+de salvamento não depende da intenção. A tabela de testes acima segue a redação
+conciliada.
+
+Na mesma revisão caiu a promessa de que "o alerta da Regra 3 dispara" numa recusa isolada.
+A cláusula 7 alerta nas elevações **efetivadas**; tentativas alimentam a Regra 3 por
+outros gatilhos. Por isso o serviço expõe duas consultas distintas à trilha -
+`alertas_de_elevacao` para a cláusula 7 e `eventos_para_regra_3` para os gatilhos da Etapa
+6 - e o teste 2 verifica que a recusa **não** dispara o alerta, ao mesmo tempo que as duas
+faces do ataque entram na regra.
 
 **O que isto comprova e o que não comprova.** Comprova os controles **R06-C1** (perfil
 vindo da sessão, `nivelAcesso` do corpo descartado, 403 para quem não é Diretor),
