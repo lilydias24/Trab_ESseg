@@ -7,7 +7,7 @@
 | Item | Responsável | Situação |
 | --- | --- | --- |
 | Condução da sessão (setup Juice Shop + ZAP, captura de evidências) | @PPrauchner | Concluída (sessão executada em 13/08/2026; relatório e capturas versionados) |
-| Análise dos 3 achados e correção proposta (com CWE/OWASP) | @mariasanchez0’s | Pendente (achados identificados e evidenciados na seção 2) |
+| Análise dos 3 achados e correção proposta (com CWE/OWASP) | @mariasanchez0 | Concluída |
 | Revisão cruzada e complemento da tabela final | @lilydias24 e @lorenzoficher | Pendente |
 
 ---
@@ -97,9 +97,9 @@ As colunas *Possível impacto* e *Correção proposta* são a análise da @maria
 
 | ID | Achado | Severidade (ZAP) | Evidência | Possível impacto | CWE/OWASP | Correção proposta |
 | --- | --- | --- | --- | --- | --- | --- |
-| V01 | **SQL Injection** em `GET /rest/products/search`, parâmetro `q`. Carga `'(` produz `HTTP 500` com `SQLITE_ERROR: near "(": syntax error` | Alto (confiança Baixa segundo o ZAP - **verificado como verdadeiro positivo**, ver abaixo) | [captura 03](../evidencias/etapa-5/capturas-de-tela/03-sqli-erro-sqlite.png); `pluginid` 40018 no [JSON](../evidencias/etapa-5/relatorio-zap-juiceshop.json) | | CWE-89; WASC-19 | |
-| V02 | **Content Security Policy (CSP) Header Not Set** - 5 instâncias, incluindo a raiz da aplicação | Médio (confiança Alta) | [captura 02](../evidencias/etapa-5/capturas-de-tela/02-zap-relatorio-alertas.png); `pluginid` 10038 | | CWE-693; WASC-15 | |
-| V03 | **Cross-Domain Misconfiguration** - resposta traz `Access-Control-Allow-Origin: *`, em 3 instâncias | Médio (confiança Média) | [captura 02](../evidencias/etapa-5/capturas-de-tela/02-zap-relatorio-alertas.png); `pluginid` 10098 | | CWE-264; WASC-14 | |
+| V01 | **SQL Injection** em `GET /rest/products/search`, parâmetro `q`. Carga `'(` produz `HTTP 500` com `SQLITE_ERROR: near "(": syntax error` | Alto (confiança Baixa segundo o ZAP - **verificado como verdadeiro positivo**, ver abaixo) | [captura 03](../evidencias/etapa-5/capturas-de-tela/03-sqli-erro-sqlite.png); `pluginid` 40018 no [JSON](../evidencias/etapa-5/relatorio-zap-juiceshop.json) | Leitura, adulteração ou exclusão de dados no banco por trás do endpoint, caso a exploração avance além do erro de sintaxe já confirmado | CWE-89; WASC-19 | Consultas parametrizadas (prepared statements) e resposta de erro genérica, sem stack trace nem versão de framework |
+| V02 | **Content Security Policy (CSP) Header Not Set** - 5 instâncias, incluindo a raiz da aplicação | Médio (confiança Alta) | [captura 02](../evidencias/etapa-5/capturas-de-tela/02-zap-relatorio-alertas.png); `pluginid` 10038 | Amplia o efeito de qualquer XSS presente na aplicação, por faltar a camada do navegador que conteria um script injetado | CWE-693; WASC-15 | Cabeçalho `Content-Security-Policy` restritivo (`default-src 'self'`, sem `unsafe-inline`/`unsafe-eval`) em todas as respostas |
+| V03 | **Cross-Domain Misconfiguration** - resposta traz `Access-Control-Allow-Origin: *`, em 3 instâncias | Médio (confiança Média) | [captura 02](../evidencias/etapa-5/capturas-de-tela/02-zap-relatorio-alertas.png); `pluginid` 10098 | Qualquer origem pode ler resposta autenticada via requisição cross-site, ampliando furto de sessão ou dado por site malicioso | CWE-264; WASC-14 | Allowlist de origens confiáveis no `Access-Control-Allow-Origin`, nunca combinado com `Access-Control-Allow-Credentials: true` |
 
 ### Verificação do V01: verdadeiro positivo, não falso positivo
 
