@@ -27,7 +27,7 @@ que fazer diante de um alerta.
 | --- | --- | --- | --- | --- | --- |
 | 1 | R01 - Spoofing | Eventos de segurança do serviço de autenticação (RS01, cláusula 7), correlacionados com os de operação sensível | Crítico: sucesso após rajada de falhas, sessões simultâneas em zonas distintas, ou operação sensível de dispositivo desconhecido. Alto: 5 falhas em 15 min na mesma conta, ou mesma origem falhando contra 10 contas | Confirmar a sessão com o titular fora do sistema antes de revogar; havendo comprometimento, revisar o que foi executado durante a sessão | @lilydias24 |
 | 2 | R02 - Tampering | Eventos de segurança e trilha de auditoria das prescrições | Publicação que viola uma invariante de RS02, ou 3 recusas suspeitas pelo mesmo autor/prescrição em 10 minutos | Acionar resposta clínica e de segurança conforme a severidade, preservando as evidências | @ARTHUR9011 |
-| 3 | R06 - Elevation of Privilege | Decisões do Serviço de Autorização (DA02) e trilha imutável de alteração de perfil (DA01), conforme as cláusulas 5 e 7 de RS03 | Notificação obrigatória, sem limiar, a cada elevação efetivada (Gatilho A, controle R06-C4). Crítico: elevação com solicitante igual ao titular, aprovador igual ao solicitante, `decisionSource` diferente do Serviço de Autorização ou `ruleId` vazio, campo gravado pela via de salvamento do cadastro, ou leitura acima do limite de volume da cláusula 8 até 60 min depois de uma elevação. Alto: 3 recusas de privilégio em 10 min, requisição direto ao endpoint, 3 usos em 10 min de alçada nova em sessão anterior à promoção, uso isolado de alçada já retirada por rebaixamento, ou leitura acima do limite de volume sem elevação prévia | Notificar Diretor e Segurança da Informação; havendo anomalia, reverter o `nivelAcesso` pelo fluxo de aprovação, reemitir a sessão e apurar o que a alçada leu | @PPrauchner |
+| 3 | R06 - Elevation of Privilege | Decisões do Serviço de Autorização (DA02) e trilha imutável de alteração de perfil (DA01), conforme as cláusulas 5 e 7 de RS03 | Notificação obrigatória, sem limiar, a cada elevação efetivada (Gatilho A, controle R06-C4). Crítico: elevação com solicitante igual ao titular, aprovador igual ao solicitante, `decisionSource` diferente do Serviço de Autorização ou `ruleId` vazio, campo gravado pela via de salvamento do cadastro, ou leitura acima do limite de volume da cláusula 8 até 60 min depois de uma elevação do próprio autor da leitura. Alto: 3 recusas de privilégio em 10 min, requisição direto ao endpoint, 3 usos em 10 min de alçada nova em sessão anterior à promoção, uso isolado de alçada já retirada por rebaixamento, ou leitura acima do limite de volume sem elevação prévia do próprio autor | Notificar Diretor e Segurança da Informação; havendo anomalia, reverter o `nivelAcesso` pelo fluxo de aprovação, reemitir a sessão e apurar o que a alçada leu | @PPrauchner |
 
 ## Convenções comuns às três regras
 
@@ -269,8 +269,10 @@ entram no evento.
   tentativa frustrada.
 - **E - Leitura em massa do cadastro.** Volume ou abrangência acima do limite da cláusula
   8. **Crítico** quando ocorre nos 60 min seguintes a uma promoção do mesmo autor (a
-  sequência do CA05); **Alto** quando não há elevação na janela - o cenário puro de
-  RS03-CA08, que a cláusula 8 cobre pelo volume, não pela origem da alçada. É o único
+  sequência do CA05); **Alto** quando não há promoção **do mesmo autor** na janela - o
+  cenário puro de RS03-CA08, que a cláusula 8 cobre pelo volume, não pela origem da
+  alçada. As duas condições são complementares de propósito: promoção de outra pessoa na
+  janela não é a sequência do CA05, e sem isso a leitura cairia fora das duas. É o único
   gatilho que também protege R05, nas duas severidades: o mesmo volume, sobre o SGBD
   único, é caminho de indisponibilidade. Quando o alerta de 80% do pool (R05-C5) disparar
   na mesma janela, correlacionar no mesmo incidente.
@@ -320,7 +322,7 @@ separa os dois casos, limite honesto da regra).
 | R3-TV05 | Diretor tenta elevar o próprio nível | Recusa `SELF_PRIVILEGE_CHANGE`, contada no Gatilho C; Crítico se efetivada por falha |
 | R3-TV06 | Operação nova sem regra de autorização declarada | Recusa por regra ausente; Crítico se efetivada |
 | R3-TV07 | Sessão pré-promoção chama operação nova 3x em 10 min; e sessão rebaixada chama 1x a operação antiga | `STALE_SESSION_LEVEL` nas duas. 2 informativas + Alto na 3ª; Alto já na 1ª no rebaixamento, com revogação da sessão |
-| R3-TV08 | Cadastro completo lido 20 min após promoção; e o mesmo volume sem promoção na janela | Crítico pelo Gatilho E na primeira; Alto na segunda |
+| R3-TV08 | Cadastro completo lido 20 min após a promoção do próprio autor; o mesmo volume sem promoção na janela; e 30 min após a promoção de outro funcionário | Crítico pelo Gatilho E na primeira; Alto na segunda e na terceira |
 | R3-TV09 | Aprovador não reconhece o pedido na confirmação | Notificação escala para incidente Crítico |
 | R3-TV10 | Evento com `senhaLogin` ou `nomeLogin` de terceiros | Quarentena; falha de esquema |
 | R3-TV11 | Perda de 2 heartbeats consecutivos | Alerta operacional; regra sem cobertura |
