@@ -22,13 +22,15 @@ O que este módulo demonstra
 5. Alterações efetivadas **e** recusadas vão para a trilha de auditoria, com
    autor, valor anterior, valor novo, terminal e data/hora carimbados pelo
    servidor (cláusula 5). O alerta da cláusula 7 é só das elevações
-   **efetivadas**; as tentativas alimentam a Regra 3 da Etapa 6 por outros
-   gatilhos - daí as duas consultas distintas na trilha.
+   **efetivadas** - rebaixamento é registrado e não notifica; as tentativas
+   alimentam a Regra 3 da Etapa 6 por outros gatilhos - daí as duas consultas
+   distintas na trilha.
 6. O valor de destino da alteração de perfil sai de um conjunto fechado
-   (`NIVEIS_DE_ACESSO`) e a ausência do parâmetro é recusada como HTTP 400
-   (`ErroDeEntrada`), não como 403 nem como erro de servidor. Não é cláusula de
-   RS03 - é a higiene de entrada que impede a decisão do servidor de operar
-   sobre um nível que ela não conhece.
+   (`NIVEIS_DE_ACESSO`); a ausência do parâmetro e o alvo fora do cadastro são
+   recusados como HTTP 400 (`ErroDeEntrada`), não como 403 nem como erro de
+   servidor. Não é cláusula de RS03 - é a higiene de entrada que impede a
+   decisão do servidor de operar sobre um nível ou um registro que ela não
+   conhece.
 
 O que este módulo não é: um framework de autorização. É o menor modelo capaz de
 tornar essas decisões visíveis - uma sessão, um cadastro em memória, um decisor
@@ -166,11 +168,18 @@ class TrilhaDeAuditoria:
         elevação. Uma tentativa recusada não é elevação, e prometer alerta nela
         seria prometer um limiar que a Regra 3 não tem: recusa entra na regra
         pelos gatilhos de repetição, não por notificação imediata.
+
+        Rebaixamento também não é elevação. Alterar perfil para baixo fica
+        registrado na trilha, mas não notifica por este caminho - é o Gatilho A
+        da Regra 3 tal como a Etapa 6 o define.
         """
         return tuple(
             e
             for e in self._entradas
-            if e["operacao"] == "alterarPerfil" and e["resultado"] == "EFETIVADA"
+            if e["operacao"] == "alterarPerfil"
+            and e["resultado"] == "EFETIVADA"
+            and NIVEIS_DE_ACESSO.index(e["valor_novo"])
+            > NIVEIS_DE_ACESSO.index(e["valor_anterior"])
         )
 
     def eventos_para_regra_3(self) -> tuple[dict, ...]:
@@ -258,10 +267,18 @@ class ServicoDeFuncionarios:
             # recusa não pode virar fonte de enumeração.
             raise ErroAutorizacao("operacao nao autorizada")
 
-        if operacao in ("alterarPerfil", "salvarCadastro") and id_alvo is None:
-            # Operação sobre registro sem dizer qual registro é pedido
-            # malformado, não recusa de alçada: 400, e antes de qualquer escrita.
-            raise ErroDeEntrada("operacao exige identificacao do registro alvo")
+        if operacao in ("alterarPerfil", "salvarCadastro"):
+            if id_alvo is None:
+                # Operação sobre registro sem dizer qual registro é pedido
+                # malformado, não recusa de alçada: 400, e antes de qualquer
+                # escrita.
+                raise ErroDeEntrada("operacao exige identificacao do registro alvo")
+            if id_alvo not in self._cadastro:
+                # Mesmo caso: alvo que não existe é pedido malformado. Sem este
+                # guarda, a busca no cadastro levantaria `KeyError` - erro de
+                # servidor para entrada de cliente. A mensagem não confirma nem
+                # nega a existência do identificador, para não virar enumeração.
+                raise ErroDeEntrada("operacao exige identificacao do registro alvo")
 
         if operacao == "alterarPerfil":
             return self._alterar_perfil(sessao, id_alvo, corpo, decisao)

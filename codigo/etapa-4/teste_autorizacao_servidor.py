@@ -281,6 +281,21 @@ def teste_4_entrada_invalida() -> None:
     assert servico.nivel_acesso_de("F003") == "Supervisor", (
         "recusa por parametro ausente nao pode deixar gravacao"
     )
+    # Alvo inexistente: mesma classe de pedido malformado. Sem o guarda, a busca
+    # no cadastro levantaria KeyError - erro de servidor para entrada de cliente.
+    try:
+        servico.executar(
+            SESSAO_DIRETOR,
+            "alterarPerfil",
+            id_alvo="F999",
+            corpo={"novoNivelAcesso": "Diretor"},
+        )
+        raise AssertionError("alvo inexistente tem de ser recusado")
+    except KeyError:
+        raise AssertionError("alvo inexistente nao pode virar KeyError (HTTP 500)")
+    except ErroDeEntrada as erro:
+        assert erro.codigo_http == 400, "alvo inexistente e 400, nao 403"
+
     assert not trilha.alertas_de_elevacao(), (
         "nenhuma elevacao foi efetivada: nada a alertar"
     )
@@ -288,7 +303,51 @@ def teste_4_entrada_invalida() -> None:
     print("[OK] Validacao de entrada da alteracao de perfil")
     print("     promocao para nivel inexistente.................. recusada (400)")
     print("     parametro novoNivelAcesso ausente................ recusado (400), sem KeyError")
-    print(f"     nivelAcesso persistido apos as duas tentativas... {servico.nivel_acesso_de('F003')}")
+    print("     alvo inexistente no cadastro..................... recusado (400), sem KeyError")
+    print(f"     nivelAcesso persistido apos as tres tentativas... {servico.nivel_acesso_de('F003')}")
+
+
+def teste_5_rebaixamento_nao_alerta() -> None:
+    """O alerta da cláusula 7 é de **elevação**, não de toda alteração de perfil.
+
+    Um rebaixamento fica registrado na trilha, mas não notifica Diretor e
+    Segurança da Informação: é o Gatilho A da Regra 3 da Etapa 6, que trata
+    rebaixamento como registro e não como notificação. Sem esta verificação, a
+    Prática 2 reivindicaria ser a fonte de evento da cláusula 7 emitindo evento
+    onde a cláusula não pede.
+    """
+    servico, trilha = montar_servico()
+
+    servico.executar(
+        SESSAO_DIRETOR,
+        "alterarPerfil",
+        id_alvo="F002",
+        corpo={"novoNivelAcesso": "Supervisor"},
+    )
+
+    entradas = [e for e in trilha.entradas() if e["operacao"] == "alterarPerfil"]
+    assert len(entradas) == 1, "o rebaixamento tem de ficar na trilha"
+    assert entradas[0]["resultado"] == "EFETIVADA"
+    assert not trilha.alertas_de_elevacao(), (
+        "rebaixamento nao e elevacao: nao alerta pela clausula 7"
+    )
+
+    # A elevação seguinte, sobre o mesmo alvo, volta a alertar - o filtro
+    # distingue a direção da mudança, não a operação.
+    servico.executar(
+        SESSAO_DIRETOR,
+        "alterarPerfil",
+        id_alvo="F002",
+        corpo={"novoNivelAcesso": "GerenteGeral"},
+    )
+    assert len(trilha.alertas_de_elevacao()) == 1, (
+        "a elevacao seguinte tem de alertar"
+    )
+
+    print("[OK] Direcao da alteracao de perfil (clausula 7)")
+    print("     rebaixamento GerenteGeral -> Supervisor.......... registrado, sem alerta")
+    print("     elevacao Supervisor -> GerenteGeral.............. alerta emitido")
+    print(f"     alertas da clausula 7 apos as duas operacoes..... {len(trilha.alertas_de_elevacao())}")
 
 
 if __name__ == "__main__":
@@ -299,5 +358,7 @@ if __name__ == "__main__":
     teste_3_verificacoes_auxiliares()
     print()
     teste_4_entrada_invalida()
+    print()
+    teste_5_rebaixamento_nao_alerta()
     print()
     print("Todos os testes passaram.")

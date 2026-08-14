@@ -144,9 +144,12 @@ declarada, recusado por omissão - cláusula 2) e **RS03-CA08** (leitura em mass
 de volume e sem campos de autenticação na resposta - cláusula 8). O **RS03-CA03**
 (requisição enviada direto ao endpoint) está dentro do teste 2: o modelo não tem camada de
 interface, todas as chamadas partem do serviço, e é justamente isso que ele precisa
-demonstrar. Uma quarta verificação, fora dos critérios do E3, cobre a validação de entrada
-da operação de alteração de perfil: promoção para nível inexistente e chamada sem o
-parâmetro `novoNivelAcesso` - as duas recusadas com **HTTP 400** e sem gravação.
+demonstrar. Duas verificações finais, fora dos critérios do E3, cobrem o que o modelo
+precisa acertar para não mentir na trilha: a **validação de entrada** da operação de
+alteração de perfil - nível inexistente, parâmetro `novoNivelAcesso` ausente e alvo fora
+do cadastro, os três recusados com **HTTP 400** e sem gravação - e a **direção** da
+alteração, porque o alerta da cláusula 7 é de elevação e um rebaixamento não pode
+dispará-lo.
 
 ### Implementação
 
@@ -209,7 +212,7 @@ $ python teste_autorizacao_servidor.py
      nivelAcesso do alvo apos a operacao.............. GerenteSetor
      trilha - autor................................... F001
      trilha - valor anterior / valor novo............. Supervisor -> GerenteSetor
-     trilha - data/hora carimbada pelo servidor....... 2026-08-14T14:33:10+00:00
+     trilha - data/hora carimbada pelo servidor....... 2026-08-14T14:49:49+00:00
      alerta da clausula 7 (elevacao efetivada)........ emitido
 
 [OK] Teste 2 - caso nao autorizado (RS03-CA02 e RS03-CA03)
@@ -234,7 +237,13 @@ $ python teste_autorizacao_servidor.py
 [OK] Validacao de entrada da alteracao de perfil
      promocao para nivel inexistente.................. recusada (400)
      parametro novoNivelAcesso ausente................ recusado (400), sem KeyError
-     nivelAcesso persistido apos as duas tentativas... Supervisor
+     alvo inexistente no cadastro..................... recusado (400), sem KeyError
+     nivelAcesso persistido apos as tres tentativas... Supervisor
+
+[OK] Direcao da alteracao de perfil (clausula 7)
+     rebaixamento GerenteGeral -> Supervisor.......... registrado, sem alerta
+     elevacao Supervisor -> GerenteGeral.............. alerta emitido
+     alertas da clausula 7 apos as duas operacoes..... 1
 
 Todos os testes passaram.
 ```
@@ -259,6 +268,13 @@ outros gatilhos. Por isso o serviço expõe duas consultas distintas à trilha -
 `alertas_de_elevacao` para a cláusula 7 e `eventos_para_regra_3` para os gatilhos da Etapa
 6 - e o teste 2 verifica que a recusa **não** dispara o alerta, ao mesmo tempo que as duas
 faces do ataque entram na regra.
+
+`alertas_de_elevacao` também compara a **direção** da mudança contra a ordem de
+`NIVEIS_DE_ACESSO`, e não apenas o resultado da operação. Um rebaixamento é uma alteração
+de perfil efetivada, mas não é elevação: fica na trilha e não notifica, como o
+[Gatilho A da Regra 3](E6_Monitoramento_e_deteccao.md) exige. Sem essa comparação, a
+prática emitiria o evento da cláusula 7 num caso em que a cláusula não o pede - e a
+Etapa 6, que consome esta fonte, herdaria o alerta falso.
 
 **O que isto comprova e o que não comprova.** Comprova os controles **R06-C1** (perfil
 vindo da sessão, `nivelAcesso` do corpo descartado, 403 para quem não é Diretor),
