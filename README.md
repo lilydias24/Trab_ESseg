@@ -103,24 +103,24 @@ Pastas a serem criadas conforme as etapas avançarem: `evidencias/etapa-5/` (Eta
 ### Etapa 2 - Riscos e NIST CSF 2.0
 
 - [x] 13.1 a 13.3 Critérios e cálculo - escalas definidas e exemplificadas no contexto do SIGH
-- [ ] 13.4 e 13.5 Registro e justificativa dos riscos - R01, R02, R03, R05 e R06 concluídos; R04 (@mariasanchez0) pendente
-- [ ] 13.6 Priorização geral - @mariasanchez0 (destravada: depende só de R04)
-- [x] 13.7 Conclusão da análise - @ARTHUR9011 (rascunho; revisão após R04)
-- [ ] 14.1 Estratégias de tratamento - R01, R02, R03, R05 e R06 concluídas; R04 pendente
+- [x] 13.4 e 13.5 Registro e justificativa dos riscos - todos os seis riscos concluídos (R04 por @mariasanchez0)
+- [x] 13.6 Priorização geral - @mariasanchez0
+- [x] 13.7 Conclusão da análise - @ARTHUR9011 (revisada após a conclusão de R04, 13.6 e 14.5)
+- [x] 14.1 Estratégias de tratamento - todos os seis riscos concluídos
 - [x] 14.2 Funções do NIST CSF - @lorenzoficher
-- [ ] 14.3 Mapeamento NIST - R01, R02, R03, R05 e R06 concluídos; R04 pendente
-- [ ] 14.4 Plano de tratamento - R01, R02, R03, R05 e R06 concluídos; R04 pendente
-- [ ] 14.5 Ordem de implementação - @mariasanchez0 (destravada: depende só de R04)
-- [ ] 14.6 Risco residual - R01, R02, R03, R05 e R06 concluídos; R04 pendente
-- [ ] 15. Considerações finais - @PPrauchner (rascunho sobre recorte parcial; revisão após R04)
+- [x] 14.3 Mapeamento NIST - todos os seis riscos concluídos
+- [x] 14.4 Plano de tratamento - todos os seis riscos concluídos
+- [x] 14.5 Ordem de implementação - @mariasanchez0
+- [x] 14.6 Risco residual - todos os seis riscos concluídos
+- [ ] 15. Considerações finais - @PPrauchner (rascunho sobre recorte parcial; revisão pendente agora que R04, 13.6 e 14.5 estão completos)
 
 ### Etapas 3 a 7
 
-- [ ] Etapa 3 - RS01 e RS02 concluídos (aguardam revisão cruzada); RS03 (@PPrauchner) pendente. Diagrama especificado (@lorenzoficher); falta exportar o PNG. DA01 (@lorenzoficher) e DA03 (@lilydias24) concluídas; DA02 (@mariasanchez0) pendente
+- [ ] Etapa 3 - RS01 e RS02 concluídos (aguardam revisão cruzada); RS03 (@PPrauchner) pendente. Diagrama da arquitetura segura concluído e versionado (@lorenzoficher). DA01 (@lorenzoficher), DA02 (@mariasanchez0) e DA03 (@lilydias24) concluídas
 - [ ] Etapa 4 - Prática 1 (armazenamento seguro de senhas, @lilydias24) concluída, testes executados; Prática 2 (autorização no servidor, @PPrauchner) pendente
 - [ ] Etapa 5 - uma verificação com até três achados analisados
 - [ ] Etapa 6 - Regras 1 (@lilydias24) e 2 (@ARTHUR9011) concluídas; Regra 3 (@PPrauchner) e a compilação do roteiro pendentes
-- [ ] Etapa 7 - pipeline especificado e revisado; blocos Abertura, Spoofing (@lilydias24), Tampering e Repudiation do roteiro concluídos; blocos Information Disclosure e DoS/EoP, consolidação e gravação pendentes
+- [ ] Etapa 7 - pipeline concluído com as observações da revisão incorporadas; blocos Abertura, Spoofing (@lilydias24), Tampering e Repudiation concluídos; Information Disclosure (@mariasanchez0) aguarda os achados do ZAP; bloco DoS/EoP (@PPrauchner), gravação e publicação pendentes
 
 ## Como contribuir (para o grupo)
 

@@ -14,6 +14,7 @@ Nomes de arquivo sem acento, para evitar problemas de normalização de caracter
 | `Diagramas_SIGH - Componentes.png` | Firewall por serviço, DAOs «persistent» e SGBD central | Seção 8.4 - **o mais relevante**, mostra os *trust boundaries* |
 | `Diagramas_SIGH - Implantacao.png` | Servidores de aplicação, proxy/gateway, firewall e SGBD único | Seção 8.4 e justificativa de Denial of Service (T05) |
 | `Diagramas_SIGH - Mapeamento relacional.png` | Mapeamento das classes em tabelas, com PKs e FKs | Seção 8.3 (ativos de banco de dados) |
+| `Diagramas_SIGH - Arquitetura segura.png` | Arquitetura da Etapa 3: a base acima acrescida dos serviços de autenticação (DA03), autorização e auditoria (DA01), do catálogo clínico e do armazenamento de auditoria separado do SGBD | Etapa 3, seção 3 |
 
 ## `atividade/` - fluxo funcional por caso de uso
 
@@ -36,3 +37,5 @@ São a base técnica dos **fluxos de abuso da seção 8.6**: mostram o caminho p
 | [DSequência SIGH](https://lucid.app/lucidchart/b26b5fc3-6c18-4dae-a730-236478997840/edit) | DS01 a DS10, DS1.1 e DS1.2 |
 
 > Ao reexportar um diagrama editado (ex.: o recorte para a seção 8.4 ou a arquitetura segura da Etapa 3), substitua o PNG aqui e mantenha o mesmo nome de arquivo, para não quebrar as referências nos documentos.
+
+> **Exceção:** `Diagramas_SIGH - Arquitetura segura.png` é o único que não sai dos documentos do Lucid listados acima. Ele foi produzido na Etapa 3, a partir da especificação das seções 3.1 a 3.3 de [`E3_Arquitetura_segura.md`](../docs/E3_Arquitetura_segura.md) - que descreve os componentes, as fronteiras de confiança e o fluxo que o desenho precisa mostrar, e serve de referência para refazê-lo.

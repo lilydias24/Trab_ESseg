@@ -8,11 +8,12 @@
 | --- | --- | --- |
 | RS01 - requisito e vulnerabilidade | @lilydias24 | Concluído (aguarda revisão cruzada) |
 | RS02 - requisito e vulnerabilidade | @ARTHUR9011 | Concluído (aguarda revisão cruzada) |
-| RS03 - requisito e vulnerabilidade | @PPrauchner | Concluído (aguarda revisão cruzada); depende da DA02 para a decisão de arquitetura correspondente |
-| Diagrama da arquitetura segura | @lorenzoficher | Especificado (seções 3.1 a 3.3); falta exportar o PNG do Lucid |
+| RS03 - requisito e vulnerabilidade | @PPrauchner | Pendente |
+| Diagrama da arquitetura segura | @lorenzoficher | Concluído (seções 3.1 a 3.3 e PNG versionado) |
 | Decisão de arquitetura 1 (ligada ao diagrama) | @lorenzoficher | Concluída (DA01) |
-| Decisão de arquitetura 2 (ligada a RS03) | @mariasanchez0’s | Pendente |
+| Decisão de arquitetura 2 (ligada a RS03) | @mariasanchez0 | Concluída (DA02) |
 | Decisão de arquitetura 3 (reforço de autenticação) | @lilydias24 | Concluída (DA03; ponto de contato com a DA01 sinalizado) |
+| Conciliação entre DA01 e DA03 | @lorenzoficher | Concluída (responde ao ponto levantado na DA03) |
 
 ---
 
@@ -456,11 +457,9 @@ componente, e RS03 pressupõe essa decisão tomada.
 
 ## 3. Diagrama da arquitetura segura
 
-> Responsável: **@lorenzoficher** - parte de `diagrams/estrutura/Diagramas_SIGH - Componentes.png` (já versionado) e acrescenta serviço de autenticação, serviço de autorização e componente de logs/auditoria. Exportar como `diagrams/estrutura/SIGH - Arquitetura segura.png`.
+> Responsável: **@lorenzoficher** - parte de `diagrams/estrutura/Diagramas_SIGH - Componentes.png` (já versionado) e acrescenta o serviço de autenticação instituído pela DA03, o serviço de autorização, o serviço de auditoria instituído pela DA01 e o catálogo clínico. Versionado como `diagrams/estrutura/Diagramas_SIGH - Arquitetura segura.png`.
 
-<!-- Descomentar quando o diagrama estiver exportado:
-![Arquitetura segura do SIGH](../diagrams/estrutura/SIGH%20-%20Arquitetura%20segura.png)
--->
+![Arquitetura segura do SIGH](../diagrams/estrutura/Diagramas_SIGH%20-%20Arquitetura%20segura.png)
 
 O diagrama parte da arquitetura já modelada - Desktop Cliente, API Gateway e 7
 microsserviços em 5 camadas sobre um SGBD central - e acrescenta os três componentes que
@@ -579,12 +578,22 @@ o que impede que exista um óbito sem rastro, e é a diferença entre auditar e 
     que qualquer perfil possa consultar recria, na privacidade, o problema que resolve na
     responsabilização.
 
-### DA02 - *(a definir, ligada a RS03)* - @mariasanchez0’s
+### DA02 - Serviço de Autorização centralizado como ponto único de decisão de acesso - @mariasanchez0
 
-- **Contexto:**
-- **Decisão:**
-- **Alternativas consideradas:**
-- **Consequências:**
+- **Contexto.** Três exigências diferentes, de três trilhas diferentes, pedem a mesma capacidade que o modelo atual não tem: RS02 exige confirmar papel médico e vínculo com o paciente antes de alterar uma prescrição; RS03 exige validar `nivelAcesso` no servidor em toda operação administrativa; e o plano de tratamento de R04 (Etapa 2) exige verificar vínculo entre o profissional autenticado e o paciente consultado antes de entregar prontuário, farmácia ou dado financeiro. Hoje nenhuma dessas checagens tem dono: o diagrama de componentes mostra 7 microsserviços, cada um livre para decidir sozinho o que aceita como autorização - inclusive aceitá-la do corpo da requisição ou apenas ocultar a opção na interface, que é exatamente o que CWE-602 descreve e o que o passo 3 do CA05 explora. A seção 3.1 já nomeou um **Serviço de Autorização** como componente da arquitetura segura, consultado por todos os serviços de negócio antes de qualquer operação sensível; esta decisão formaliza o que esse componente é, por que ele existe separado dos serviços de negócio e o que ele resolve que sete implementações independentes não resolveriam.
+
+- **Decisão.** Criar um **Serviço de Autorização** dedicado, posicionado depois do API Gateway e do Serviço de Autenticação (DA03), como **único ponto de decisão** sobre se uma sessão pode executar uma operação sobre um recurso. Ele recebe a identidade já verificada pela DA03 (quem é, qual papel, quando reautenticou), o tipo de operação solicitada e o identificador do recurso envolvido, e responde permitir ou negar combinando três fontes: o papel do profissional, o `nivelAcesso` quando o solicitante for Administrador, e o vínculo declarado entre o profissional e o paciente (atendimento em curso, internação ativa ou plantão vigente). As políticas de autorização vivem como regras declaráveis dentro deste serviço - não espalhadas pelo código de cada microsserviço - e toda decisão, permitida ou negada, é registrada no Serviço de Auditoria (DA01), com autor, operação, recurso e resultado. Nenhum serviço de negócio decide autorização por conta própria: ele executa a operação **depois** de receber a permissão, nunca antes nem em paralelo.
+
+- **Alternativas consideradas.**
+  - *Manter a autorização embutida em cada um dos 7 microsserviços.* Rejeitada por repetir a mesma checagem sete vezes, com sete oportunidades de divergência - é literalmente o estado atual que produziu T02, T04 e T06, e a mesma razão pela qual a DA03 centralizou a autenticação em vez de deixá-la em cada serviço.
+  - *Autorização resolvida na interface do Desktop Cliente, ocultando opções por perfil.* Rejeitada explicitamente: é a vulnerabilidade que RS02 e RS03 existem para fechar (CWE-602), e o passo 3 do CA05 já demonstra como ela se contorna reenviando a requisição sem passar pela tela.
+  - *Fundir autorização e autenticação em um único serviço (estender a DA03).* Rejeitada porque as duas mudam em ritmos diferentes: identidade muda raramente (login, MFA), enquanto papel e vínculo mudam a cada atendimento, internação ou troca de plantão. Fundir os dois tornaria o serviço de autenticação também responsável por decidir o que cada sessão pode acessar, ampliando o raio de impacto de qualquer falha nele e contrariando a separação de responsabilidades que a própria DA03 estabelece entre "quem você é" e "o que você pode fazer".
+  - *Adotar um motor de políticas de terceiro, hospedado fora do perímetro do hospital.* Não rejeitada, apenas adiada: resolveria bem a expressão declarativa de políticas, mas tornaria toda operação sensível dependente de uma chamada de rede a um serviço fora do controle do hospital - o mesmo problema de disponibilidade e de custódia de dado sensível que a DA01 já rejeitou para a trilha de auditoria. Fica registrada como opção de **implementação interna** do Serviço de Autorização (o motor de políticas hospedado dentro do perímetro), não como serviço terceirizado.
+
+- **Consequências.**
+  - *Positivas.* Uma única implementação satisfaz RS02 (papel e vínculo), RS03 (`nivelAcesso`) e o controle R04-C2 (vínculo profissional-paciente) ao mesmo tempo - é a mesma propriedade que a Etapa 2 já atribuiu ao R06-C1 isoladamente, e esta decisão é o que a torna possível na arquitetura: um único serviço, não uma coincidência entre implementações separadas. Toda negativa de acesso fica registrada via DA01, o que dá à Regra 3 da Etapa 6 e à detecção de padrão de consulta de R04-C5 um evento concreto para observar. E fecha definitivamente o CWE-602: a interface pode continuar ocultando opções por conveniência de uso, mas deixa de ser, em qualquer hipótese, o controle de segurança.
+  - *Negativas.* O Serviço de Autorização se torna **passagem obrigatória** de toda operação sensível, somando-se ao API Gateway, ao Serviço de Autenticação e ao SGBD central como mais um ponto de concentração - a mesma característica que sustenta R05. Se ele cair, nenhuma prescrição, alta, registro de óbito, alteração de perfil ou consulta vinculada se completa, porque a decisão de negar por padrão (falha fechada, no mesmo regime de RS01 e RS02) impede prosseguir sem resposta do serviço. **Este ponto precisa ser conciliado com a DA01 e a DA03**, no mesmo sentido que a DA03 já sinalizou em relação à DA01: redundância do serviço e uma política explícita de latência máxima antes de recusar, para que uma indisponibilidade curta não pare o hospital inteiro.
+  - *Custo.* Definir e manter as políticas de papel × `nivelAcesso` × vínculo como um artefato próprio, versionado e revisável - trabalho concentrado em um lugar, mas que precisa de dono, no mesmo sentido que a função Govern já cobra dos mapeamentos de R04 e R06. E cada um dos 7 serviços de negócio precisa adicionar uma chamada síncrona a este serviço antes de qualquer operação sensível, o que é esforço de integração, mas evita sete implementações divergentes na alternativa descartada.
 
 ### DA03 - Serviço de autenticação dedicado como emissor único da identidade de sessão - @lilydias24
 
@@ -637,3 +646,63 @@ o que impede que exista um óbito sem rastro, e é a diferença entre auditar e 
     e reescrever o fluxo de login do Desktop Cliente - trabalho concentrado, mas feito
     uma vez só, contra sete implementações na alternativa descartada.
 
+### Conciliação entre a DA01 e a DA03 - @lorenzoficher
+
+A DA03 registrou, nas suas consequências negativas, que o serviço de autenticação passa a
+ser passagem obrigatória de toda operação, e pediu que esse ponto fosse conciliado com a
+DA01. O pedido procede: as duas decisões acrescentam, cada uma, um componente obrigatório
+ao mesmo caminho, e o efeito sobre o R05 do @PPrauchner é somado, não paralelo. O que
+segue é o que muda na DA01 por causa da DA03, e a regra que resolve a interação.
+
+**Os dois acoplamentos não têm o mesmo tamanho, e tratá-los como iguais seria um erro de
+priorização.** O Serviço de Autenticação está no caminho de *toda* operação, inclusive de
+uma consulta de prontuário: se ele cai, ninguém entra. O Serviço de Auditoria é condição
+apenas das operações irreversíveis - registrar óbito (UC10) e autorizar alta (UC06) - e,
+mesmo nessas, o que a DA01 exige não é que o serviço esteja no ar, e sim que o evento
+esteja durável, o que o buffer local já garante. Numa indisponibilidade curta, a queda da
+autenticação para o hospital; a da auditoria não para nada. A redundância que a DA03 pede
+é, portanto, mais urgente que a da DA01, e a ordem de implementação de 14.5 deve refletir
+isso.
+
+**O buffer tem limite, e o limite precisa ser declarado em projeto.** A vantagem descrita
+acima vale enquanto o buffer local absorver a indisponibilidade. Esgotado o espaço
+reservado, a durabilidade deixa de ser garantida e o acoplamento volta inteiro: a operação
+irreversível passa a falhar de forma fechada, como manda o R03-C5. A escolha continua
+sendo a da DA01 - entre concluir sem prova e não concluir, não se conclui -, mas o ponto
+em que ela é exercida não pode ser descoberto durante o incidente. O buffer é dimensionado
+para a janela de indisponibilidade que o tratamento de R05 admite como tolerável, e a sua
+ocupação recebe alerta próprio, no mesmo regime do R05-C5, para que a reposição do Serviço
+de Auditoria ocorra antes do esgotamento e não depois.
+
+**A regra que concilia as duas: a autenticação pode degradar, a auditoria não.** A
+cláusula 8 de RS01 prevê o *break-glass* para quando o segundo fator estiver indisponível
+durante o atendimento. Esse é exatamente o momento em que a prova vale mais, e não menos,
+porque se trata de um acesso que contornou a autenticação normal. O caminho de exceção da
+DA03 não é, por isso, exceção ao acréscimo da DA01 - ele **eleva** a exigência probatória
+em vez de reduzi-la. É o mesmo regime proposto para a Condição de bloqueio 3 do pipeline
+na [Etapa 7](E7_DevSecOps_e_video.md): o único portão sem exceção temporária possível é o
+que produz evidência, porque nenhuma trilha futura produz prova sobre o que já passou.
+
+**Disso decorre uma exigência nova para a trilha: registrar a qualidade da identidade, e
+não apenas a identidade.** A justificativa do residual de R03 na
+[Etapa 2](E2_Riscos_e_NIST_CSF.md) já reconhece que a trilha prova qual sessão registrou,
+não quem estava no teclado. A DA03 torna essa dependência concreta e, ao mesmo tempo,
+delimitável: como passa a existir um emissor único de identidade, ele pode informar ao
+Serviço de Auditoria *como* aquela identidade foi estabelecida - senha e segundo fator,
+reautenticação dentro da janela, ou *break-glass* com o segundo profissional
+identificado. Sem esse campo, um óbito registrado em *break-glass* e um óbito registrado
+com autenticação plena ficam indistinguíveis na trilha, o que recriaria, dentro do
+próprio controle, a ambiguidade que o R03 descreve.
+
+**Ordem entre as duas decisões: a DA03 vem antes da DA01, ou junto, nunca depois.** A
+autoria que a trilha registra vale exatamente o que valer a autenticação que a sustenta -
+uma trilha em operação sobre uma autenticação que ainda guarda `senhaLogin` em texto
+simples produz registros bem formados e fracamente atribuíveis. É o mesmo argumento do
+residual de R03, agora com componente e responsável definidos.
+
+**O que fica em aberto para o grupo.** A conciliação não elimina o fato de a arquitetura
+passar a ter quatro passagens obrigatórias: Gateway, autenticação, SGBD central e, nas
+operações irreversíveis, o acréscimo à trilha. A regra de degradação prevista em R05-C5
+precisa dizer explicitamente o que é suspenso e o que é preservado durante a saturação, e
+o acréscimo à trilha tem de estar no conjunto preservado. Isso é matéria da RS03 e da
+DA02, e fica registrado aqui como dependência.
