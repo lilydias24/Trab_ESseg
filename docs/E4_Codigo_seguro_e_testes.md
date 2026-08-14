@@ -160,9 +160,14 @@ acréscimo. Seis decisões merecem registro:
 
 - **Descartar, não validar.** `descartar_campos_de_sessao` remove `idFuncionario`,
   `perfil` e `nivelAcesso` do corpo **antes** da decisão de autorização, e devolve à parte
-  a lista do que removeu. A ordem importa: validar um valor controlado pelo cliente ainda
-  é confiar nele. A lista de descartados não é decorativa - é ela que permite registrar a
-  tentativa em vez de ignorá-la em silêncio, que é o resultado exigido por RS03-CA04.
+  o que removeu, **com os valores**. A ordem importa: validar um valor controlado pelo
+  cliente ainda é confiar nele. O que foi descartado não é registro decorativo - é ele que
+  permite registrar a tentativa em vez de ignorá-la em silêncio, que é o resultado exigido
+  por RS03-CA04. Guardar o **valor** afirmado, e não só o nome do campo, é a cláusula 5
+  pedindo valor anterior e valor novo também nas alterações recusadas, e é o que a Regra 3
+  da [Etapa 6](E6_Monitoramento_e_deteccao.md) compara, no campo `claimedLevel`, para
+  separar reenvio de rotina do registro inteiro de tentativa de gravar o privilégio.
+  Registrar não é confiar: a entrada `nivel_afirmado` da trilha nunca alimenta decisão.
 - **A decisão mora fora de quem executa.** `ServicoDeAutorizacao.decidir` é consultado por
   `ServicoDeFuncionarios.executar` antes de qualquer despacho, no papel do Serviço de
   Autorização instituído pela DA02. Se a decisão vivesse dentro do serviço, seria

@@ -171,6 +171,15 @@ def teste_3_verificacoes_auxiliares() -> None:
     assert trilha.entradas()[-1]["campos_descartados"] == ("nivelAcesso",), (
         "a tentativa de gravar o campo precisa ficar registrada, sem erro silencioso"
     )
+    # A trilha guarda o par que a Regra 3 da Etapa 6 compara: o nível vigente,
+    # do servidor, e o que o corpo afirmava. Valores diferentes são tentativa de
+    # gravação e contam no Gatilho C; iguais seriam reenvio de rotina.
+    assert trilha.entradas()[-1]["nivel_afirmado"] == "Diretor", (
+        "o valor afirmado pelo cliente e evidencia (clausula 5), nao so o nome do campo"
+    )
+    assert trilha.entradas()[-1]["valor_anterior"] == "GerenteGeral", (
+        "sem o nivel vigente na entrada, a Regra 3 nao separa reenvio de tentativa"
+    )
 
     # RS03-CA05 - o Diretor não tem alçada sobre o próprio registro.
     try:

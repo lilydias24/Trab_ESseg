@@ -335,8 +335,15 @@ autorização emita evento mesmo quando **permite** a operação.
 
 O Serviço de Autorização (DA02), e não o Desktop Cliente nem o Serviço de Funcionários,
 preenche os campos usados pela regra: a cláusula 1 de RS03 manda descartar identidade,
-papel e `nivelAcesso` recebidos na requisição, e um evento que os copiasse reintroduziria
-no monitoramento o valor que o requisito acabou de descartar. Cada operação administrativa
+papel e `nivelAcesso` recebidos na requisição, e nenhum campo de que a detecção dependa
+para **decidir** pode ser preenchido a partir deles - `actorId`, `actorRole`, `actorLevel`,
+`previousLevel` e `newLevel` vêm da sessão autenticada e do estado do servidor, nunca do
+corpo. O `nivelAcesso` que veio no corpo não é, porém, jogado fora pelo monitoramento: a
+cláusula 5 manda registrar também as alterações **recusadas**, com valor anterior e valor
+novo, e é essa afirmação do cliente que o campo `claimedLevel` guarda, rotulada como o que
+é. **Registrar não é confiar**: `claimedLevel` é evidência, e serve à contagem do Gatilho
+C; nenhuma decisão de autorização o consulta, nem antes nem depois da recusa. Cada operação
+administrativa
 gera um evento terminal `PROFILE_CHANGE_APPLIED` ou `PROFILE_CHANGE_DENIED`; as leituras
 da cláusula 8 geram `ADMIN_BULK_READ`. **Nenhum evento pode conter `senhaLogin`, valor
 derivado dela, `nomeLogin` de terceiros ou código de segundo fator** - o dano de R06 se
@@ -347,7 +354,8 @@ entregar pela detecção o que a autorização passou a negar.
 | --- | --- |
 | `eventTime`, `eventType`, `correlationId` | Ordenação, janela e deduplicação da operação |
 | `actorId`, `actorRole`, `actorLevel` | Quem solicitou, com o perfil vigente **obtido da sessão** (cláusula 1) |
-| `subjectId`, `previousLevel`, `newLevel` | Titular afetado e a transição de perfil; `newLevel` acima de `previousLevel` é o que define elevação |
+| `subjectId`, `previousLevel`, `newLevel` | Titular afetado e a transição de perfil **aplicada pelo servidor**; `newLevel` acima de `previousLevel` é o que define elevação |
+| `claimedLevel` | `nivelAcesso` que veio no corpo e foi descartado pela cláusula 1, preservado como afirmação do cliente (cláusula 5). Ausente quando o corpo não trouxe o campo. Nunca alimenta decisão de autorização - só a contagem do Gatilho C |
 | `approverId`, `approverDistinctFromRequester`, `approverLevel` | Verificam a alçada de Diretor e a separação entre quem pede e quem aprova (cláusula 3) |
 | `decisionSource`, `ruleId`, `writePath` | Comprovam que a decisão veio do Serviço de Autorização, sob qual regra, e se o campo chegou pela operação própria de perfil ou pela via de salvamento do cadastro |
 | `bypassedUi` | Indicador derivado: a requisição chegou ao endpoint sem passar pela interface. Vale para qualquer dos dois caminhos de RS03-CA03, cujo desfecho - descarte do campo na via de salvamento, HTTP 403 na operação própria - independe da tela |
@@ -396,11 +404,17 @@ de digitação que produza uma tentativa de **mudar** `nivelAcesso`.
 O que existe, e não é tentativa, é o cliente que reenvia o registro inteiro a cada
 salvamento, carregando o `nivelAcesso` vigente junto no corpo. Por isso a contagem separa
 os dois casos por uma regra objetiva, e não por avaliação caso a caso: quando o evento vem
-da via de salvamento do cadastro, ele só conta para o limiar se `newLevel` **diferir** de
-`previousLevel`. Corpo que traz o valor vigente é reenvio - fica na trilha da cláusula 5,
-pesquisável, sem somar ao limiar; corpo que traz valor diferente é tentativa de gravar o
+da via de salvamento do cadastro, ele só conta para o limiar se `claimedLevel` **diferir**
+de `previousLevel`. Corpo que traz o valor vigente é reenvio - fica na trilha da cláusula
+5, pesquisável, sem somar ao limiar; corpo que traz valor diferente é tentativa de gravar o
 campo e conta. Recusas que não vêm da via de salvamento contam sempre, porque ali o
 `nivelAcesso` não tem por que trafegar.
+
+A comparação é com `claimedLevel`, e não com `newLevel`, justamente porque nessa via nada
+foi aplicado: o campo foi descartado antes de qualquer validação, de modo que `newLevel`
+sempre igualaria `previousLevel` e a regra nunca contaria nada. É o mesmo par da cláusula
+5 - valor anterior do servidor contra valor novo pretendido pela requisição - lido aqui
+como sinal, não como autorização.
 
 **Gatilho D - Alto por sessão desatualizada.** Requisição de operação exclusiva de um
 perfil cujo `sessionLevel` diverge do perfil vigente do titular, com `sessionIssuedAt`

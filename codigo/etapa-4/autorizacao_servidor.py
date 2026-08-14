@@ -111,13 +111,18 @@ class Decisao:
     motivo: str
 
 
-def descartar_campos_de_sessao(corpo: dict) -> tuple[dict, tuple[str, ...]]:
+def descartar_campos_de_sessao(corpo: dict) -> tuple[dict, dict]:
     """Remove do corpo os campos que só a sessão pode afirmar.
 
-    Devolve o corpo já limpo e a lista do que foi descartado - a segunda é o que
-    permite registrar a tentativa em vez de ignorá-la em silêncio (RS03-CA04).
+    Devolve o corpo já limpo e o que foi descartado, **com os valores** - o
+    segundo é o que permite registrar a tentativa em vez de ignorá-la em
+    silêncio (RS03-CA04). Guardar o valor não é confiar nele: nenhuma decisão
+    o consulta, e a cláusula 5 exige registrar o valor novo pretendido também
+    nas alterações recusadas. É o campo `claimedLevel` do contrato de eventos
+    da Regra 3 da Etapa 6, que separa reenvio de rotina de tentativa de
+    gravação comparando-o com o nível vigente.
     """
-    descartados = tuple(campo for campo in CAMPOS_DE_SESSAO if campo in corpo)
+    descartados = {campo: corpo[campo] for campo in CAMPOS_DE_SESSAO if campo in corpo}
     limpo = {chave: valor for chave, valor in corpo.items() if chave not in CAMPOS_DE_SESSAO}
     return limpo, descartados
 
@@ -138,6 +143,7 @@ class TrilhaDeAuditoria:
         valor_anterior: str | None = None,
         valor_novo: str | None = None,
         campos_descartados: tuple[str, ...] = (),
+        nivel_afirmado: str | None = None,
     ) -> None:
         self._entradas.append(
             {
@@ -155,6 +161,10 @@ class TrilhaDeAuditoria:
                 "valor_anterior": valor_anterior,
                 "valor_novo": valor_novo,
                 "campos_descartados": campos_descartados,
+                # O `nivelAcesso` que o corpo afirmava, preservado como
+                # afirmação do cliente e não como fato do servidor. É o
+                # `claimedLevel` da Regra 3 da Etapa 6.
+                "nivel_afirmado": nivel_afirmado,
             }
         )
 
@@ -261,7 +271,8 @@ class ServicoDeFuncionarios:
         if not decisao.permitida:
             self._trilha.registrar(
                 sessao, operacao, id_alvo, "RECUSADA", decisao.motivo,
-                campos_descartados=descartados,
+                campos_descartados=tuple(descartados),
+                nivel_afirmado=descartados.get("nivelAcesso"),
             )
             # A mensagem não diz qual campo ou perfil existe: a resposta de
             # recusa não pode virar fonte de enumeração.
@@ -331,7 +342,7 @@ class ServicoDeFuncionarios:
         return self._sem_campos_de_autenticacao(registro)
 
     def _salvar_cadastro(
-        self, sessao: Sessao, id_alvo: str, corpo: dict, descartados: tuple[str, ...]
+        self, sessao: Sessao, id_alvo: str, corpo: dict, descartados: dict
     ) -> dict:
         registro = self._cadastro[id_alvo]
         # `registro.update(corpo)` gravaria qualquer chave que o cliente
@@ -347,7 +358,13 @@ class ServicoDeFuncionarios:
         registro.update(gravaveis)
         self._trilha.registrar(
             sessao, "salvarCadastro", id_alvo, "EFETIVADA",
-            "dados funcionais gravados", campos_descartados=descartados + ignorados,
+            "dados funcionais gravados",
+            # `valor_anterior` é o nível vigente, do servidor; `nivel_afirmado` é
+            # o que o corpo dizia. A Regra 3 compara os dois para separar reenvio
+            # de rotina - valores iguais - de tentativa de gravar o campo.
+            valor_anterior=registro["nivelAcesso"],
+            campos_descartados=tuple(descartados) + ignorados,
+            nivel_afirmado=descartados.get("nivelAcesso"),
         )
         return self._sem_campos_de_autenticacao(registro)
 

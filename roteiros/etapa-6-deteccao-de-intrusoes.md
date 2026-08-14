@@ -231,11 +231,12 @@ original do SIGH não produz.
 | --- | --- |
 | `eventTime`, `eventType`, `correlationId` | Ordenação, janela e deduplicação |
 | `actorId`, `actorRole`, `actorLevel` | Solicitante, com perfil obtido da sessão |
-| `subjectId`, `previousLevel`, `newLevel` | Titular afetado e a transição - `newLevel` > `previousLevel` define elevação |
+| `subjectId`, `previousLevel`, `newLevel` | Titular afetado e a transição aplicada pelo servidor - `newLevel` > `previousLevel` define elevação |
+| `claimedLevel` | `nivelAcesso` descartado do corpo pela cláusula 1, guardado como afirmação do cliente (cláusula 5). Evidência e contagem do Gatilho C, nunca decisão |
 | `approverId`, `approverDistinctFromRequester`, `approverLevel` | Alçada de Diretor e separação entre quem pede e quem aprova |
 | `decisionSource`, `ruleId`, `writePath` | Decisão veio do Serviço de Autorização, sob qual regra, e por qual via |
 | `bypassedUi` | Requisição chegou ao endpoint sem passar pela interface |
-| `sessionId`, `sessionIssuedAt`, `sessionLevel` | Alçada nova exercida em sessão anterior à promoção |
+| `sessionId`, `sessionIssuedAt`, `sessionLevel` | Alçada nova exercida em sessão anterior à promoção, e alçada antiga exercida em sessão já rebaixada (cláusula 6) |
 | `outcome`, `denyReason`, `httpStatus` | Resultado e motivo da recusa |
 | `recordsReturned`, `queryScope`, `unitScope` | Volume e abrangência de leitura administrativa |
 | `deviceId`, `networkZone`, `sourceService` | Contexto técnico, mesma convenção das Regras 1 e 2 |
@@ -256,8 +257,9 @@ entram no evento.
   insuficiente, aprovador igual ao solicitante ou regra ausente: 3ª ocorrência em 10 min
   no mesmo autor **ou** titular abre alerta. Recusa isolada com `bypassedUi` verdadeiro
   abre alerta Alto **sozinha**. Evento vindo da via de salvamento só conta quando
-  `newLevel` difere de `previousLevel`: corpo com o valor vigente é reenvio do registro
-  pelo cliente, fica registrado sem somar ao limiar.
+  `claimedLevel` difere de `previousLevel`: corpo com o valor vigente é reenvio do registro
+  pelo cliente, fica registrado sem somar ao limiar. A comparação é com `claimedLevel`
+  porque nessa via nada foi aplicado - `newLevel` sempre igualaria `previousLevel`.
 - **D - Alto por sessão desatualizada.** Recusa pela cláusula 6, com `denyReason`
   `STALE_SESSION_LEVEL`, nas duas metades de RS03-CA07. Sessão **anterior a uma promoção**
   (`sessionLevel` inferior): 3ª ocorrência do mesmo `sessionId` em 10 min abre alerta - as
@@ -301,7 +303,7 @@ Promoção em lote por reestruturação (Gatilho A notifica uma a uma - declarar
 antecedência para agrupar os avisos, nunca suprimi-los); sessão antiga após promoção
 legítima (Gatilho D, limiar 3 por esse motivo - a tolerância não vale para a sessão
 rebaixada); reenvio do registro inteiro pelo cliente, que carrega o `nivelAcesso` vigente
-no corpo (não conta no Gatilho C, porque `newLevel` não difere de `previousLevel`);
+no corpo (não conta no Gatilho C, porque `claimedLevel` não difere de `previousLevel`);
 inventário periódico de acessos (Gatilho
 E - precisa de janela, executor e escopo declarados); correção de cadastro errado
 (indistinguível de promoção nos dados - só o reconhecimento do Diretor no Gatilho A
