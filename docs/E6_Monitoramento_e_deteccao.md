@@ -483,8 +483,8 @@ RS03-CA08 da [Etapa 3](E3_Arquitetura_segura.md).
 | ID | Entrada simulada | Resultado esperado |
 | --- | --- | --- |
 | R3-TV01 | Sessão Diretor promove outro funcionário a GerenteSetor, com aprovador distinto | Nenhum alerta de incidente; notificação obrigatória do Gatilho A ao Diretor e à Segurança, com confirmação de recebimento |
-| R3-TV02 | Sessão Supervisor envia o próprio cadastro com `nivelAcesso: "Diretor"` no corpo | Recusa HTTP 403 registrada e contabilizada no Gatilho C; o campo permanece `Supervisor` |
-| R3-TV03 | A requisição de R3-TV02 enviada direto ao endpoint, sem passar pela interface | Alerta Alto imediato pelo `bypassedUi`, sem esperar a terceira ocorrência |
+| R3-TV02 | Sessão Supervisor tenta se promover pelos dois caminhos: primeiro enviando o próprio cadastro com `nivelAcesso: "Diretor"` no corpo, depois chamando a operação própria de alteração de perfil | Pela via de salvamento, **não há 403**: o campo é descartado, os demais dados seguem o fluxo normal e a tentativa entra na regra com `writePath` de cadastro. Pela operação própria, recusa HTTP 403 registrada. As duas contabilizam no Gatilho C; o campo permanece `Supervisor` e nenhuma delas dispara o alerta do Gatilho A, que é das elevações efetivadas |
+| R3-TV03 | Qualquer das duas requisições de R3-TV02 enviada direto ao endpoint, sem passar pela interface | Alerta Alto imediato pelo `bypassedUi`, sem esperar a terceira ocorrência |
 | R3-TV04 | Alteração legítima de dados funcionais trazendo `nivelAcesso` alterado junto no corpo | Dados funcionais gravados, campo inalterado e tentativa registrada com `writePath` de cadastro; sem alerta se isolada, contando para o Gatilho C |
 | R3-TV05 | Diretor tenta elevar o próprio `nivelAcesso` | Recusa registrada; se a elevação tiver sido efetivada por falha do controle, alerta Crítico pelo primeiro caso do Gatilho B |
 | R3-TV06 | Operação administrativa nova sem regra de autorização declarada | Recusa por omissão de regra com `MISSING_AUTHORIZATION_RULE`, contabilizada no Gatilho C; efetivação com `ruleId` vazio gera Crítico |
