@@ -6,8 +6,8 @@
 | Item | Responsável | Situação |
 | --- | --- | --- |
 | Pipeline DevSecOps (8 momentos + 3 condições de bloqueio) | @ARTHUR9011 (rascunho), @lorenzoficher (revisão) | Concluído (observações da revisão incorporadas) |
-| Roteiro do vídeo - parte de cada trilha | Todos | Em andamento (Abertura e blocos Spoofing, Tampering e Repudiation concluídos; Information Disclosure aguarda o ZAP; falta DoS/EoP) |
-| Organização do roteiro em documento único | @mariasanchez0 | Concluído (blocos Information Disclosure e Encerramento adicionados; falta o bloco DoS/EoP do @PPrauchner) |
+| Roteiro do vídeo - parte de cada trilha | Todos | Concluído (Abertura e os cinco blocos de trilha escritos; Information Disclosure aguarda apenas o trecho final do ZAP) |
+| Organização do roteiro em documento único | @mariasanchez0 | Concluído (blocos Information Disclosure e Encerramento adicionados; o bloco DoS/EoP do @PPrauchner já foi escrito e falta integrá-lo) |
 | Gravação (5-8 min) e publicação do link | Todos; edição por @ARTHUR9011 | Pendente |
 
 ---
@@ -129,7 +129,7 @@ Cada integrante escreve a parte referente à própria trilha: o que fez, qual de
 | Trilha Tampering → R02 → RS02 → regra 2 | Da alteração sem autoria à prevenção, auditoria e detecção correlacionada | @ARTHUR9011 | Concluído (incluído no documento único) |
 | Trilha Repudiation → R03 → DA01 → trilha de auditoria | Da operação sem autor à decisão de arquitetura que produz a prova | @lorenzoficher | Concluído (incluído no documento único) |
 | Trilha Information Disclosure → R04, priorização e achados do ZAP | Da ausência de segunda barreira após o login à decisão de arquitetura DA02 e à detecção de padrão de consulta | @mariasanchez0 | Rascunho concluído (aguarda achados do ZAP da Etapa 5 para o trecho final) |
-| Trilha DoS/EoP → R05 e R06 → RS03 → autorização → regra 3 | | @PPrauchner | Pendente |
+| Trilha DoS/EoP → R05 e R06 → RS03 → autorização → regra 3 | Das duas categorias que se encontram no CA05 à autorização decidida no servidor e à detecção da elevação | @PPrauchner | Concluído |
 | Encerramento e conclusões | Síntese das cinco trilhas nas três decisões de arquitetura e no que ainda falta implementar | @mariasanchez0 (organiza) | Concluído (rascunho; ajustar duração após o bloco DoS/EoP entrar) |
 
 ### Abertura - roteiro de @lilydias24
@@ -330,6 +330,66 @@ o argumento de R04 e DA02 já fecha a trilha com evidência própria.
 
 > **Pendente:** completar o trecho de achados do ZAP assim que a Etapa 5 (@PPrauchner
 > conduz a sessão, @mariasanchez0 analisa) estiver concluída.
+
+### Bloco DoS/EoP - roteiro de @PPrauchner
+
+- **Duração-alvo:** 80 a 90 segundos.
+- **Objetivo:** mostrar a única trilha que carrega **duas** categorias do STRIDE e explicar
+  por que elas foram levadas juntas - o volume de leitura que a elevação de privilégio
+  permite é o mesmo volume que satura o banco. É também o único bloco que precisa fixar a
+  distinção que separa esta trilha da de Spoofing: aqui a identidade não foi falsificada,
+  foi promovida. Os dois argumentos não cabem no tempo dos demais blocos, e é isso que
+  justifica ultrapassar os 80 segundos.
+
+**Narração sugerida:**
+
+> Minha trilha é a única que leva duas categorias, e elas se encontram no fim. Começa no
+> T05, a indisponibilidade: os DAOs dos sete serviços terminam no mesmo SGBD e o API
+> Gateway é passagem obrigatória, enquanto o RNF01, o RNF02 e o RNF03 pedem alto volume,
+> escalabilidade e operação 24 horas por dia com recuperação automática. A ameaça está na
+> distância entre o que os requisitos pediram e o que o projeto entregou. E segue no T06, a
+> elevação de privilégio: o `nivelAcesso` do Administrador é o único atributo de
+> autorização do modelo inteiro do SIGH, e ele é salvo junto com o resto do cadastro. Um
+> Supervisor reenvia o próprio salvamento com `nivelAcesso` igual a Diretor, e o servidor
+> grava. No CA05 as duas se costuram: a elevação é o meio, a indisponibilidade é a
+> consequência - percorrer o cadastro de todas as unidades é o que o privilégio novo
+> permite, e é também o volume que derruba o banco. Na Etapa 2 isso virou o R05, 12 e
+> Crítico, e o R06, 8 e Alto. O ponto do R06 é este: a identidade não foi falsificada, foi
+> promovida. A sessão é legítima do começo ao fim, então autenticar melhor não impede nada
+> - a dúvida nunca foi quem é o usuário, é o que ele pode. Na Etapa 3, a RS03 tirou essa
+> decisão da interface: ela passa a ser tomada no servidor, fora do componente que executa
+> a operação, com negação por padrão, e a cláusula 8 limita a leitura em massa, que é
+> exatamente onde as duas ameaças se encontram. Na Etapa 4 eu implementei isso, e o
+> detalhe que mais me custou escrever é o que resume a prática: o `nivelAcesso` que chega
+> do cliente é descartado, não validado - validar um valor que o cliente controla ainda é
+> confiar nele. A tentativa de gravá-lo fica registrada em vez de sumir em silêncio, e é
+> essa trilha que a Regra 3 consome. O gatilho que mais me interessa nela é o que
+> correlaciona leitura em massa nos 60 minutos seguintes a uma elevação: é a sequência
+> exata do CA05, que na apuração sempre foi lida como dois fatos independentes. E o fecho
+> honesto: a RS03 não reduz o impacto do R06. Essa redução depende da RS01, porque o dano
+> se realiza sobre as credenciais que ela protege. E o risco residual do R05 só desce até
+> certo ponto: enquanto o SGBD for um só, a queda continua possível - isso é limitação de
+> arquitetura, não do requisito.
+
+**Sequência visual e evidência:**
+
+| Tempo | Mostrar na tela | Mensagem principal |
+| --- | --- | --- |
+| 0-15 s | T05 e T06 na [Etapa 1](E1_Casos_de_abuso_e_Stride.md), com `diagrams/estrutura/Diagramas_SIGH - Implantacao.png` | Um SGBD único para os sete serviços; e o `nivelAcesso` como única autorização do modelo |
+| 15-30 s | Fluxo de abuso do CA05 na [Etapa 1](E1_Casos_de_abuso_e_Stride.md), passos 3 a 7 | A elevação é o meio, a indisponibilidade é a consequência do uso do privilégio obtido |
+| 30-45 s | Registros de R05 e R06 em 13.4 na [Etapa 2](E2_Riscos_e_NIST_CSF.md) | 12 Crítico e 8 Alto - e a identidade promovida, não falsificada |
+| 45-62 s | Cláusulas 1, 2, 3 e 8 da RS03 e a DA02 na [Etapa 3](E3_Arquitetura_segura.md) | Decisão no servidor, fora de quem executa, com negação por padrão |
+| 62-76 s | Saída dos testes da Prática 2 na [Etapa 4](E4_Codigo_seguro_e_testes.md) | O `nivelAcesso` do cliente é descartado; a tentativa vira 403 registrado |
+| 76-88 s | Gatilho E da Regra 3 na [Etapa 6](E6_Monitoramento_e_deteccao.md) e os residuais de R05 e R06 em 14.6 na [Etapa 2](E2_Riscos_e_NIST_CSF.md) | Leitura em massa logo após uma elevação; e o que os controles não resolvem |
+
+Durante a gravação, destacar os identificadores `T05`, `T06`, `CA05`, `R05`, `R06`, `RS03`
+e `Regra 3`, e manter a cláusula 8 visível quando a narração disser que as duas categorias
+se encontram - é a única evidência de que a costura não é retórica. Os testes da Prática 2
+são evidência **executada**; o restante da trilha é especificação e deve ser apresentado
+como tal. Se for preciso cortar tempo, o que não pode sair é a frase sobre a identidade
+promovida, o "descartado, não validado" e a dependência do impacto de R06 em relação à
+RS01; a leitura de RNF01, RNF02 e RNF03 e o segundo caminho de R05 - a chamada síncrona ao
+«system» Convênio - podem ficar só no documento.
 
 ### Encerramento e conclusões - roteiro de @mariasanchez0 (organiza)
 
