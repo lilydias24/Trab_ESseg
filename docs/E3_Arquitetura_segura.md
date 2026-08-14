@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | RS01 - requisito e vulnerabilidade | @lilydias24 | Concluído (aguarda revisão cruzada) |
 | RS02 - requisito e vulnerabilidade | @ARTHUR9011 | Concluído (aguarda revisão cruzada) |
-| RS03 - requisito e vulnerabilidade | @PPrauchner | Pendente |
+| RS03 - requisito e vulnerabilidade | @PPrauchner | Concluído (aguarda revisão cruzada); apoia-se na DA02 |
 | Diagrama da arquitetura segura | @lorenzoficher | Concluído (seções 3.1 a 3.3 e PNG versionado) |
 | Decisão de arquitetura 1 (ligada ao diagrama) | @lorenzoficher | Concluída (DA01) |
 | Decisão de arquitetura 2 (ligada a RS03) | @mariasanchez0 | Concluída (DA02) |
@@ -451,9 +451,22 @@ identificar, ainda que em nível lógico:
 
 **Dependências para as próximas etapas.** Os critérios acima são critérios de arquitetura
 enquanto o SIGH não possui implementação, e não devem ser apresentados como evidência
-executada. A **DA02**, ligada a este requisito, ainda não foi escrita - é ela que deve
-registrar formalmente a decisão de onde a autorização passa a ser decidida e por qual
-componente, e RS03 pressupõe essa decisão tomada.
+executada. A decisão de arquitetura que sustenta este requisito é a **DA02**, da
+@mariasanchez0: ela institui o Serviço de Autorização como ponto único de decisão, que é
+o componente pressuposto pelas cláusulas 2 e 6 - sem ele, a revalidação no servidor teria
+de ser repetida dentro de cada um dos 7 microsserviços, com as sete divergências que a
+própria DA02 rejeita. A cláusula 3 (`nivelAcesso` fora da via de salvamento do cadastro)
+é a única que permanece como responsabilidade do Serviço de Funcionários, porque diz
+respeito ao que se **grava**, e não a quem decide.
+
+Vale registrar a consequência que a DA02 assume e que atinge esta trilha: o Serviço de
+Autorização vira passagem obrigatória de toda operação sensível, somando-se ao API
+Gateway, ao Serviço de Autenticação e ao SGBD central como ponto de concentração - a mesma
+característica que sustenta **R05**, o outro risco desta trilha. A negação por padrão da
+cláusula 2 é justamente o que torna a indisponibilidade desse serviço uma parada de
+operação, e não uma passagem livre. É a troca correta, mas ela precisa da redundância e da
+política de latência máxima que a DA02 registra como pendência a conciliar com a DA01 e a
+DA03.
 
 ## 3. Diagrama da arquitetura segura
 
