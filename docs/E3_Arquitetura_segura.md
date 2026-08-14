@@ -6,7 +6,7 @@
 
 | Item | Responsável | Situação |
 | --- | --- | --- |
-| RS01 - requisito e vulnerabilidade | @lilydias24 | Concluído (revisão cruzada por @mariasanchez0: numeração OWASP a corrigir) |
+| RS01 - requisito e vulnerabilidade | @lilydias24 | Concluído (revisão cruzada por @mariasanchez0 incorporada: numeração OWASP corrigida) |
 | RS02 - requisito e vulnerabilidade | @ARTHUR9011 | Concluído (revisão cruzada por @mariasanchez0: sem achados) |
 | RS03 - requisito e vulnerabilidade | @PPrauchner | Concluído; revisão cruzada com as Etapas 4 e 6 feita (critérios de CA02, CA03 e CA04 conciliados) e por @mariasanchez0 (cláusula 6 pode ganhar frase de esclarecimento); apoia-se na DA02 |
 | Diagrama da arquitetura segura | @lorenzoficher | Concluído (seções 3.1 a 3.3, PNG e fonte editável `.mmd` versionados) |
@@ -297,12 +297,14 @@ contradição está documentada no próprio projeto.
 | [CWE-613 - Insufficient Session Expiration](https://cwe.mitre.org/data/definitions/613.html) | Sem expiração por inatividade, o terminal compartilhado deixado aberto entre plantões é uma sessão válida à disposição de quem passar. |
 | [CWE-287 - Improper Authentication](https://cwe.mitre.org/data/definitions/287.html) | Permanece como categoria-mãe do requisito, útil para a rastreabilidade geral, mas abstrata demais para orientar controle: as cinco fraquezas acima é que dizem o que precisa mudar. |
 
-No **OWASP Top 10**, a relação principal é com a categoria de **falhas de identificação e
-autenticação** e, pelo armazenamento da senha, com a de **falhas criptográficas**. O
-grupo está citando a edição 2025 (ver o mapeamento de RS02); a numeração exata dessas duas
-categorias nessa edição deve ser conferida na lista vigente antes da entrega final, para
-não citar identificador de edição diferente. As referências de controle usadas aqui, e
-que não dependem dessa numeração, são o
+No **OWASP Top 10:2025**, a relação principal é com
+[A07 - Authentication Failures](https://owasp.org/Top10/2025/A07_2025-Authentication_Failures/),
+pela ausência de segundo fator, bloqueio por tentativas e expiração de sessão; e, pelo
+armazenamento da senha, com
+[A04 - Cryptographic Failures](https://owasp.org/Top10/2025/A04_2025-Cryptographic_Failures/).
+A numeração foi conferida na lista oficial na revisão cruzada de @mariasanchez0, que
+apontava o ponto em aberto. As referências de controle usadas aqui, que não dependem
+dessa numeração, são o
 [OWASP Authentication Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html)
 e o
 [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html),
