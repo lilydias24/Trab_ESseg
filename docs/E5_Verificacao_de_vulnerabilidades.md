@@ -7,7 +7,7 @@
 | Item | Responsável | Situação |
 | --- | --- | --- |
 | Condução da sessão (setup Juice Shop + ZAP, captura de evidências) | @PPrauchner | Concluída (sessão executada em 13/08/2026; relatório e capturas versionados) |
-| Análise dos 3 achados e correção proposta (com CWE/OWASP) | @mariasanchez0’s | Pendente (achados identificados e evidenciados na seção 2) |
+| Análise dos 3 achados e correção proposta (com CWE/OWASP) | @mariasanchez0 | Concluída |
 | Revisão cruzada e complemento da tabela final | @lilydias24 e @lorenzoficher | Pendente |
 
 ---
@@ -102,9 +102,9 @@ As colunas *Possível impacto* e *Correção proposta* são a análise da @maria
 
 | ID | Achado | Severidade (ZAP) | Evidência | Possível impacto | CWE/WASC | Correção proposta |
 | --- | --- | --- | --- | --- | --- | --- |
-| V01 | **SQL Injection** em `GET /rest/products/search`, parâmetro `q`. Carga `'(` produz `HTTP 500` com `SQLITE_ERROR: near "(": syntax error` | Alto (confiança Baixa segundo o ZAP - **verificado como verdadeiro positivo**, ver abaixo) | [captura 03](../evidencias/etapa-5/capturas-de-tela/03-sqli-erro-sqlite.png); `pluginid` 40018 no [JSON](../evidencias/etapa-5/relatorio-zap-juiceshop.json) e no *Alert Detail* do [HTML](../evidencias/etapa-5/relatorio-zap-juiceshop.html), com URL, parâmetro, carga e `evidence: HTTP/1.1 500 Internal Server Error` | | CWE-89; WASC-19 | |
-| V02 | **Content Security Policy (CSP) Header Not Set** - 5 instâncias, incluindo a raiz da aplicação | Médio (confiança Alta) | `pluginid` 10038 no [JSON](../evidencias/etapa-5/relatorio-zap-juiceshop.json) e no *Alert Detail* do [HTML](../evidencias/etapa-5/relatorio-zap-juiceshop.html): 5 instâncias `GET` - `/`, `/ftp/eastere.gg`, `/ftp/encrypt.pyc`, `/ftp/package-lock.json.bak` e `/sitemap.xml`. O campo `evidence` vem vazio porque o achado é a **ausência** do cabeçalho na resposta | | CWE-693; WASC-15 | |
-| V03 | **Cross-Domain Misconfiguration** - resposta traz `Access-Control-Allow-Origin: *`, em 3 instâncias | Médio (confiança Média) | `pluginid` 10098 no [JSON](../evidencias/etapa-5/relatorio-zap-juiceshop.json) e no *Alert Detail* do [HTML](../evidencias/etapa-5/relatorio-zap-juiceshop.html): 3 instâncias `GET` - `/`, `/scripts.js` e `/styles.css` -, todas com `evidence: Access-Control-Allow-Origin: *` | | CWE-264; WASC-14 | |
+| V01 | **SQL Injection** em `GET /rest/products/search`, parâmetro `q`. Carga `'(` produz `HTTP 500` com `SQLITE_ERROR: near "(": syntax error` | Alto (confiança Baixa segundo o ZAP - **verificado como verdadeiro positivo**, ver abaixo) | [captura 03](../evidencias/etapa-5/capturas-de-tela/03-sqli-erro-sqlite.png); `pluginid` 40018 no [JSON](../evidencias/etapa-5/relatorio-zap-juiceshop.json) e no *Alert Detail* do [HTML](../evidencias/etapa-5/relatorio-zap-juiceshop.html), com URL, parâmetro, carga e `evidence: HTTP/1.1 500 Internal Server Error` | Leitura, adulteração ou exclusão de dados no banco por trás do endpoint, caso a exploração avance além do erro de sintaxe já confirmado | CWE-89; WASC-19 | Consultas parametrizadas (prepared statements) e resposta de erro genérica, sem stack trace nem versão de framework |
+| V02 | **Content Security Policy (CSP) Header Not Set** - 5 instâncias, incluindo a raiz da aplicação | Médio (confiança Alta) | `pluginid` 10038 no [JSON](../evidencias/etapa-5/relatorio-zap-juiceshop.json) e no *Alert Detail* do [HTML](../evidencias/etapa-5/relatorio-zap-juiceshop.html): 5 instâncias `GET` - `/`, `/ftp/eastere.gg`, `/ftp/encrypt.pyc`, `/ftp/package-lock.json.bak` e `/sitemap.xml`. O campo `evidence` vem vazio porque o achado é a **ausência** do cabeçalho na resposta | Amplia o efeito de qualquer XSS presente na aplicação, por faltar a camada do navegador que conteria um script injetado | CWE-693; WASC-15 | Cabeçalho `Content-Security-Policy` restritivo (`default-src 'self'`, sem `unsafe-inline`/`unsafe-eval`) em todas as respostas |
+| V03 | **Cross-Domain Misconfiguration** - resposta traz `Access-Control-Allow-Origin: *`, em 3 instâncias | Médio (confiança Média) | `pluginid` 10098 no [JSON](../evidencias/etapa-5/relatorio-zap-juiceshop.json) e no *Alert Detail* do [HTML](../evidencias/etapa-5/relatorio-zap-juiceshop.html): 3 instâncias `GET` - `/`, `/scripts.js` e `/styles.css` -, todas com `evidence: Access-Control-Allow-Origin: *` | Qualquer origem pode ler resposta autenticada via requisição cross-site, ampliando furto de sessão ou dado por site malicioso | CWE-264; WASC-14 | Allowlist de origens confiáveis no `Access-Control-Allow-Origin`, nunca combinado com `Access-Control-Allow-Credentials: true` |
 
 A coluna traz a classificação **como a ferramenta a devolve**: CWE e WASC são os dois
 identificadores presentes no relatório do ZAP; o §25 aceita "OWASP **ou** CWE". O
@@ -160,38 +160,120 @@ interpretar o resultado.
 
 ## 3. Análise dos achados
 
-> **Pendente - @mariasanchez0’s.** Os três achados estão identificados, evidenciados e
-> com CWE atribuída pela ferramenta na seção 2. Falta, para cada um: o impacto
-> possível, a relação com a categoria OWASP e a correção proposta - inclusive nas duas
-> colunas em branco da tabela acima.
->
-> Sugestão de ponto de partida, sem invadir a análise: V01 e V03 têm relação direta
-> com riscos já registrados na [Etapa 2](E2_Riscos_e_NIST_CSF.md) - V01 com a
-> validação de entrada ausente que aparece em R02, e V03 com a falta de fronteira de
-> confiança entre serviços que sustenta R04.
-
 ### V01 - SQL Injection em `/rest/products/search`
 
-- **O que foi encontrado:**
-- **Por que é um problema:**
-- **Correção proposta:**
-- **Relação com CWE/OWASP:**
+- **O que foi encontrado:** o endpoint `GET /rest/products/search`, parâmetro `q`, aceita
+  a carga `'(` e devolve `HTTP 500` com a mensagem `SQLITE_ERROR: near "(": syntax error`,
+  exposta diretamente ao cliente. A verificação manual da seção 1 confirmou: uma consulta
+  comum (`?q=apple`) responde normalmente, uma aspas isolada (`?q='`) não quebra a
+  sintaxe, e é só a carga do ZAP que produz o erro - evidência de que o parâmetro chega ao
+  interpretador SQL sem escape nem parametrização.
+- **Por que é um problema:** um parâmetro de busca que altera a sintaxe da consulta é, por
+  definição, controlado pelo atacante além do que a aplicação previu. O ZAP marcou
+  confiança **Baixa** porque só observou o erro de sintaxe, sem extrair dado - mas o mesmo
+  caminho que quebra a consulta é o que, com uma carga um pouco mais elaborada, costuma
+  permitir ler colunas de outras tabelas nesse tipo de aplicação. Não foi isso que se fez
+  aqui - o §25 do enunciado autoriza parar na confirmação -, mas a mensagem de erro já
+  entrega ao atacante o motor de banco e a versão do framework (`Express ^4.22.1`, visível
+  na captura), o que reduz o custo de qualquer tentativa seguinte.
+- **Correção proposta:** substituir a concatenação por **consultas parametrizadas**
+  (prepared statements), de modo que o valor de `q` nunca seja interpretado como parte da
+  instrução SQL - a recomendação central do
+  [OWASP SQL Injection Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html).
+  Como reforço, validar o formato esperado do parâmetro (allowlist de caracteres) antes de
+  chegar à camada de dados, e substituir a página de erro atual por uma resposta genérica
+  que não devolva stack trace, motor de banco nem versão de framework.
+- **Relação com CWE/OWASP:** CWE-89 (SQL Injection) e, mais amplamente, CWE-20 (Improper
+  Input Validation) - o mesmo par que a Etapa 3 já cataloga para o SIGH na seção de
+  vulnerabilidades de RS02. No OWASP Top 10:2025, o achado se encaixa em
+  **A05:2025 - Injection**. É a mesma classe de falha que a Etapa 3 já previa de forma
+  hipotética: RS02 exige validar `dosagemMedicamento` e `intervaloConsumo` contra faixa
+  terapêutica no servidor (R02-C3) precisamente porque um parâmetro aceito sem validação,
+  se chegar a uma consulta montada por concatenação, produz este mesmo tipo de falha. O
+  Juice Shop não é o SIGH, mas demonstra, num sistema real, o que a Etapa 2 só podia
+  argumentar sobre o modelo.
 
 ### V02 - Content Security Policy (CSP) Header Not Set
 
-- **O que foi encontrado:**
-- **Por que é um problema:**
-- **Correção proposta:**
-- **Relação com CWE/OWASP:**
+- **O que foi encontrado:** cinco respostas do alvo - incluindo a raiz da aplicação - não
+  trazem o cabeçalho `Content-Security-Policy`. O ZAP sinalizou com confiança Alta; é uma
+  verificação estrutural (presença ou ausência de um cabeçalho HTTP), sem necessidade de
+  confirmação manual como no V01.
+- **Por que é um problema:** o CSP é a barreira do navegador contra o que uma página pode
+  carregar e executar. Sem ele, se existir **qualquer** ponto de injeção de script na
+  aplicação (XSS refletido, armazenado ou baseado em DOM), o navegador executa o script
+  injetado sem restrição de origem. O CSP não fecha o XSS em si - é uma camada de
+  contenção que reduz o dano quando uma falha primária passar despercebida, o mesmo papel
+  que uma segunda barreira cumpre nas fraquezas que este grupo já descreveu para o SIGH em
+  R01 e R04.
+- **Correção proposta:** definir um `Content-Security-Policy` restritivo em todas as
+  respostas HTML, começando por `default-src 'self'` e evitando `unsafe-inline`/
+  `unsafe-eval`; expandir por allowlist apenas os domínios efetivamente necessários.
+  Recomenda-se implantar primeiro em modo `Content-Security-Policy-Report-Only` para medir
+  o que quebraria, conforme o
+  [OWASP Content Security Policy Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html).
+- **Relação com CWE/OWASP:** CWE-693 (Protection Mechanism Failure) - categoria abrangente
+  por natureza, porque o achado é sobre a **ausência** de uma camada de proteção, não
+  sobre uma falha específica que ela protegeria. No OWASP Top 10:2025, o achado se encaixa
+  em **A02:2025 - Security Misconfiguration**, categoria que subiu da 5ª para a 2ª posição
+  nesta edição - cabeçalho de segurança ausente é exatamente o tipo de lacuna que essa
+  subida reflete.
 
 ### V03 - Cross-Domain Misconfiguration (`Access-Control-Allow-Origin: *`)
 
-- **O que foi encontrado:**
-- **Por que é um problema:**
-- **Correção proposta:**
-- **Relação com CWE/OWASP:**
+- **O que foi encontrado:** três instâncias da resposta trazem
+  `Access-Control-Allow-Origin: *`, liberando CORS para qualquer origem. O ZAP sinalizou
+  com confiança Média.
+- **Por que é um problema:** o CORS existe para que o navegador aplique, por padrão, a
+  política de mesma origem e só a afrouxe quando o servidor autoriza explicitamente uma
+  origem confiável. Um `*` remove essa fronteira por completo: qualquer site, inclusive um
+  malicioso hospedado em outro domínio, pode fazer uma requisição a partir do navegador da
+  vítima e ler a resposta como se fosse a própria aplicação. É, em escala de navegador, o
+  mesmo problema estrutural que a Etapa 1 e a Etapa 2 já descrevem para o **R04** no SIGH:
+  a **ausência de uma fronteira de confiança** onde deveria haver uma - lá é entre
+  Farmácia/Financeiro e o restante dos serviços; aqui é entre a aplicação e qualquer
+  origem externa. Nos dois casos, o dado não é roubado por invasão: é entregue porque o
+  sistema não distingue quem tem direito de recebê-lo.
+- **Correção proposta:** substituir o `*` por uma lista de origens confiáveis, validada no
+  servidor a cada requisição; nunca combinar `Access-Control-Allow-Origin` amplo com
+  `Access-Control-Allow-Credentials: true`; e limitar o cabeçalho às rotas que de fato
+  precisam de acesso entre origens. Orientação consolidada no
+  [OWASP HTML5 Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html),
+  seção de Cross-Origin Resource Sharing.
+- **Relação com CWE/OWASP:** CWE-264 (categoria-mãe de controle de acesso) e, mais
+  precisamente, CWE-942 (Permissive Cross-domain Policy with Untrusted Domains). No OWASP
+  Top 10:2025, o achado se encaixa em **A02:2025 - Security Misconfiguration**, junto com
+  o V02 - os dois achados Médios desta sessão são, na raiz, o mesmo tipo de falha: uma
+  configuração de proteção deixada no padrão mais permissivo, não uma falha de lógica de
+  negócio.
+
 
 ## 4. Considerações da etapa
 
-*(Pendente - o que a sessão mostrou, limitações da ferramenta e relação com os riscos
-já registrados na [Etapa 2](E2_Riscos_e_NIST_CSF.md). Depende da análise da seção 3.)*
+A sessão confirmou, num sistema real, um padrão que a Etapa 2 só podia argumentar sobre o
+modelo do SIGH: a ausência de uma segunda barreira depois do ponto óbvio de proteção é o
+que transforma uma falha pontual em exposição ampla. O achado de maior risco, V01, é
+validação de entrada ausente na camada mais crítica (a consulta ao banco) - a mesma classe
+de fraqueza que RS02 já previa fechar via faixa terapêutica e validação no servidor
+(R02-C3). Os achados V02 e V03 são configuração permissiva por padrão, não lógica de
+negócio quebrada - e V03 em particular reproduz, em nível de cabeçalho HTTP, o mesmo
+problema estrutural que sustenta o R04 deste grupo: a ausência de uma fronteira onde uma
+era esperada.
+
+Duas limitações merecem registro, para que os achados não sejam lidos além do que provam.
+Primeiro, a varredura foi **não autenticada** - cobriu só a superfície acessível a um
+usuário anônimo, o que significa que a maior parte das falhas de autorização pós-login (o
+tema central da trilha R06/RS03) ficou fora do alcance desta sessão; nenhuma conclusão
+sobre controle de acesso autenticado pode ser tirada daqui. Segundo, confiança **Baixa** do
+ZAP no V01 não é sinônimo de falso positivo - é sinônimo de "a ferramenta não tem certeza
+sozinha", e foi por isso que a verificação manual da seção 1 foi necessária antes de tratar
+o achado como real; o inverso também vale, e por isso os cinco alertas descartados na seção
+2 foram justificados individualmente, não descartados em bloco.
+
+O ponto mais importante para o trabalho como um todo é metodológico: **o Juice Shop não é
+o SIGH.** Esta sessão não prova nem refuta nada sobre a implementação do SIGH, porque o
+SIGH não tem implementação - prova que a **classe** de vulnerabilidade que a Etapa 1 e a
+Etapa 2 anteciparam a partir do modelo (validação de entrada ausente, fronteiras de
+confiança inexistentes) é real e testável em sistemas do mesmo tipo, quando o código
+existe. É a diferença entre "o modelo sugere que isso pode acontecer" e "isso acontece,
+neste outro sistema, exatamente pela razão que o modelo sugeriu".
