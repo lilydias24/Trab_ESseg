@@ -9,7 +9,7 @@
 | Armazenamento seguro de senhas (hash + salt em `senhaLogin`) | R01 / RS01 | @lilydias24 | Concluída (testes executados) |
 | Controle de autorização no servidor (checagem de `nivelAcesso`) | R06 / RS03 | @PPrauchner | Concluída (testes executados) |
 
-Cada responsável entrega: risco e requisito atendidos, **2 testes escritos antes da implementação** (1 caso válido + 1 caso malicioso/não autorizado), pseudocódigo ou implementação simples, resultado esperado e referência ao OWASP Cheat Sheet Series. O @mariasanchez0’s organiza a pasta e revisa os dois PRs.
+Cada responsável entrega: risco e requisito atendidos, **2 testes escritos antes da implementação** (1 caso válido + 1 caso malicioso/não autorizado), pseudocódigo ou implementação simples, resultado esperado e referência ao OWASP Cheat Sheet Series. Os dois PRs já foram mesclados à branch principal.
 
 ---
 

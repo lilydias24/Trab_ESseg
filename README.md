@@ -122,7 +122,7 @@ mas não como arquivo próprio em `roteiros/` - ver a pendência na Etapa 7 abai
 ### Etapas 3 a 7
 
 - [ ] Etapa 3 - RS01, RS02 e RS03 concluídos (aguardam revisão cruzada). Diagrama da arquitetura segura concluído e versionado (@lorenzoficher) - **falta versionar o arquivo-fonte editável**, exigido pelo §18.3 do enunciado. DA01 (@lorenzoficher), DA02 (@mariasanchez0) e DA03 (@lilydias24) concluídas, com o quadro dos cinco campos do §18.4 na abertura da seção 4. Os critérios RS03-CA02 e RS03-CA04, que se contradiziam, foram conciliados depois que a implementação da Etapa 4 expôs a contradição
-- [ ] Etapa 4 - as duas práticas concluídas com testes executados: armazenamento seguro de senhas (@lilydias24) e controle de autorização no servidor (@PPrauchner). Revisão dos dois PRs pela @mariasanchez0’s pendente
+- [x] Etapa 4 - as duas práticas concluídas com testes executados: armazenamento seguro de senhas (@lilydias24) e controle de autorização no servidor (@PPrauchner). Os dois PRs já mesclados à main
 - [ ] Etapa 5 - sessão conduzida em 13/08/2026 (@PPrauchner); análise dos 3 achados concluída (@mariasanchez0). Falta apenas a revisão cruzada (@lilydias24 e @lorenzoficher)
 - [x] Etapa 6 - as três regras concluídas (1 @lilydias24, 2 @ARTHUR9011, 3 @PPrauchner) e o roteiro compilado em [`roteiros/etapa-6-deteccao-de-intrusoes.md`](roteiros/etapa-6-deteccao-de-intrusoes.md), com convenções comuns, correlação entre regras e tabela de rastreabilidade até a Etapa 1
 - [ ] Etapa 7 - pipeline e os sete blocos do roteiro concluídos. Arquivo `roteiros/etapa-7-devsecops-e-video-final.md` criado (§31). **Falta** ajustar a duração (soma hoje passa do teto de 8 min no pior caso) e a gravação/publicação do link
