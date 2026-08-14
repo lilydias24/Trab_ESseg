@@ -38,4 +38,23 @@ São a base técnica dos **fluxos de abuso da seção 8.6**: mostram o caminho p
 
 > Ao reexportar um diagrama editado (ex.: o recorte para a seção 8.4 ou a arquitetura segura da Etapa 3), substitua o PNG aqui e mantenha o mesmo nome de arquivo, para não quebrar as referências nos documentos.
 
-> **Exceção:** `Diagramas_SIGH - Arquitetura segura.png` é o único que não sai dos documentos do Lucid listados acima. Ele foi produzido na Etapa 3, a partir da especificação das seções 3.1 a 3.3 de [`E3_Arquitetura_segura.md`](../docs/E3_Arquitetura_segura.md) - que descreve os componentes, as fronteiras de confiança e o fluxo que o desenho precisa mostrar, e serve de referência para refazê-lo.
+> **Exceção:** `Diagramas_SIGH - Arquitetura segura.png` é o único que não sai dos documentos do Lucid listados acima. Ele foi produzido na Etapa 3, a partir da especificação das seções 3.1 a 3.3 de [`E3_Arquitetura_segura.md`](../docs/E3_Arquitetura_segura.md) - que descreve os componentes, as fronteiras de confiança e o fluxo que o desenho precisa mostrar.
+
+## Arquivo-fonte editável
+
+Por não vir do Lucid, esse diagrama tem o **fonte versionado ao lado do PNG**, como pede o §18.3:
+
+| Fonte | Imagem gerada |
+| --- | --- |
+| `estrutura/Diagramas_SIGH - Arquitetura segura.mmd` | `estrutura/Diagramas_SIGH - Arquitetura segura.png` |
+
+É um diagrama **Mermaid** (texto puro, versionável e diferenciável por commit - ao contrário do binário de uma ferramenta gráfica). Para editar, altere o `.mmd` e reexporte o PNG **com o mesmo nome**, para não quebrar as referências nos documentos:
+
+```sh
+cd diagrams/estrutura
+npx -y @mermaid-js/mermaid-cli \
+  -i "Diagramas_SIGH - Arquitetura segura.mmd" \
+  -o "Diagramas_SIGH - Arquitetura segura.png" -s 7 -b white
+```
+
+Os seis diagramas restantes de `estrutura/`, mais os de `atividade/` e `sequencia/`, continuam tendo como fonte os documentos do Lucid linkados acima.
