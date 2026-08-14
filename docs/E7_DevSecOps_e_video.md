@@ -7,7 +7,7 @@
 | --- | --- | --- |
 | Pipeline DevSecOps (8 momentos + 3 condições de bloqueio) | @ARTHUR9011 (rascunho), @lorenzoficher (revisão) | Concluído (observações da revisão incorporadas) |
 | Roteiro do vídeo - parte de cada trilha | Todos | Concluído (Abertura e os cinco blocos de trilha escritos; Information Disclosure aguarda apenas o trecho final do ZAP) |
-| Organização do roteiro em documento único | @mariasanchez0 | Concluído (blocos Information Disclosure e Encerramento adicionados; o bloco DoS/EoP do @PPrauchner já foi escrito e falta integrá-lo) |
+| Organização do roteiro em documento único | @mariasanchez0 | Concluído (os sete blocos reunidos aqui, incluindo o DoS/EoP do @PPrauchner; falta o arquivo próprio em `roteiros/`, exigido pelo §31) |
 | Gravação (5-8 min) e publicação do link | Todos; edição por @ARTHUR9011 | Pendente |
 
 ---

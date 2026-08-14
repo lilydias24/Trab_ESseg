@@ -47,9 +47,23 @@
   - O teto de 2 minutos por regra ativa limita as regras mais lentas (injeção cega
     baseada em tempo, por exemplo). O objetivo, conforme o §25, é **interpretar os
     resultados da ferramenta**, não esgotar a exploração.
-  - Nenhum acesso indevido foi obtido e nenhum dado foi extraído. A única
-    interação além da varredura automática foi a reprodução do achado V01 descrita
-    abaixo, com a carga mínima necessária para separar verdadeiro de falso positivo.
+  - Nenhum dado foi extraído e não houve exploração manual além da reprodução do
+    achado V01 descrita abaixo, com a carga mínima necessária para separar
+    verdadeiro de falso positivo. Cabe registrar, porém, que o spider **alcançou
+    conteúdo restrito por conta própria**: a captura do alvo, abaixo, mostra o
+    Juice Shop anunciando os desafios *Confidential Document* e *Error Handling*
+    como resolvidos, disparados pela varredura ao percorrer `/ftp/`. É consequência
+    de varrer sem exclusão de caminho um alvo desenhado para ser vulnerável - não
+    houve intenção nem uso do conteúdo -, mas dizer "nenhum acesso indevido" seria
+    impreciso diante da própria evidência versionada.
+
+![Tela inicial do OWASP Juice Shop 20.2.0 em `localhost:3000`, alvo da sessão, com dois banners do próprio aplicativo anunciando desafios resolvidos pela varredura](../evidencias/etapa-5/capturas-de-tela/01-juiceshop-alvo.png)
+
+*O alvo da sessão, no navegador, antes da leitura do relatório. Os banners verdes são
+do próprio Juice Shop: ele sinaliza quando um desafio embutido é atingido, e foram a
+varredura automática do ZAP - não um operador - que os disparou. A listagem vazia em
+"All Products" é efeito do carregamento assíncrono no instante da captura, e não
+indica alvo sem dados: os 39 endpoints mapeados constam do relatório.*
 
 ### Resultado bruto da sessão
 

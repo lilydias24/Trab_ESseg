@@ -42,7 +42,7 @@ A análise não parte do zero: a modelagem completa do SIGH já foi produzida em
 | --- | --- |
 | [`contexto/SIGH - Recorte ESSEG.md`](contexto/SIGH%20-%20Recorte%20ESSEG.md) | Escopo dos 5 módulos, requisitos funcionais e não funcionais mantidos, atores, casos de uso e a tabela de campos sensíveis por classe |
 | [`contexto/SIGH - Contexto dos diagramas.md`](contexto/SIGH%20-%20Contexto%20dos%20diagramas.md) | Leitura de cada diagrama sob a ótica de segurança e as lacunas identificadas no documento original |
-| [`diagrams/`](diagrams/README.md) | Os 24 diagramas exportados do Lucid, com um índice indicando qual serve a qual seção |
+| [`diagrams/`](diagrams/README.md) | Os 25 diagramas exportados do Lucid, com um índice indicando qual serve a qual seção |
 
 ## Trilha individual
 
@@ -75,8 +75,8 @@ Trab_ESseg/
 ├── diagrams/                                  # Diagramas do SIGH exportados do Lucid
 │   ├── README.md                              # Índice: qual diagrama serve a qual seção
 │   ├── estrutura/                             # Casos de uso, classes, pacotes, componentes, implantação, mapeamento
-│   ├── atividade/                             # ACT01 a ACT10
-│   └── sequencia/                             # DS01 a DS10, DS1.1 e DS1.2
+│   ├── atividade/                             # ACT01 a ACT10, menos ACT04 e ACT07
+│   └── sequencia/                             # DS01 a DS10 (menos DS04 e DS07), DS1.1 e DS1.2
 ├── codigo/etapa-4/                            # Práticas de código seguro e testes (Etapa 4)
 ├── evidencias/etapa-5/                        # Relatório do ZAP, plano de automação e capturas (Etapa 5)
 ├── roteiros/                                  # Roteiros finais compilados, exigidos pelos §27 e §31
@@ -122,7 +122,7 @@ mas não como arquivo próprio em `roteiros/` - ver a pendência na Etapa 7 abai
 ### Etapas 3 a 7
 
 - [ ] Etapa 3 - RS01, RS02 e RS03 concluídos (aguardam revisão cruzada). Diagrama da arquitetura segura concluído e versionado (@lorenzoficher) - **falta versionar o arquivo-fonte editável**, exigido pelo §18.3 do enunciado. DA01 (@lorenzoficher), DA02 (@mariasanchez0) e DA03 (@lilydias24) concluídas, com o quadro dos cinco campos do §18.4 na abertura da seção 4. Os critérios RS03-CA02 e RS03-CA04, que se contradiziam, foram conciliados depois que a implementação da Etapa 4 expôs a contradição
-- [x] Etapa 4 - as duas práticas concluídas com testes executados: armazenamento seguro de senhas (@lilydias24) e controle de autorização no servidor (@PPrauchner). Revisão dos dois PRs pela @mariasanchez0’s pendente
+- [ ] Etapa 4 - as duas práticas concluídas com testes executados: armazenamento seguro de senhas (@lilydias24) e controle de autorização no servidor (@PPrauchner). Revisão dos dois PRs pela @mariasanchez0’s pendente
 - [ ] Etapa 5 - sessão conduzida em 13/08/2026 sobre o OWASP Juice Shop 20.2.0 com o ZAP 2.17.0 (@PPrauchner); relatório, plano de automação e capturas versionados em `evidencias/etapa-5/`; três achados identificados. **Falta** a análise de impacto e correção (@mariasanchez0’s) e a revisão cruzada (@lilydias24 e @lorenzoficher)
 - [x] Etapa 6 - as três regras concluídas (1 @lilydias24, 2 @ARTHUR9011, 3 @PPrauchner) e o roteiro compilado em [`roteiros/etapa-6-deteccao-de-intrusoes.md`](roteiros/etapa-6-deteccao-de-intrusoes.md), com convenções comuns, correlação entre regras e tabela de rastreabilidade até a Etapa 1
 - [ ] Etapa 7 - pipeline concluído com as observações da revisão incorporadas. Dos 7 blocos do roteiro, 6 estão concluídos (Abertura, Spoofing, Tampering, Repudiation, DoS/EoP e o rascunho de Encerramento); o bloco Information Disclosure (@mariasanchez0) é rascunho e aguarda a análise dos achados da Etapa 5. Os blocos já estão reunidos em `docs/E7_DevSecOps_e_video.md`, mas falta o arquivo próprio em `roteiros/` exigido pelo §31 (ver nota acima). **Falta** a gravação (5-8 min) e a publicação do link - a soma das durações-alvo hoje fecha entre 7min e 8min10s, acima do teto de 8 min em cenário de pior caso
