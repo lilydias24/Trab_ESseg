@@ -6,8 +6,8 @@
 | Item | Responsável | Situação |
 | --- | --- | --- |
 | Pipeline DevSecOps (8 momentos + 3 condições de bloqueio) | @ARTHUR9011 (rascunho), @lorenzoficher (revisão) | Concluído (observações da revisão incorporadas) |
-| Roteiro do vídeo - parte de cada trilha | Todos | Concluído (Abertura e os cinco blocos de trilha escritos; Information Disclosure aguarda apenas o trecho final do ZAP) |
-| Organização do roteiro em documento único | @mariasanchez0 | Concluído (os sete blocos reunidos aqui, incluindo o DoS/EoP do @PPrauchner; falta o arquivo próprio em `roteiros/`, exigido pelo §31) |
+| Roteiro do vídeo - parte de cada trilha | Todos | Concluído (os sete blocos escritos, incluindo o trecho final de Information Disclosure) |
+| Organização do roteiro em documento único | @mariasanchez0 | Concluído (arquivo `roteiros/etapa-7-devsecops-e-video-final.md` criado, exigido pelo §31) |
 | Gravação (5-8 min) e publicação do link | Todos; edição por @ARTHUR9011 | Pendente |
 
 ---
@@ -128,7 +128,7 @@ Cada integrante escreve a parte referente à própria trilha: o que fez, qual de
 | Trilha Spoofing → R01 → RS01 → hash de senha → regra 1 | | @lilydias24 | Concluído (incluído no documento único) |
 | Trilha Tampering → R02 → RS02 → regra 2 | Da alteração sem autoria à prevenção, auditoria e detecção correlacionada | @ARTHUR9011 | Concluído (incluído no documento único) |
 | Trilha Repudiation → R03 → DA01 → trilha de auditoria | Da operação sem autor à decisão de arquitetura que produz a prova | @lorenzoficher | Concluído (incluído no documento único) |
-| Trilha Information Disclosure → R04, priorização e achados do ZAP | Da ausência de segunda barreira após o login à decisão de arquitetura DA02 e à detecção de padrão de consulta | @mariasanchez0 | Rascunho concluído (aguarda achados do ZAP da Etapa 5 para o trecho final) |
+| Trilha Information Disclosure → R04, priorização e achados do ZAP | Da ausência de segunda barreira após o login à decisão de arquitetura DA02 e à detecção de padrão de consulta | @mariasanchez0 | Concluído |
 | Trilha DoS/EoP → R05 e R06 → RS03 → autorização → regra 3 | Das duas categorias que se encontram no CA05 à autorização decidida no servidor e à detecção da elevação | @PPrauchner | Concluído |
 | Encerramento e conclusões | Síntese das cinco trilhas nas três decisões de arquitetura e no que ainda falta implementar | @mariasanchez0 (organiza) | Concluído (rascunho; ajustar duração após o bloco DoS/EoP entrar) |
 
@@ -334,9 +334,11 @@ lado do de R01, para reforçar visualmente o empate. Se a Etapa 5 já tiver acha
 controle de acesso quebrado (IDOR ou equivalente) no momento da gravação, inserir uma
 frase final relacionando o achado ao R04. Se não estiver pronta, manter o bloco como está;
 o argumento de R04 e DA02 já fecha a trilha com evidência própria.
-
-> **Pendente:** completar o trecho de achados do ZAP assim que a Etapa 5 (@PPrauchner
-> conduz a sessão, @mariasanchez0 analisa) estiver concluída.
+Durante a gravação, destacar os identificadores `T04`, `R04`, `DA02` e o número **16** ao
+lado do de R01, para reforçar visualmente o empate. O achado V03 da Etapa 5 é o que fecha
+esta trilha com evidência de outro sistema - não é IDOR, mas é a mesma ausência de
+fronteira de confiança. Se for necessário cortar tempo, a frase sobre o V03 é a primeira
+candidata a sair: o argumento de R04 e DA02 já fecha a trilha sem ela.
 
 ### Bloco DoS/EoP - roteiro de @PPrauchner
 
