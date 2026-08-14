@@ -23,7 +23,7 @@
 | --- | --- | --- | --- | --- |
 | RS01 | R01 - Spoofing | O sistema deve exigir autenticação multifator no login e reautenticação antes de operações sensíveis envolvendo a conta de `Funcionario` | Operação sensível pedida sem segundo fator válido ou fora da janela de reautenticação é recusada, e o valor persistido em `senhaLogin` não é diretamente reutilizável (RS01-CA01 a RS01-CA09) | @lilydias24 |
 | RS02 | R02 - Tampering | Toda alteração de prescrição ativa deve ser autorizada e validada no servidor, confirmada por segundo profissional e registrada com autoria e versionamento em trilha de auditoria imutável | Alteração sem autorização no servidor, fora da faixa terapêutica ou sem o segundo confirmador não publica versão vigente, e a tentativa fica registrada na auditoria (RS02-CA01 a RS02-CA08) | @ARTHUR9011 |
-| RS03 | R06 - Elevation of Privilege | O sistema deve validar `nivelAcesso` no servidor em toda operação administrativa, e não apenas ocultar opções na interface | Requisição que altera `nivelAcesso` partindo de sessão sem alçada é recusada com HTTP 403 e registrada na trilha, mesmo quando enviada direto ao endpoint, sem passar pela interface (RS03-CA01 a RS03-CA08) | @PPrauchner |
+| RS03 | R06 - Elevation of Privilege | O sistema deve validar `nivelAcesso` no servidor em toda operação administrativa, e não apenas ocultar opções na interface | Sessão sem alçada não consegue elevar `nivelAcesso` por caminho algum: pela via de salvamento do cadastro o campo é descartado e a tentativa registrada; pela operação própria de alteração de perfil a requisição é recusada com HTTP 403. Vale igualmente quando enviada direto ao endpoint, sem passar pela interface (RS03-CA01 a RS03-CA08) | @PPrauchner |
 
 > A coluna *Critério de verificação* foi acrescentada porque o §18.1 do enunciado a exige
 > na tabela de requisitos - o requisito precisa ser "específico e verificável", e é essa
@@ -235,13 +235,34 @@ primeiros são exatamente os testes escritos na [Etapa 4](E4_Codigo_seguro_e_tes
 | ID | Cenário | Resultado verificável |
 | --- | --- | --- |
 | RS03-CA01 | Sessão com `nivelAcesso = Diretor` promove outro funcionário a GerenteSetor | Alteração aceita; a trilha registra autor, valor anterior, valor novo e data/hora do servidor |
-| RS03-CA02 | Sessão com `nivelAcesso = Supervisor` envia o próprio cadastro com `nivelAcesso: "Diretor"` no corpo | HTTP 403; o campo permanece `Supervisor`; a tentativa é registrada e o alerta da Regra 3 dispara |
-| RS03-CA03 | A mesma requisição de CA02 é enviada **direto ao endpoint**, sem passar pela interface | Resultado idêntico ao de RS03-CA02 - a recusa não depende da tela ter ou não montado a opção |
-| RS03-CA04 | Requisição legítima de alteração de dados funcionais traz `nivelAcesso` alterado junto no corpo | Os dados funcionais são gravados e o `nivelAcesso` permanece inalterado, sem erro silencioso: a tentativa de gravá-lo é registrada |
+| RS03-CA02 | Sessão com `nivelAcesso = Supervisor` tenta se promover a Diretor pelos dois caminhos: primeiro enviando o próprio cadastro com `nivelAcesso: "Diretor"` no corpo (passo 3 do CA05), depois chamando a operação própria de alteração de perfil | Pela via de salvamento, o campo é **descartado antes de qualquer validação**: os demais dados seguem o fluxo normal, `nivelAcesso` permanece `Supervisor` e a tentativa de gravá-lo é registrada. Pela operação própria, a requisição é recusada com **HTTP 403**, sem efeito parcial. Em nenhum dos dois há promoção, e ambos alimentam a Regra 3 |
+| RS03-CA03 | A mesma requisição de CA02 é enviada **direto ao endpoint**, sem passar pela interface | Resultado idêntico ao de RS03-CA02 - o desfecho não depende da tela ter ou não montado a opção |
+| RS03-CA04 | Requisição legítima de alteração de dados funcionais traz `nivelAcesso` alterado junto no corpo, sem intenção de promoção | Mesmo desfecho da via de salvamento em CA02, o que é o ponto: os dados funcionais são gravados, o `nivelAcesso` permanece inalterado e a tentativa de gravá-lo é registrada. O servidor não distingue intenção - trata o campo pela origem da requisição, não pelo propósito de quem a enviou |
 | RS03-CA05 | Diretor tenta elevar o **próprio** `nivelAcesso` | HTTP 403 - a alçada não alcança o próprio registro, e a promoção exige aprovador distinto do solicitante |
 | RS03-CA06 | Novo endpoint administrativo entra no serviço sem regra de autorização declarada | Toda chamada é recusada por omissão de regra, e não permitida - a negação por padrão é verificada, não presumida |
 | RS03-CA07 | Sessão aberta antes de uma promoção legítima chama operação exclusiva do perfil novo; e sessão de perfil rebaixado chama operação do perfil antigo | A primeira é recusada até a identidade de sessão ser reemitida; a segunda é recusada imediatamente |
 | RS03-CA08 | Sessão administrativa percorre o cadastro completo de funcionários de todas as unidades | O limite de volume é aplicado, nenhum campo de autenticação é retornado e cada consulta fica registrada |
+
+> **Correção aos critérios de CA02 e CA04.** Na redação anterior os dois descreviam a
+> mesma entrada - corpo de salvamento do cadastro trazendo `nivelAcesso` alterado - com
+> resultados incompatíveis: CA02 esperava HTTP 403 e CA04 esperava gravação dos dados
+> funcionais com o campo ignorado. Nenhum servidor pode satisfazer os dois, porque a
+> requisição é a mesma; só a intenção difere, e intenção não é observável.
+>
+> A implementação da [Etapa 4](E4_Codigo_seguro_e_testes.md) expôs a contradição ao
+> tentar codificar ambos. O critério foi reescrito segundo a cláusula 3, que já dava a
+> resposta: `nivelAcesso` **não é gravável pela via de salvamento do cadastro**, e a
+> mudança de perfil é **operação própria**. São dois caminhos distintos, com desfechos
+> distintos - descarte com registro num, HTTP 403 no outro -, e CA02 passa a exercitar
+> os dois. CA04 deixa de ser um caso concorrente e passa a ser o que sempre deveria ter
+> sido: a demonstração de que o desfecho da via de salvamento **não depende da
+> intenção** de quem enviou a requisição.
+>
+> A menção ao disparo do alerta também foi ajustada. A cláusula 7 alerta nas elevações
+> **efetivadas**; tentativas recusadas entram na [Regra 3](E6_Monitoramento_e_deteccao.md)
+> por outros gatilhos - repetição, ou imediatamente quando a requisição não passa pela
+> interface. Dizer que "o alerta da Regra 3 dispara" numa recusa isolada prometia um
+> limiar que a regra não tem.
 
 ## 2. Vulnerabilidades catalogadas (CWE/OWASP)
 
@@ -425,7 +446,7 @@ RS03 concretiza os controles R06-C1 a R06-C4 definidos no plano de tratamento da
 | R06-C1 - revalidação de autorização no servidor, com o `nivelAcesso` do corpo descartado | Cláusulas 1, 2, 4 e 6 | RS03-CA02, RS03-CA03, RS03-CA06 e RS03-CA07 | Os dois testes da [Etapa 4](E4_Codigo_seguro_e_testes.md), mais o teste que envia a requisição direto ao endpoint e o que verifica a recusa por omissão de regra |
 | R06-C2 - `nivelAcesso` imutável pelo próprio titular, mudança só por fluxo de aprovação | Cláusula 3 | RS03-CA01, RS03-CA04 e RS03-CA05 | Promoção legítima por sessão Diretor sobre outro funcionário; tentativa sobre o próprio registro recusada; gravação de dados funcionais que ignora o campo de privilégio |
 | R06-C3 - trilha imutável de toda alteração de perfil, com autor, valor anterior e novo e data/hora do servidor | Cláusula 5 | RS03-CA01, RS03-CA02 e RS03-CA04 | Consulta à trilha exibindo alterações efetivadas **e** recusadas, com autoria vinda da sessão - garantida pelo Serviço de Auditoria da DA01 |
-| R06-C4 - alerta ao Diretor e à Segurança da Informação a cada elevação | Cláusula 7 | RS03-CA02 | Regra 3 da [Etapa 6](E6_Monitoramento_e_deteccao.md) disparando em uma elevação simulada, com destinatário definido |
+| R06-C4 - alerta ao Diretor e à Segurança da Informação a cada elevação | Cláusula 7 | RS03-CA01 e RS03-CA02 | Regra 3 da [Etapa 6](E6_Monitoramento_e_deteccao.md) disparando em uma elevação simulada, com destinatário definido. CA01 é o caso que o controle descreve - a elevação **efetivada**; CA02 entra como a tentativa recusada, que a regra observa por outro gatilho |
 
 A cláusula 8 não realiza um controle de R06: ela fecha a continuação do CA05, em que o
 privilégio obtido vira varredura do cadastro e, pelo volume sobre o SGBD único, alcança a
