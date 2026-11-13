@@ -129,6 +129,28 @@ mas não como arquivo próprio em `roteiros/` - ver a pendência na Etapa 7 abai
 - [x] Etapa 6 - as três regras concluídas (1 @lilydias24, 2 @ARTHUR9011, 3 @PPrauchner) e o roteiro compilado em [`roteiros/etapa-6-deteccao-de-intrusoes.md`](roteiros/etapa-6-deteccao-de-intrusoes.md), com convenções comuns, correlação entre regras e tabela de rastreabilidade até a Etapa 1
 - [ ] Etapa 7 - pipeline e os sete blocos do roteiro concluídos. Arquivo `roteiros/etapa-7-devsecops-e-video-final.md` criado (§31). **Falta** ajustar a duração (soma hoje passa do teto de 8 min no pior caso) e a gravação/publicação do link
 
+## Minha contribuição
+
+Responsável pela categoria **Spoofing** (ameaça T01, risco R01: credenciais de
+`Funcionario`) do início ao fim do trabalho, e líder das Etapas 1 e 6:
+
+- **Etapa 1 (liderança):** identificação do SIGH, ameaça de spoofing nas credenciais e
+  caso de abuso com credenciais roubadas, interpretação da análise STRIDE e fechamento
+  da etapa.
+- **Etapa 2:** registro do risco R01 com justificativa de probabilidade e impacto,
+  plano de tratamento mapeado ao NIST CSF 2.0 e estimativa do risco residual.
+- **Etapa 3:** requisito de segurança RS01 com as vulnerabilidades CWE/OWASP
+  relacionadas e a rastreabilidade, e a decisão de arquitetura DA03.
+- **Etapa 4:** implementação em Python do armazenamento seguro de senhas com scrypt e
+  salt, com testes automatizados e documentação dos resultados
+  ([`codigo/etapa-4/`](codigo/etapa-4/)).
+- **Etapa 5:** revisão cruzada de reprodutibilidade das seções 1 e 2.
+- **Etapa 6 (liderança):** regras de detecção de uso indevido de credencial e roteiro
+  de detecção de intrusões.
+
+Também organizei a estrutura do repositório em um documento por etapa, para que a
+contribuição de cada integrante fosse rastreável pelos commits.
+
 ## Como contribuir (para o grupo)
 
 1. Clone o repositório: `git clone https://github.com/lilydias24/Trab_ESseg.git`
